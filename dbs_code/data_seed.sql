@@ -233,9 +233,6 @@ VALUES
 
 
 
-
-
-
 -- ========================================================
 -- 03_content.sql (đã FIX lỗi subquery nhiều dòng)
 -- Người thực hiện: Cường
