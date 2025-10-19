@@ -231,8 +231,6 @@ VALUES
  'https://images.pexels.com/photos/4386407/pexels-photo-4386407.jpeg',
  42.99, 28.99);
 
-
-
 -- ========================================================
 -- 03_content.sql (đã FIX lỗi subquery nhiều dòng)
 -- Người thực hiện: Cường
