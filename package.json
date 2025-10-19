@@ -1,0 +1,35 @@
+{
+  "name": "online-academy",
+  "version": "1.0.0",
+  "description": "A full-stack web learning platform built with ExpressJS + Handlebars + Supabase (PostgreSQL).",
+  "main": "app.js",
+  "scripts": {
+  "start": "node app.js",
+  "dev": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QuangHuyUte/online-academy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/QuangHuyUte/online-academy/issues"
+  },
+  "homepage": "https://github.com/QuangHuyUte/online-academy#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-handlebars": "^8.0.3",
+    "express-handlebars-sections": "^1.0.1",
+    "express-session": "^1.18.2",
+    "knex": "^3.1.0",
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
