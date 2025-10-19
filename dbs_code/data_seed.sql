@@ -115,6 +115,7 @@ INSERT INTO email_otps (email, otp, expires_at) VALUES
   ('amy@academy.com', '753951', now() + interval '10 minutes');
 
 -- ========================================================
+
 -- 5. COURSE
 
 -- 02_courses.sql
