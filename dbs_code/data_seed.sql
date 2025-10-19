@@ -447,3 +447,51 @@ VALUES
   AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
  'Simultaneous Interpretation', 'https://www.youtube.com/watch?v=20Shv0XTQfg&pp=ygUXaW50ZXJwcmV0YXRpb24gcHJhY3RpY2U%3D', 500, FALSE, 1);
 
+-- ========================================================
+-- 04_enrollments.sql
+-- Người thực hiện: Thong
+-- Nhiệm vụ: Tạo enrollments (học viên đăng ký khóa học)
+-- ========================================================
+INSERT INTO enrollments (user_id, course_id)
+SELECT u.id, c.id
+FROM users u, courses c
+WHERE u.role='student'
+AND (
+    (u.email = 'tommy@academy.com' 
+     AND c.title IN ('Modern Web Development with React', 
+                     'Intro to Python', 
+                     'Cloud Fundamentals')
+    ) OR
+    (u.email = 'julia@academy.com' 
+     AND c.title IN ('Data Science 101', 
+                     'Machine Learning Basics')
+    ) OR
+    (u.email = 'mike@academy.com' 
+     AND c.title IN ('UI/UX Design Fundamentals', 
+                     'Figma Masterclass', 
+                     'Digital Marketing 101')
+    ) OR
+    (u.email = 'linda@academy.com' 
+     AND c.title IN ('SQL for Beginners', 
+                     'Business Analytics', 
+                     'Financial Accounting Essentials')
+    ) OR
+    (u.email = 'peter@academy.com' 
+     AND c.title IN ('Introduction to Cyber Security', 
+                     'Ethical Hacking Basics')
+    ) OR
+    (u.email = 'anna@academy.com' 
+     AND c.title IN ('Mobile App Development with Flutter', 
+                     'Intro to Python', 
+                     'Data Visualization with Tableau')
+    ) OR
+    (u.email = 'robert@academy.com' 
+     AND c.title IN ('AI for Everyone', 
+                     'Deep Learning Crash Course')
+    ) OR
+    (u.email = 'sophia@academy.com' 
+     AND c.title IN ('Excel Mastery', 
+                     'Digital Marketing 101', 
+                     'Cloud Fundamentals')
+    )
+  );
