@@ -114,7 +114,7 @@ INSERT INTO email_otps (email, otp, expires_at) VALUES
   ('lily@academy.com', '852369', now() + interval '10 minutes'),
   ('amy@academy.com', '753951', now() + interval '10 minutes');
 
-  -- ========================================================
+-- ========================================================
 -- 5. COURSE
 
 -- 02_courses.sql
@@ -230,4 +230,218 @@ VALUES
  '<p>Learn sentence structure, idiomatic expressions, and cultural adaptation in translation.</p>',
  'https://images.pexels.com/photos/4386407/pexels-photo-4386407.jpeg',
  42.99, 28.99);
+
+
+
+-- ========================================================
+-- 03_content.sql (đã FIX lỗi subquery nhiều dòng)
+-- Người thực hiện: Cường
+-- Nhiệm vụ: Tạo nội dung khóa học (sections + lessons)
+-- ========================================================
+
+TRUNCATE TABLE lessons, sections RESTART IDENTITY CASCADE;
+
+-- ========================================================
+-- 1. SECTIONS
+-- ========================================================
+
+INSERT INTO sections (course_id, title, order_no)
+VALUES
+-- React Course
+((SELECT id FROM courses WHERE title='Modern Web Development with React'), 'Introduction to React', 1),
+((SELECT id FROM courses WHERE title='Modern Web Development with React'), 'Working with Components', 2),
+((SELECT id FROM courses WHERE title='Modern Web Development with React'), 'Hooks & State Management', 3),
+
+-- Flutter Course
+((SELECT id FROM courses WHERE title='Flutter for Beginners'), 'Getting Started with Flutter', 1),
+((SELECT id FROM courses WHERE title='Flutter for Beginners'), 'Layouts and Widgets', 2),
+((SELECT id FROM courses WHERE title='Flutter for Beginners'), 'Navigation and State', 3),
+
+-- AWS Cloud
+((SELECT id FROM courses WHERE title='AWS Cloud Fundamentals'), 'Cloud Basics', 1),
+((SELECT id FROM courses WHERE title='AWS Cloud Fundamentals'), 'AWS Core Services', 2),
+((SELECT id FROM courses WHERE title='AWS Cloud Fundamentals'), 'Deploying Applications', 3),
+
+-- Cybersecurity
+((SELECT id FROM courses WHERE title='Introduction to Cybersecurity'), 'Cybersecurity Overview', 1),
+((SELECT id FROM courses WHERE title='Introduction to Cybersecurity'), 'Network Security', 2),
+((SELECT id FROM courses WHERE title='Introduction to Cybersecurity'), 'Security Practices', 3),
+
+-- UI/UX Design
+((SELECT id FROM courses WHERE title='UI/UX Design for Beginners'), 'UI/UX Fundamentals', 1),
+((SELECT id FROM courses WHERE title='UI/UX Design for Beginners'), 'Wireframes and Prototypes', 2),
+((SELECT id FROM courses WHERE title='UI/UX Design for Beginners'), 'Usability Testing', 3),
+
+-- Photoshop
+((SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass'), 'Introduction to Photoshop', 1),
+((SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass'), 'Layers and Tools', 2),
+((SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass'), 'Advanced Editing', 3),
+
+-- Digital Marketing
+((SELECT id FROM courses WHERE title='Digital Marketing 101'), 'Marketing Basics', 1),
+((SELECT id FROM courses WHERE title='Digital Marketing 101'), 'SEO and Analytics', 2),
+((SELECT id FROM courses WHERE title='Digital Marketing 101'), 'Campaign Management', 3),
+
+-- Social Media
+((SELECT id FROM courses WHERE title='Social Media Marketing Strategy'), 'Social Media Platforms', 1),
+((SELECT id FROM courses WHERE title='Social Media Marketing Strategy'), 'Content Strategy', 2),
+((SELECT id FROM courses WHERE title='Social Media Marketing Strategy'), 'Analytics and Engagement', 3),
+
+-- English
+((SELECT id FROM courses WHERE title='English Communication for Beginners'), 'Basic Grammar', 1),
+((SELECT id FROM courses WHERE title='English Communication for Beginners'), 'Speaking Practice', 2),
+((SELECT id FROM courses WHERE title='English Communication for Beginners'), 'Listening and Writing', 3),
+
+-- Japanese
+((SELECT id FROM courses WHERE title='Japanese Language N5 Preparation'), 'Hiragana & Katakana', 1),
+((SELECT id FROM courses WHERE title='Japanese Language N5 Preparation'), 'Basic Grammar & Vocabulary', 2),
+((SELECT id FROM courses WHERE title='Japanese Language N5 Preparation'), 'JLPT Practice Tests', 3),
+
+-- Korean
+((SELECT id FROM courses WHERE title='Korean for Everyday Conversation'), 'Hangul Basics', 1),
+((SELECT id FROM courses WHERE title='Korean for Everyday Conversation'), 'Common Phrases', 2),
+((SELECT id FROM courses WHERE title='Korean for Everyday Conversation'), 'Speaking Practice', 3),
+
+-- Translation
+((SELECT id FROM courses WHERE title='Translation and Interpretation Basics'), 'Translation Fundamentals', 1),
+((SELECT id FROM courses WHERE title='Translation and Interpretation Basics'), 'Cultural Adaptation', 2),
+((SELECT id FROM courses WHERE title='Translation and Interpretation Basics'), 'Interpretation Practice', 3);
+
+-- ========================================================
+-- 2. LESSONS (đã FIX subquery nhiều dòng)
+-- ========================================================
+
+INSERT INTO lessons (section_id, title, video_url, duration_sec, is_preview, order_no)
+VALUES
+-- React
+((SELECT id FROM sections WHERE title='Introduction to React' 
+  AND course_id=(SELECT id FROM courses WHERE title='Modern Web Development with React')),
+ 'What is React?', 'https://videos.example.com/react1.mp4', 420, TRUE, 1),
+((SELECT id FROM sections WHERE title='Working with Components' 
+  AND course_id=(SELECT id FROM courses WHERE title='Modern Web Development with React')),
+ 'Props and State', 'https://videos.example.com/react2.mp4', 480, FALSE, 1),
+((SELECT id FROM sections WHERE title='Hooks & State Management' 
+  AND course_id=(SELECT id FROM courses WHERE title='Modern Web Development with React')),
+ 'Using useState and useEffect', 'https://videos.example.com/react3.mp4', 530, FALSE, 1),
+
+-- Flutter
+((SELECT id FROM sections WHERE title='Getting Started with Flutter' 
+  AND course_id=(SELECT id FROM courses WHERE title='Flutter for Beginners')),
+ 'Installing Flutter', 'https://videos.example.com/flutter1.mp4', 400, TRUE, 1),
+((SELECT id FROM sections WHERE title='Layouts and Widgets' 
+  AND course_id=(SELECT id FROM courses WHERE title='Flutter for Beginners')),
+ 'Container and Row', 'https://videos.example.com/flutter2.mp4', 420, FALSE, 1),
+((SELECT id FROM sections WHERE title='Navigation and State' 
+  AND course_id=(SELECT id FROM courses WHERE title='Flutter for Beginners')),
+ 'Navigator 2.0 Overview', 'https://videos.example.com/flutter3.mp4', 460, FALSE, 1),
+
+-- AWS
+((SELECT id FROM sections WHERE title='Cloud Basics' 
+  AND course_id=(SELECT id FROM courses WHERE title='AWS Cloud Fundamentals')),
+ 'What is Cloud Computing?', 'https://videos.example.com/aws1.mp4', 390, TRUE, 1),
+((SELECT id FROM sections WHERE title='AWS Core Services' 
+  AND course_id=(SELECT id FROM courses WHERE title='AWS Cloud Fundamentals')),
+ 'Amazon EC2 and S3', 'https://videos.example.com/aws2.mp4', 470, FALSE, 1),
+((SELECT id FROM sections WHERE title='Deploying Applications' 
+  AND course_id=(SELECT id FROM courses WHERE title='AWS Cloud Fundamentals')),
+ 'Deploying on AWS Lambda', 'https://videos.example.com/aws3.mp4', 530, FALSE, 1),
+
+-- Cybersecurity
+((SELECT id FROM sections WHERE title='Cybersecurity Overview' 
+  AND course_id=(SELECT id FROM courses WHERE title='Introduction to Cybersecurity')),
+ 'Understanding Threats', 'https://videos.example.com/cyber1.mp4', 380, TRUE, 1),
+((SELECT id FROM sections WHERE title='Network Security' 
+  AND course_id=(SELECT id FROM courses WHERE title='Introduction to Cybersecurity')),
+ 'Firewalls and VPNs', 'https://videos.example.com/cyber2.mp4', 440, FALSE, 1),
+((SELECT id FROM sections WHERE title='Security Practices' 
+  AND course_id=(SELECT id FROM courses WHERE title='Introduction to Cybersecurity')),
+ 'Best Practices', 'https://videos.example.com/cyber3.mp4', 460, FALSE, 1),
+
+-- UI/UX
+((SELECT id FROM sections WHERE title='UI/UX Fundamentals' 
+  AND course_id=(SELECT id FROM courses WHERE title='UI/UX Design for Beginners')),
+ 'Design Thinking Basics', 'https://videos.example.com/uiux1.mp4', 450, TRUE, 1),
+((SELECT id FROM sections WHERE title='Wireframes and Prototypes' 
+  AND course_id=(SELECT id FROM courses WHERE title='UI/UX Design for Beginners')),
+ 'Using Figma', 'https://videos.example.com/uiux2.mp4', 510, FALSE, 1),
+((SELECT id FROM sections WHERE title='Usability Testing' 
+  AND course_id=(SELECT id FROM courses WHERE title='UI/UX Design for Beginners')),
+ 'Testing Techniques', 'https://videos.example.com/uiux3.mp4', 420, FALSE, 1),
+
+-- Photoshop
+((SELECT id FROM sections WHERE title='Introduction to Photoshop' 
+  AND course_id=(SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass')),
+ 'Interface Overview', 'https://videos.example.com/ps1.mp4', 400, TRUE, 1),
+((SELECT id FROM sections WHERE title='Layers and Tools' 
+  AND course_id=(SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass')),
+ 'Using Layers', 'https://videos.example.com/ps2.mp4', 460, FALSE, 1),
+((SELECT id FROM sections WHERE title='Advanced Editing' 
+  AND course_id=(SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass')),
+ 'Color Correction', 'https://videos.example.com/ps3.mp4', 480, FALSE, 1),
+
+-- Digital Marketing
+((SELECT id FROM sections WHERE title='Marketing Basics' 
+  AND course_id=(SELECT id FROM courses WHERE title='Digital Marketing 101')),
+ 'Marketing Funnel', 'https://videos.example.com/mkt1.mp4', 430, TRUE, 1),
+((SELECT id FROM sections WHERE title='SEO and Analytics' 
+  AND course_id=(SELECT id FROM courses WHERE title='Digital Marketing 101')),
+ 'Google Analytics 101', 'https://videos.example.com/mkt2.mp4', 520, FALSE, 1),
+((SELECT id FROM sections WHERE title='Campaign Management' 
+  AND course_id=(SELECT id FROM courses WHERE title='Digital Marketing 101')),
+ 'Running Facebook Ads', 'https://videos.example.com/mkt3.mp4', 540, FALSE, 1),
+
+-- Social Media
+((SELECT id FROM sections WHERE title='Social Media Platforms' 
+  AND course_id=(SELECT id FROM courses WHERE title='Social Media Marketing Strategy')),
+ 'Overview of Major Platforms', 'https://videos.example.com/smm1.mp4', 400, TRUE, 1),
+((SELECT id FROM sections WHERE title='Content Strategy' 
+  AND course_id=(SELECT id FROM courses WHERE title='Social Media Marketing Strategy')),
+ 'Planning Engaging Content', 'https://videos.example.com/smm2.mp4', 480, FALSE, 1),
+((SELECT id FROM sections WHERE title='Analytics and Engagement' 
+  AND course_id=(SELECT id FROM courses WHERE title='Social Media Marketing Strategy')),
+ 'Tracking KPIs', 'https://videos.example.com/smm3.mp4', 510, FALSE, 1),
+
+-- English
+((SELECT id FROM sections WHERE title='Basic Grammar' 
+  AND course_id=(SELECT id FROM courses WHERE title='English Communication for Beginners')),
+ 'Tenses Overview', 'https://videos.example.com/eng1.mp4', 420, TRUE, 1),
+((SELECT id FROM sections WHERE title='Speaking Practice' 
+  AND course_id=(SELECT id FROM courses WHERE title='English Communication for Beginners')),
+ 'Common Conversations', 'https://videos.example.com/eng2.mp4', 500, FALSE, 1),
+((SELECT id FROM sections WHERE title='Listening and Writing' 
+  AND course_id=(SELECT id FROM courses WHERE title='English Communication for Beginners')),
+ 'Listening Tips', 'https://videos.example.com/eng3.mp4', 490, FALSE, 1),
+
+-- Japanese
+((SELECT id FROM sections WHERE title='Hiragana & Katakana' 
+  AND course_id=(SELECT id FROM courses WHERE title='Japanese Language N5 Preparation')),
+ 'Learn Hiragana', 'https://videos.example.com/jpn1.mp4', 410, TRUE, 1),
+((SELECT id FROM sections WHERE title='Basic Grammar & Vocabulary' 
+  AND course_id=(SELECT id FROM courses WHERE title='Japanese Language N5 Preparation')),
+ 'Common Sentences', 'https://videos.example.com/jpn2.mp4', 460, FALSE, 1),
+((SELECT id FROM sections WHERE title='JLPT Practice Tests' 
+  AND course_id=(SELECT id FROM courses WHERE title='Japanese Language N5 Preparation')),
+ 'Sample Test 1', 'https://videos.example.com/jpn3.mp4', 480, FALSE, 1),
+
+-- Korean
+((SELECT id FROM sections WHERE title='Hangul Basics' 
+  AND course_id=(SELECT id FROM courses WHERE title='Korean for Everyday Conversation')),
+ 'Korean Alphabet', 'https://videos.example.com/kor1.mp4', 420, TRUE, 1),
+((SELECT id FROM sections WHERE title='Common Phrases' 
+  AND course_id=(SELECT id FROM courses WHERE title='Korean for Everyday Conversation')),
+ 'Daily Expressions', 'https://videos.example.com/kor2.mp4', 460, FALSE, 1),
+((SELECT id FROM sections WHERE title='Speaking Practice' 
+  AND course_id=(SELECT id FROM courses WHERE title='Korean for Everyday Conversation')),
+ 'Conversation Practice', 'https://videos.example.com/kor3.mp4', 500, FALSE, 1),
+
+-- Translation
+((SELECT id FROM sections WHERE title='Translation Fundamentals' 
+  AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
+ 'What is Translation?', 'https://videos.example.com/tran1.mp4', 420, TRUE, 1),
+((SELECT id FROM sections WHERE title='Cultural Adaptation' 
+  AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
+ 'Understanding Context', 'https://videos.example.com/tran2.mp4', 480, FALSE, 1),
+((SELECT id FROM sections WHERE title='Interpretation Practice' 
+  AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
+ 'Simultaneous Interpretation', 'https://videos.example.com/tran3.mp4', 500, FALSE, 1);
 
