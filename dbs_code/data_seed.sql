@@ -116,6 +116,7 @@ INSERT INTO email_otps (email, otp, expires_at) VALUES
 
 -- ========================================================
 
+
 -- 5. COURSE
 
 -- 02_courses.sql
