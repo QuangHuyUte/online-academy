@@ -136,7 +136,7 @@ VALUES
  'Modern Web Development with React',
  'Learn to build modern and scalable web apps using React and Node.js.',
  '<p>This course introduces modern React development using functional components, hooks, and API integration.</p>',
- 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg',
+ 'https://plus.unsplash.com/premium_photo-1685086785054-d047cdc0e525?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8d2ViJTIwZGV2ZWxvcG1lbnR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=900',
  49.99, 29.99),
 
 ((SELECT id FROM categories WHERE slug='mobile-development'),
@@ -144,7 +144,7 @@ VALUES
  'Flutter for Beginners',
  'Create cross-platform mobile apps with Google Flutter and Dart.',
  '<p>Hands-on introduction to Flutter widgets, layouts, and state management for iOS and Android.</p>',
- 'https://images.pexels.com/photos/1181263/pexels-photo-1181263.jpeg',
+ 'https://plus.unsplash.com/premium_photo-1683936163005-a506303344b3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bW9iaWxlJTIwZGV2ZWxvcG1lbnR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=900',
  39.99, 24.99),
 
 -- David Nguyen - Cloud Computing / Cyber Security
@@ -153,7 +153,7 @@ VALUES
  'AWS Cloud Fundamentals',
  'Master AWS basics: EC2, S3, and serverless architecture.',
  '<p>Comprehensive introduction to AWS services, IAM, networking, and cloud deployment.</p>',
- 'https://images.pexels.com/photos/373543/pexels-photo-373543.jpeg',
+ 'https://plus.unsplash.com/premium_photo-1683120968693-9af51578770e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Y2xvdWQlMjBjb21wdXRpbmd8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600',
  59.99, 39.99),
 
 ((SELECT id FROM categories WHERE slug='cyber-security'),
@@ -161,7 +161,7 @@ VALUES
  'Introduction to Cybersecurity',
  'Learn essential cybersecurity principles and protection methods.',
  '<p>Understand firewalls, encryption, malware, and defensive strategies to protect digital systems.</p>',
- 'https://images.pexels.com/photos/5380644/pexels-photo-5380644.jpeg',
+ 'https://images.unsplash.com/photo-1614064548237-096f735f344f?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y3liZXIlMjBzZWN1cml0eXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600',
  54.99, 32.99),
 
 -- Sophia Tran - Design & UI/UX
@@ -170,7 +170,7 @@ VALUES
  'UI/UX Design for Beginners',
  'Learn to create user-friendly and visually appealing interfaces.',
  '<p>This course covers Figma, prototyping, and usability testing for modern product design.</p>',
- 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg',
+ 'https://plus.unsplash.com/premium_photo-1733306548826-95daff988ae6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8dWklMkZ1eCUyMGRlc2lnbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600',
  45.99, 27.99),
 
 ((SELECT id FROM categories WHERE slug='graphic-design'),
@@ -178,7 +178,7 @@ VALUES
  'Adobe Photoshop Masterclass',
  'Master Photoshop tools and techniques for digital design.',
  '<p>Learn image editing, color correction, and compositing to create stunning visuals.</p>',
- 'https://images.pexels.com/photos/1181359/pexels-photo-1181359.jpeg',
+ 'https://images.unsplash.com/photo-1626785774573-4b799315345d?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Z3JhcGhpYyUyMGRlc2lnbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600',
  49.99, 29.99),
 
 -- Michael Chen - Marketing
@@ -187,7 +187,7 @@ VALUES
  'Digital Marketing 101',
  'Discover the fundamentals of online marketing, SEO, and analytics.',
  '<p>Learn Google Ads, Facebook Ads, and content marketing strategies for real-world success.</p>',
- 'https://images.pexels.com/photos/3184460/pexels-photo-3184460.jpeg',
+ 'https://images.unsplash.com/photo-1557838923-2985c318be48?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8ZGlnaXRhbCUyMG1hcmtldGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600',
  59.99, 34.99),
 
 ((SELECT id FROM categories WHERE slug='social-media-marketing'),
@@ -195,7 +195,7 @@ VALUES
  'Social Media Marketing Strategy',
  'Build a strong brand presence on social media platforms.',
  '<p>Understand audience targeting, engagement metrics, and content creation for growth.</p>',
- 'https://images.pexels.com/photos/1181391/pexels-photo-1181391.jpeg',
+ 'https://images.unsplash.com/photo-1683721003111-070bcc053d8b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8c29jaWFsJTIwbWVkaWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600',
  44.99, 26.99),
 
 -- Olivia Lee - Language
@@ -204,7 +204,7 @@ VALUES
  'English Communication for Beginners',
  'Improve your English speaking and writing skills with interactive lessons.',
  '<p>This course focuses on real-life communication, pronunciation, and vocabulary building.</p>',
- 'https://images.pexels.com/photos/4144222/pexels-photo-4144222.jpeg',
+ 'https://plus.unsplash.com/premium_photo-1682088176629-0f48d58a614c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8ZW5nbGlzaCUyMGxlc3NvbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600',
  29.99, 19.99),
 
 ((SELECT id FROM categories WHERE slug='japanese-language'),
@@ -212,7 +212,7 @@ VALUES
  'Japanese Language N5 Preparation',
  'Start your journey with basic Japanese grammar, vocabulary, and kanji.',
  '<p>Designed for JLPT N5 preparation with speaking and writing practice.</p>',
- 'https://images.pexels.com/photos/3800088/pexels-photo-3800088.jpeg',
+ 'https://images.unsplash.com/photo-1589123053298-eab8ed8e29e9?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8amFwYW5lc2UlMjBsZXNzb258ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600',
  39.99, 25.99),
 
 ((SELECT id FROM categories WHERE slug='korean-language'),
@@ -220,7 +220,7 @@ VALUES
  'Korean for Everyday Conversation',
  'Learn to speak Korean confidently in daily situations.',
  '<p>Practice pronunciation, grammar, and cultural expressions used in modern Korea.</p>',
- 'https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg',
+ 'https://plus.unsplash.com/premium_photo-1723629680032-d24ef1c9f026?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8a29yZWFuJTIwbGVzc29ufGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=1600',
  34.99, 22.99),
 
 ((SELECT id FROM categories WHERE slug='translation-interpretation'),
@@ -228,7 +228,7 @@ VALUES
  'Translation and Interpretation Basics',
  'Develop essential translation techniques for English–Vietnamese pairs.',
  '<p>Learn sentence structure, idiomatic expressions, and cultural adaptation in translation.</p>',
- 'https://images.pexels.com/photos/4386407/pexels-photo-4386407.jpeg',
+ 'https://images.unsplash.com/photo-1634128221889-82ed6efebfc3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8TGFuZ3VhZ2V8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600',
  42.99, 28.99);
 
 -- ========================================================
@@ -314,132 +314,132 @@ VALUES
 -- React
 ((SELECT id FROM sections WHERE title='Introduction to React' 
   AND course_id=(SELECT id FROM courses WHERE title='Modern Web Development with React')),
- 'What is React?', 'https://videos.example.com/react1.mp4', 420, TRUE, 1),
+ 'What is React?', 'https://www.youtube.com/watch?v=Tn6-PIqc4UM&t=70s', 420, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Working with Components' 
   AND course_id=(SELECT id FROM courses WHERE title='Modern Web Development with React')),
- 'Props and State', 'https://videos.example.com/react2.mp4', 480, FALSE, 1),
+ 'Props and State', 'https://www.youtube.com/watch?v=mECV6nGOqNo', 480, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Hooks & State Management' 
   AND course_id=(SELECT id FROM courses WHERE title='Modern Web Development with React')),
- 'Using useState and useEffect', 'https://videos.example.com/react3.mp4', 530, FALSE, 1),
+ 'Using useState and useEffect', 'https://www.youtube.com/watch?v=kt0FrkQgw8w&list=PL6QREj8te1P7q1OjvnnLG-Tm7OX5u4Mg9', 530, FALSE, 1),
 
 -- Flutter
 ((SELECT id FROM sections WHERE title='Getting Started with Flutter' 
   AND course_id=(SELECT id FROM courses WHERE title='Flutter for Beginners')),
- 'Installing Flutter', 'https://videos.example.com/flutter1.mp4', 400, TRUE, 1),
+ 'Installing Flutter', 'https://www.youtube.com/watch?v=p1l-BUtjHJk&list=PLyxSzL3F7484qhNw1K08o8kDn8ecCpA_j', 400, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Layouts and Widgets' 
   AND course_id=(SELECT id FROM courses WHERE title='Flutter for Beginners')),
- 'Container and Row', 'https://videos.example.com/flutter2.mp4', 420, FALSE, 1),
+ 'Container and Row', 'https://www.youtube.com/watch?v=OrG794LT0c4', 420, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Navigation and State' 
   AND course_id=(SELECT id FROM courses WHERE title='Flutter for Beginners')),
- 'Navigator 2.0 Overview', 'https://videos.example.com/flutter3.mp4', 460, FALSE, 1),
+ 'Navigator 2.0 Overview', 'https://www.youtube.com/watch?v=1xipg02Wu8s', 460, FALSE, 1),
 
 -- AWS
 ((SELECT id FROM sections WHERE title='Cloud Basics' 
   AND course_id=(SELECT id FROM courses WHERE title='AWS Cloud Fundamentals')),
- 'What is Cloud Computing?', 'https://videos.example.com/aws1.mp4', 390, TRUE, 1),
+ 'What is Cloud Computing?', 'https://www.youtube.com/watch?v=ZaA0kNm18pE', 390, TRUE, 1),
 ((SELECT id FROM sections WHERE title='AWS Core Services' 
   AND course_id=(SELECT id FROM courses WHERE title='AWS Cloud Fundamentals')),
- 'Amazon EC2 and S3', 'https://videos.example.com/aws2.mp4', 470, FALSE, 1),
+ 'Amazon EC2 and S3', 'https://www.youtube.com/watch?v=JIbIYCM48to', 470, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Deploying Applications' 
   AND course_id=(SELECT id FROM courses WHERE title='AWS Cloud Fundamentals')),
- 'Deploying on AWS Lambda', 'https://videos.example.com/aws3.mp4', 530, FALSE, 1),
+ 'Deploying on AWS Lambda', 'https://www.youtube.com/watch?v=cw34KMPSt4k', 530, FALSE, 1),
 
 -- Cybersecurity
 ((SELECT id FROM sections WHERE title='Cybersecurity Overview' 
   AND course_id=(SELECT id FROM courses WHERE title='Introduction to Cybersecurity')),
- 'Understanding Threats', 'https://videos.example.com/cyber1.mp4', 380, TRUE, 1),
+ 'Understanding Threats', 'https://www.youtube.com/watch?v=zYLkdT731x8', 380, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Network Security' 
   AND course_id=(SELECT id FROM courses WHERE title='Introduction to Cybersecurity')),
- 'Firewalls and VPNs', 'https://videos.example.com/cyber2.mp4', 440, FALSE, 1),
+ 'Firewalls and VPNs', 'https://www.youtube.com/watch?v=NIRXtMg-0z8', 440, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Security Practices' 
   AND course_id=(SELECT id FROM courses WHERE title='Introduction to Cybersecurity')),
- 'Best Practices', 'https://videos.example.com/cyber3.mp4', 460, FALSE, 1),
+ 'Best Practices', 'https://www.youtube.com/watch?v=kNQp1Tda_TQ&list=PLT8yTjyUGL2xwaWl2ermpNzuQxzoeX6zD', 460, FALSE, 1),
 
 -- UI/UX
 ((SELECT id FROM sections WHERE title='UI/UX Fundamentals' 
   AND course_id=(SELECT id FROM courses WHERE title='UI/UX Design for Beginners')),
- 'Design Thinking Basics', 'https://videos.example.com/uiux1.mp4', 450, TRUE, 1),
+ 'Design Thinking Basics', 'https://www.youtube.com/watch?v=wIuVvCuiJhU', 450, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Wireframes and Prototypes' 
   AND course_id=(SELECT id FROM courses WHERE title='UI/UX Design for Beginners')),
- 'Using Figma', 'https://videos.example.com/uiux2.mp4', 510, FALSE, 1),
+ 'Using Figma', 'https://www.youtube.com/watch?v=iyrEStiTZh0', 510, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Usability Testing' 
   AND course_id=(SELECT id FROM courses WHERE title='UI/UX Design for Beginners')),
- 'Testing Techniques', 'https://videos.example.com/uiux3.mp4', 420, FALSE, 1),
+ 'Testing Techniques', 'https://www.youtube.com/watch?v=jWEE3YYv9BU', 420, FALSE, 1),
 
 -- Photoshop
 ((SELECT id FROM sections WHERE title='Introduction to Photoshop' 
   AND course_id=(SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass')),
- 'Interface Overview', 'https://videos.example.com/ps1.mp4', 400, TRUE, 1),
+ 'Interface Overview', 'https://www.youtube.com/watch?v=qwNbjGyhZ48', 400, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Layers and Tools' 
   AND course_id=(SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass')),
- 'Using Layers', 'https://videos.example.com/ps2.mp4', 460, FALSE, 1),
+ 'Using Layers', 'https://www.youtube.com/watch?v=WP8eswvWZeo&list=PLCT625VX33gT3NiV1nSx1MDie6suwtMg6', 460, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Advanced Editing' 
   AND course_id=(SELECT id FROM courses WHERE title='Adobe Photoshop Masterclass')),
- 'Color Correction', 'https://videos.example.com/ps3.mp4', 480, FALSE, 1),
+ 'Color Correction', 'https://www.youtube.com/watch?v=owStZxm9DIA', 480, FALSE, 1),
 
 -- Digital Marketing
 ((SELECT id FROM sections WHERE title='Marketing Basics' 
   AND course_id=(SELECT id FROM courses WHERE title='Digital Marketing 101')),
- 'Marketing Funnel', 'https://videos.example.com/mkt1.mp4', 430, TRUE, 1),
+ 'Marketing Funnel', 'https://www.youtube.com/watch?v=0mczz27i19w&pp=ygUgbWFya2V0IGJhc2ljIGVkaXQgcGhvdG8gdHV0b3JpYWw%3D', 430, TRUE, 1),
 ((SELECT id FROM sections WHERE title='SEO and Analytics' 
   AND course_id=(SELECT id FROM courses WHERE title='Digital Marketing 101')),
- 'Google Analytics 101', 'https://videos.example.com/mkt2.mp4', 520, FALSE, 1),
+ 'Google Analytics 101', 'https://www.youtube.com/watch?v=MYE6T_gd7H0&pp=ygUNc2VvIGFuYWx5dGljcw%3D%3D', 520, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Campaign Management' 
   AND course_id=(SELECT id FROM courses WHERE title='Digital Marketing 101')),
- 'Running Facebook Ads', 'https://videos.example.com/mkt3.mp4', 540, FALSE, 1),
+ 'Running Facebook Ads', 'https://www.youtube.com/watch?v=W6SkSK46HA4&pp=ygUTY2FtcGFpZ24gbWFuYWdlbWVudA%3D%3D', 540, FALSE, 1),
 
 -- Social Media
 ((SELECT id FROM sections WHERE title='Social Media Platforms' 
   AND course_id=(SELECT id FROM courses WHERE title='Social Media Marketing Strategy')),
- 'Overview of Major Platforms', 'https://videos.example.com/smm1.mp4', 400, TRUE, 1),
+ 'Overview of Major Platforms', 'https://www.youtube.com/watch?v=6-15znNFQK8&pp=ygUVc29jaWFsIG1lZGlhIHBsYXRmb3Jt', 400, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Content Strategy' 
   AND course_id=(SELECT id FROM courses WHERE title='Social Media Marketing Strategy')),
- 'Planning Engaging Content', 'https://videos.example.com/smm2.mp4', 480, FALSE, 1),
+ 'Planning Engaging Content', 'https://www.youtube.com/watch?v=H9DXLvR-Yb8&pp=ygUQY29udGVudCBzdHJhdGVneQ%3D%3D', 480, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Analytics and Engagement' 
   AND course_id=(SELECT id FROM courses WHERE title='Social Media Marketing Strategy')),
- 'Tracking KPIs', 'https://videos.example.com/smm3.mp4', 510, FALSE, 1),
+ 'Tracking KPIs', 'https://www.youtube.com/watch?v=bilOOPuAvTY&pp=ygUSbWFya2V0aW5nIHN0cmF0ZWd5', 510, FALSE, 1),
 
 -- English
 ((SELECT id FROM sections WHERE title='Basic Grammar' 
   AND course_id=(SELECT id FROM courses WHERE title='English Communication for Beginners')),
- 'Tenses Overview', 'https://videos.example.com/eng1.mp4', 420, TRUE, 1),
+ 'Tenses Overview', 'https://www.youtube.com/watch?v=6LFjVC3cHjI&pp=ygUVYmFzaWMgZ3JhbW1hciBlbmdsaXNo', 420, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Speaking Practice' 
   AND course_id=(SELECT id FROM courses WHERE title='English Communication for Beginners')),
- 'Common Conversations', 'https://videos.example.com/eng2.mp4', 500, FALSE, 1),
+ 'Common Conversations', 'https://www.youtube.com/watch?v=FfhZFRvmaVY&pp=ygURc3BlYWtpbmcgcHJhY3RpY2U%3D', 500, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Listening and Writing' 
   AND course_id=(SELECT id FROM courses WHERE title='English Communication for Beginners')),
- 'Listening Tips', 'https://videos.example.com/eng3.mp4', 490, FALSE, 1),
+ 'Listening Tips', 'https://www.youtube.com/watch?v=rrjWWZud-B8&pp=ygUUbGlzdGVuaW5nIGFuZCByaXRpbmc%3D', 490, FALSE, 1),
 
 -- Japanese
 ((SELECT id FROM sections WHERE title='Hiragana & Katakana' 
   AND course_id=(SELECT id FROM courses WHERE title='Japanese Language N5 Preparation')),
- 'Learn Hiragana', 'https://videos.example.com/jpn1.mp4', 410, TRUE, 1),
+ 'Learn Hiragana', 'https://www.youtube.com/watch?v=2qk4gCZuSjk&pp=ygUISGlnYXJhbmHSBwkJ_AkBhyohjO8%3D', 410, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Basic Grammar & Vocabulary' 
   AND course_id=(SELECT id FROM courses WHERE title='Japanese Language N5 Preparation')),
- 'Common Sentences', 'https://videos.example.com/jpn2.mp4', 460, FALSE, 1),
+ 'Common Sentences', 'https://www.youtube.com/watch?v=-h8xnu1Okdg&list=PLMP8b3W1auVlpjrV1otr1x-DP0kWlT7yk', 460, FALSE, 1),
 ((SELECT id FROM sections WHERE title='JLPT Practice Tests' 
   AND course_id=(SELECT id FROM courses WHERE title='Japanese Language N5 Preparation')),
- 'Sample Test 1', 'https://videos.example.com/jpn3.mp4', 480, FALSE, 1),
+ 'Sample Test 1', 'https://www.youtube.com/watch?v=HOCgOTbCzFI', 480, FALSE, 1),
 
 -- Korean
 ((SELECT id FROM sections WHERE title='Hangul Basics' 
   AND course_id=(SELECT id FROM courses WHERE title='Korean for Everyday Conversation')),
- 'Korean Alphabet', 'https://videos.example.com/kor1.mp4', 420, TRUE, 1),
+ 'Korean Alphabet', 'https://www.youtube.com/watch?v=0ZhOeA0RD9o&pp=ygUMaGFuZ3VsIGJhc2lj', 420, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Common Phrases' 
   AND course_id=(SELECT id FROM courses WHERE title='Korean for Everyday Conversation')),
- 'Daily Expressions', 'https://videos.example.com/kor2.mp4', 460, FALSE, 1),
+ 'Daily Expressions', 'https://www.youtube.com/watch?v=iOH4f7r2WUQ&pp=ygUbaGFuZ3VsIGJhc2ljIGNvbW1vbiBwaHJhc2Vz', 460, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Speaking Practice' 
   AND course_id=(SELECT id FROM courses WHERE title='Korean for Everyday Conversation')),
- 'Conversation Practice', 'https://videos.example.com/kor3.mp4', 500, FALSE, 1),
+ 'Conversation Practice', 'https://www.youtube.com/watch?v=RsZjfHmPaLo&pp=ygUbaGFuZ3VsIGJhc2ljIGNvbW1vbiBwaHJhc2Vz', 500, FALSE, 1),
 
 -- Translation
 ((SELECT id FROM sections WHERE title='Translation Fundamentals' 
   AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
- 'What is Translation?', 'https://videos.example.com/tran1.mp4', 420, TRUE, 1),
+ 'What is Translation?', 'https://www.youtube.com/watch?v=J2F4I1-j6cg&pp=ygUYdHJhbnNsYXRpb24gZnVuZGFsbWVudGFs', 420, TRUE, 1),
 ((SELECT id FROM sections WHERE title='Cultural Adaptation' 
   AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
- 'Understanding Context', 'https://videos.example.com/tran2.mp4', 480, FALSE, 1),
+ 'Understanding Context', 'https://www.youtube.com/watch?v=twCpijr_GeQ&pp=ygUndHJhbnNsYXRpb24gaW50ZXJwcmV0YXRpb24gZnVuZGFsbWVudGFs', 480, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Interpretation Practice' 
   AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
- 'Simultaneous Interpretation', 'https://videos.example.com/tran3.mp4', 500, FALSE, 1);
+ 'Simultaneous Interpretation', 'https://www.youtube.com/watch?v=20Shv0XTQfg&pp=ygUXaW50ZXJwcmV0YXRpb24gcHJhY3RpY2U%3D', 500, FALSE, 1);
 
