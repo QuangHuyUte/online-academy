@@ -151,7 +151,7 @@ VALUES
  'https://plus.unsplash.com/premium_photo-1683936163005-a506303344b3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8bW9iaWxlJTIwZGV2ZWxvcG1lbnR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=900',
  39.99, 24.99),
 
--- David Nguyen - Cloud Computing / Cyber Security
+-- David Nguyen - Cloud Computing / Cyber Security 
 ((SELECT id FROM categories WHERE slug='cloud-computing'),
  (SELECT id FROM instructors WHERE user_id = (SELECT id FROM users WHERE email='david@academy.com')),
  'AWS Cloud Fundamentals',
@@ -457,44 +457,31 @@ SELECT u.id, c.id
 FROM users u, courses c
 WHERE u.role='student'
 AND (
-    (u.email = 'tommy@academy.com' 
-     AND c.title IN ('Modern Web Development with React', 
-                     'Intro to Python', 
-                     'Cloud Fundamentals')
+    (u.email = 'tommy@academy.com'
+     AND c.title IN ('mobile-development', 'web-development', 'uiux-design')
     ) OR
-    (u.email = 'julia@academy.com' 
-     AND c.title IN ('Data Science 101', 
-                     'Machine Learning Basics')
+    (u.email = 'hannah@academy.com'
+     AND c.title IN ('english-language', 'translation-interpretation')
     ) OR
-    (u.email = 'mike@academy.com' 
-     AND c.title IN ('UI/UX Design Fundamentals', 
-                     'Figma Masterclass', 
-                     'Digital Marketing 101')
+    (u.email = 'kevin@academy.com'
+     AND c.title IN ('digital-marketing', 'social-media-marketing', 'graphic-design')
     ) OR
-    (u.email = 'linda@academy.com' 
-     AND c.title IN ('SQL for Beginners', 
-                     'Business Analytics', 
-                     'Financial Accounting Essentials')
+    (u.email = 'lily@academy.com'
+     AND c.title IN ('japanese-language', 'korean-language', 'english-language')
     ) OR
-    (u.email = 'peter@academy.com' 
-     AND c.title IN ('Introduction to Cyber Security', 
-                     'Ethical Hacking Basics')
+    (u.email = 'jason@academy.com'
+     AND c.title IN ('cyber-security', 'cloud-computing')
     ) OR
-    (u.email = 'anna@academy.com' 
-     AND c.title IN ('Mobile App Development with Flutter', 
-                     'Intro to Python', 
-                     'Data Visualization with Tableau')
+    (u.email = 'sarah@academy.com'
+     AND c.title IN ('mobile-development', 'uiux-design', 'graphic-design')
     ) OR
-    (u.email = 'robert@academy.com' 
-     AND c.title IN ('AI for Everyone', 
-                     'Deep Learning Crash Course')
+    (u.email = 'ryan@academy.com'
+     AND c.title IN ('translation-interpretation', 'web-development', 'digital-marketing')
     ) OR
-    (u.email = 'sophia@academy.com' 
-     AND c.title IN ('Excel Mastery', 
-                     'Digital Marketing 101', 
-                     'Cloud Fundamentals')
+    (u.email = 'amy@academy.com'
+     AND c.title IN ('cloud-computing', 'english-language')
     )
-
+);
     -- =====================================================================
 -- 05_watchlist_progress.sql
 -- Người thực hiện: Bao
@@ -632,4 +619,5 @@ VALUES
  0, FALSE, now() - interval '1 days');
  
 -- TỔNG CỘNG: 10 bản ghi Progress
-  );
+
+
