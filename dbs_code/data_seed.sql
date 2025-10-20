@@ -494,4 +494,142 @@ AND (
                      'Digital Marketing 101', 
                      'Cloud Fundamentals')
     )
+
+    -- =====================================================================
+-- 05_watchlist_progress.sql
+-- Người thực hiện: Bao
+-- Nhiệm vụ: Tạo dữ liệu demo cho Watchlist (~20) và Progress (~10)
+-- =====================================================================
+
+-- Lấy IDs của các sinh viên
+WITH student_ids AS (
+    SELECT id, email FROM users WHERE role = 'student'
+),
+-- Lấy IDs của các khóa học
+course_ids AS (
+    SELECT id, title FROM courses
+),
+-- Lấy IDs của các bài học (chỉ lấy 10 bài đầu tiên để demo progress)
+lesson_ids AS (
+    SELECT id, section_id, duration_sec 
+    FROM lessons 
+    LIMIT 10
+)
+
+-- 1. WATCHLIST (Danh sách yêu thích) - Yêu cầu ~20 dữ liệu
+-- ========================================================
+INSERT INTO watchlist (user_id, course_id)
+VALUES
+-- Tommy Pham (ID: 7) thích 5 khóa học
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Flutter for Beginners')),
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Introduction to Cybersecurity')),
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'UI/UX Design for Beginners')),
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Digital Marketing 101')),
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Japanese Language N5 Preparation')),
+
+-- Hannah Vu (ID: 8) thích 5 khóa học
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Modern Web Development with React')),
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'AWS Cloud Fundamentals')),
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Adobe Photoshop Masterclass')),
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Social Media Marketing Strategy')),
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Korean for Everyday Conversation')),
+
+-- Kevin Do (ID: 9) thích 5 khóa học (trùng với Tommy)
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Flutter for Beginners')),
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Introduction to Cybersecurity')),
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'UI/UX Design for Beginners')),
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Digital Marketing 101')),
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Japanese Language N5 Preparation')),
+
+-- Lily Tran (ID: 10) thích 5 khóa học (trùng với Hannah)
+((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Modern Web Development with React')),
+((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'AWS Cloud Fundamentals')),
+((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Adobe Photoshop Masterclass')),
+((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Social Media Marketing Strategy')),
+((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Korean for Everyday Conversation'));
+-- TỔNG CỘNG: 20 bản ghi Watchlist
+
+
+-- 2. ENROLLMENTS (Cần có enrollment mới có progress)
+-- ========================================================
+INSERT INTO enrollments (user_id, course_id, purchased_at)
+VALUES
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Modern Web Development with React'), now() - interval '30 days'),
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'AWS Cloud Fundamentals'), now() - interval '20 days'),
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'UI/UX Design for Beginners'), now() - interval '15 days');
+
+
+-- 3. PROGRESS (Tiến độ học tập) - Yêu cầu ~10 dữ liệu
+-- ========================================================
+
+-- Tommy Pham (ID: 7) - Khóa React
+INSERT INTO progress (user_id, lesson_id, watched_sec, is_done, updated_at)
+VALUES
+-- Bài 1.1: Hoàn thành
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), 
+ (SELECT id FROM lessons WHERE title='What is React?'), 
+ (SELECT duration_sec FROM lessons WHERE title='What is React?'), 
+ TRUE, now() - interval '25 days'),
+
+-- Bài 2.1: Xem 50%
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Props and State'), 
+ (SELECT duration_sec/2 FROM lessons WHERE title='Props and State'), 
+ FALSE, now() - interval '20 days'),
+
+-- Bài 3.1: Mới bắt đầu
+((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Using useState and useEffect'), 
+ 60, FALSE, now() - interval '10 days');
+
+
+-- Hannah Vu (ID: 8) - Khóa AWS Cloud
+INSERT INTO progress (user_id, lesson_id, watched_sec, is_done, updated_at)
+VALUES
+-- Bài 1.1: Hoàn thành (Cloud Basics)
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), 
+ (SELECT id FROM lessons WHERE title='What is Cloud Computing?'), 
+ (SELECT duration_sec FROM lessons WHERE title='What is Cloud Computing?'), 
+ TRUE, now() - interval '18 days'),
+
+-- Bài 2.1: Hoàn thành (AWS Core Services)
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Amazon EC2 and S3'), 
+ (SELECT duration_sec FROM lessons WHERE title='Amazon EC2 and S3'), 
+ TRUE, now() - interval '15 days'),
+
+-- Bài 3.1: Xem 75% (Deploying Applications)
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Deploying on AWS Lambda'), 
+ (SELECT duration_sec*3/4 FROM lessons WHERE title='Deploying on AWS Lambda'), 
+ FALSE, now() - interval '5 days'),
+ 
+-- Bài 1.1 trong khóa Cybersecurity (ID: 10) - Không cần enroll để theo dõi
+((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Understanding Threats'), 
+ (SELECT duration_sec/2 FROM lessons WHERE title='Understanding Threats'), 
+ FALSE, now() - interval '1 days'); -- Thêm 1 bài để đủ số lượng demo, dù Hannah chưa enroll (Progress vẫn có thể ghi lại nếu người dùng xem preview)
+
+
+-- Kevin Do (ID: 9) - Khóa UI/UX Design
+INSERT INTO progress (user_id, lesson_id, watched_sec, is_done, updated_at)
+VALUES
+-- Bài 1.1: Hoàn thành (UI/UX Fundamentals)
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Design Thinking Basics'), 
+ (SELECT duration_sec FROM lessons WHERE title='Design Thinking Basics'), 
+ TRUE, now() - interval '10 days'),
+
+-- Bài 2.1: Xem 90% (Wireframes and Prototypes)
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Using Figma'), 
+ (SELECT duration_sec*9/10 FROM lessons WHERE title='Using Figma'), 
+ FALSE, now() - interval '5 days'),
+
+-- Bài 3.1: Chưa xem (Usability Testing)
+((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), 
+ (SELECT id FROM lessons WHERE title='Testing Techniques'), 
+ 0, FALSE, now() - interval '1 days');
+ 
+-- TỔNG CỘNG: 10 bản ghi Progress
   );
