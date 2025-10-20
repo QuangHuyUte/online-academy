@@ -455,31 +455,45 @@ VALUES
 INSERT INTO enrollments (user_id, course_id)
 SELECT u.id, c.id
 FROM users u, courses c
-WHERE u.role='student'
+WHERE u.role = 'student'
 AND (
     (u.email = 'tommy@academy.com'
-     AND c.title IN ('mobile-development', 'web-development', 'uiux-design')
+     AND c.title IN ('Modern Web Development with React', 
+                     'Flutter for Beginners', 
+                     'UI/UX Design for Beginners')
     ) OR
     (u.email = 'hannah@academy.com'
-     AND c.title IN ('english-language', 'translation-interpretation')
+     AND c.title IN ('English Communication for Beginners', 
+                     'Translation and Interpretation Basics')
     ) OR
     (u.email = 'kevin@academy.com'
-     AND c.title IN ('digital-marketing', 'social-media-marketing', 'graphic-design')
+     AND c.title IN ('Digital Marketing 101', 
+                     'Social Media Marketing Strategy', 
+                     'Adobe Photoshop Masterclass')
     ) OR
     (u.email = 'lily@academy.com'
-     AND c.title IN ('japanese-language', 'korean-language', 'english-language')
+     AND c.title IN ('Japanese Language N5 Preparation', 
+                     'Korean for Everyday Conversation', 
+                     'English Communication for Beginners')
     ) OR
     (u.email = 'jason@academy.com'
-     AND c.title IN ('cyber-security', 'cloud-computing')
+     AND c.title IN ('Introduction to Cybersecurity', 
+                     'AWS Cloud Fundamentals')
     ) OR
     (u.email = 'sarah@academy.com'
-     AND c.title IN ('mobile-development', 'uiux-design', 'graphic-design')
+     AND c.title IN ('UI/UX Design for Beginners', 
+                     'Adobe Photoshop Masterclass', 
+                     'Digital Marketing 101')
     ) OR
     (u.email = 'ryan@academy.com'
-     AND c.title IN ('translation-interpretation', 'web-development', 'digital-marketing')
+     AND c.title IN ('Modern Web Development with React', 
+                     'AWS Cloud Fundamentals', 
+                     'Social Media Marketing Strategy')
     ) OR
     (u.email = 'amy@academy.com'
-     AND c.title IN ('cloud-computing', 'english-language')
+     AND c.title IN ('Korean for Everyday Conversation', 
+                     'English Communication for Beginners', 
+                     'Translation and Interpretation Basics')
     )
 );
     -- =====================================================================
