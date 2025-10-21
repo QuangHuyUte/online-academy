@@ -617,3 +617,126 @@ BEGIN
 END $$;
 
 
+-- ========================================================
+-- 06_reviews.sql
+-- Người thực hiện: Phúc
+-- Nhiệm vụ: Tạo dữ liệu đánh giá (reviews)
+-- Mỗi khóa học có khoảng 4–5 đánh giá từ các học viên
+-- ========================================================
+
+-- Giả định: bảng reviews có các cột:
+-- id | user_id | course_id | rating | comment | created_at
+
+INSERT INTO reviews (user_id, course_id, rating, comment, created_at)
+VALUES
+-- ========================================================
+-- 1️⃣ Modern Web Development with React (5 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 5, 'Amazing course! Helped me understand React clearly.', now() - interval '28 days'),
+
+((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 4, 'Good content, but could use more hands-on coding.', now() - interval '26 days'),
+
+((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 5, 'Instructor explains concepts very well. Loved it!', now() - interval '23 days'),
+
+((SELECT id FROM users WHERE email='lily@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 4, 'Nice structure, examples are clear and helpful.', now() - interval '20 days'),
+
+((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 5, 'Very practical and beginner-friendly!', now() - interval '19 days'),
+
+
+-- ========================================================
+-- 2️⃣ Flutter for Beginners (4 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 4, 'Good for starting Flutter, nice step-by-step approach.', now() - interval '25 days'),
+
+((SELECT id FROM users WHERE email='jason@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 5, 'Really fun! I built my first app after this course.', now() - interval '22 days'),
+
+((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 4, 'Great visuals, a bit fast in advanced parts though.', now() - interval '18 days'),
+
+((SELECT id FROM users WHERE email='sarah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 5, 'Loved it! The lessons were clear and easy to follow.', now() - interval '16 days'),
+
+
+-- ========================================================
+-- 3️⃣ AWS Cloud Fundamentals (5 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 5, 'Excellent introduction to AWS core services.', now() - interval '14 days'),
+
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 4, 'Good overview, I liked the EC2 and S3 labs.', now() - interval '12 days'),
+
+((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 5, 'Super useful and very up-to-date.', now() - interval '10 days'),
+
+((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 4, 'Clear explanations, could use more practice examples.', now() - interval '8 days'),
+
+((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 5, 'Perfect for beginners to cloud computing!', now() - interval '6 days'),
+
+
+-- ========================================================
+-- 4️⃣ UI/UX Design for Beginners (4 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 5, 'Loved this course! Strong fundamentals in design.', now() - interval '10 days'),
+
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 4, 'Nice visuals, Figma lessons were really cool.', now() - interval '8 days'),
+
+((SELECT id FROM users WHERE email='sarah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 5, 'Great mix of theory and practice.', now() - interval '7 days'),
+
+((SELECT id FROM users WHERE email='lily@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 4, 'Could use more design challenges, but very good.', now() - interval '5 days'),
+
+
+-- ========================================================
+-- 5️⃣ Digital Marketing 101 (5 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 5, 'Fantastic course! I learned SEO and Ads basics.', now() - interval '6 days'),
+
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 4, 'Good examples, very practical for real-world work.', now() - interval '5 days'),
+
+((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 5, 'Clear structure, easy to follow.', now() - interval '4 days'),
+
+((SELECT id FROM users WHERE email='jason@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 5, 'Loved the instructor energy, great intro to marketing!', now() - interval '3 days'),
+
+((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 4, 'Helpful but could use more case studies.', now() - interval '2 days');
+
