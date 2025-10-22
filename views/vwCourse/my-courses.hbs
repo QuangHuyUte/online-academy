@@ -1,0 +1,31 @@
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">My Courses</h3>
+    <a class="btn btn-primary" href="/instructor/courses/new">
+      <i class="bi bi-plus-circle"></i> New Course
+    </a>
+  </div>
+
+  {{> flash}}
+
+  {{#if courses.length}}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>#</th><th>Title</th><th>Category</th><th>Price</th><th>Status</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each courses}}
+        <tr>
+          <td>{{addOne @index}}</td>
+          <td>{{this.title}}</td>
+          <td>{{this.cat_name}}</td>
+          <td>${{this.price}}</td>
+          <td>
+            {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
+          </td>
+          <td>
+            <a href="/instructor/courses/{{this.id}}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+            <form action="/instructor/courses/{{this.id}}/comp

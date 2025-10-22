@@ -1,0 +1,34 @@
+<div class="row">
+  <div class="col-3">
+    {{> sidebar}}
+  </div>
+
+  <div class="col-9">
+    <h3>{{#if category}}Edit Category{{else}}New Category{{/if}}</h3>
+
+    <form method="post" action="{{action}}">
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input name="name" class="form-control" value="{{category.name}}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Slug</label>
+        <input name="slug" class="form-control" value="{{category.slug}}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Parent Category</label>
+        <select name="parent_id" class="form-select">
+          <option value="">-- None --</option>
+          {{#each parents}}
+            <option value="{{this.id}}" {{#ifeq this.id ../category.parent_id}}selected{{/ifeq}}>
+              {{this.name}}
+            </option>
+          {{/each}}
+        </select>
+      </div>
+
+      <button class="btn btn-success">Save</button>
+      <a href="/admin/categories" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+  </div>
+</div>

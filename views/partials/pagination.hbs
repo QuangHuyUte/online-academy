@@ -1,0 +1,17 @@
+<nav>
+  <ul class="pagination justify-content-center">
+    {{#if hasPrev}}
+      <li class="page-item"><a class="page-link" href="?page={{prev}}">Previous</a></li>
+    {{/if}}
+
+    {{#each pages}}
+      <li class="page-item {{#if this.active}}active{{/if}}">
+        <a class="page-link" href="?page={{this.num}}">{{this.num}}</a>
+      </li>
+    {{/each}}
+
+    {{#if hasNext}}
+      <li class="page-item"><a class="page-link" href="?page={{next}}">Next</a></li>
+    {{/if}}
+  </ul>
+</nav>

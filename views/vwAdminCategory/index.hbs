@@ -1,0 +1,43 @@
+<div class="row">
+  <div class="col-3">
+    {{> sidebar}}
+  </div>
+
+  <div class="col-9">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="mb-0">Categories</h3>
+      <a href="/admin/categories/new" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Category
+      </a>
+    </div>
+
+    {{> flash}}
+
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>#</th><th>Name</th><th>Slug</th><th>Parent</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each categories}}
+        <tr>
+          <td>{{addOne @index}}</td>
+          <td>{{this.name}}</td>
+          <td><code>{{this.slug}}</code></td>
+          <td>{{this.parent_name}}</td>
+          <td>
+            <a class="btn btn-sm btn-outline-primary" href="/admin/categories/{{this.id}}/edit">Edit</a>
+            <form action="/admin/categories/{{this.id}}/delete" method="post" class="d-inline"
+                  onsubmit="return confirm('Delete this category?');">
+              <button class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    {{> pagination pagination}}
+  </div>
+</div>
