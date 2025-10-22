@@ -28,10 +28,10 @@
           <td>${{this.price}}</td>
           <td>
             {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
-            {{#if this.is_hidden}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
+            {{#if this.is_removed}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
           </td>
           <td>
-            {{#if this.is_hidden}}
+            {{#if this.is_removed}}
               <form action="/admin/courses/{{this.id}}/unhide" method="post" class="d-inline">
                 <button class="btn btn-sm btn-success">Unhide</button>
               </form>

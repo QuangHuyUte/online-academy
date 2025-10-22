@@ -35,5 +35,5 @@ export function countCourses(id) {
 
 export async function canDelete(id) {
   const { amount } = await countCourses(id);
-  return amount === 0;
+  return Number(amount) === 0;
 }

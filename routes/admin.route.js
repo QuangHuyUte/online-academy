@@ -2,7 +2,7 @@
 import express from 'express';
 import * as categoryModel from '../models/category.model.js';
 import * as courseModel from '../models/course.model.js';
-import { authRequired, requireAdmin } from '../middlewares/auth.mdw.js';
+import { authRequired, requireAdmin } from '../middlewares/auth.mdw.js'; // giữ đúng tên folder bạn đang dùng
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ router.get('/categories', async (req, res, next) => {
 });
 
 // 📘 New Category Form
-router.get('/categories/new', async (req, res) => {
+router.get('/categories/new', (req, res) => {
   res.render('vwAdminCategory/form', { title: 'New Category', category: {} });
 });
 
@@ -30,8 +30,8 @@ router.get('/categories/new', async (req, res) => {
 router.post('/categories', async (req, res, next) => {
   try {
     await categoryModel.add({
-      name: req.body.name.trim(),
-      slug: req.body.slug.trim(),
+      name: req.body.name?.trim(),
+      slug: req.body.slug?.trim(),
       parent_id: req.body.parent_id || null,
     });
     req.session.flash = { type: 'success', message: 'Category created successfully.' };
@@ -62,8 +62,8 @@ router.get('/categories/:id/edit', async (req, res, next) => {
 router.post('/categories/:id', async (req, res, next) => {
   try {
     await categoryModel.patch(req.params.id, {
-      name: req.body.name.trim(),
-      slug: req.body.slug.trim(),
+      name: req.body.name?.trim(),
+      slug: req.body.slug?.trim(),
       parent_id: req.body.parent_id || null,
     });
     req.session.flash = { type: 'success', message: 'Category updated.' };
@@ -73,12 +73,13 @@ router.post('/categories/:id', async (req, res, next) => {
   }
 });
 
-// 📘 Delete Category
+// 📘 Delete Category (chặn xoá nếu đã có course)
 router.post('/categories/:id/delete', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const cnt = await courseModel.countByCat(id);
-    if (cnt.amount > 0) {
+    const cnt = await courseModel.countByCat(id);        // { amount: '3' } (Postgres trả string)
+    const total = Number(cnt?.amount ?? 0);              // ép number để so sánh an toàn
+    if (total > 0) {
       req.session.flash = {
         type: 'danger',
         message: 'Cannot delete — category already has courses.',
@@ -96,11 +97,13 @@ router.post('/categories/:id/delete', async (req, res, next) => {
 
 /* =============================== COURSE ADMIN =============================== */
 
-// 📘 List all courses (with optional search)
+// 📘 List all courses (optional search)
 router.get('/courses', async (req, res, next) => {
   try {
     const q = req.query.q?.trim() || '';
-    const offset = 0, limit = 20;
+    const offset = 0;
+    const limit = 20;
+    // Admin có thể xem cả course đã remove; view kiểm tra course.is_removed để hiển thị trạng thái
     const courses = await courseModel.findPageAdmin(offset, limit, q);
     res.render('vwAdminCourse/index', { title: 'Courses', courses, q });
   } catch (err) {
@@ -108,18 +111,19 @@ router.get('/courses', async (req, res, next) => {
   }
 });
 
-// 📘 Toggle Hide/Unhide Course
-router.post('/courses/:id/hide', async (req, res, next) => {
+// 📘 Toggle Remove / Restore Course (dùng is_removed thay cho is_hidden)
+router.post('/courses/:id/remove', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const course = await courseModel.findById(id);
     if (!course) return res.sendStatus(404);
 
-    const hidden = !course.is_hidden;
-    await courseModel.patch(id, { is_hidden: hidden });
+    const removed = !course.is_removed; // đảo trạng thái
+    await courseModel.patch(id, { is_removed: removed });
+
     req.session.flash = {
       type: 'success',
-      message: hidden ? 'Course hidden.' : 'Course visible.',
+      message: removed ? 'Course removed (soft-delete).' : 'Course restored.',
     };
     res.redirect('/admin/courses');
   } catch (err) {

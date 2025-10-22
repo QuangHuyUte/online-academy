@@ -1,31 +1,16 @@
-// routes/instructor.route.js
 import express from 'express';
 import path from 'path';
-import multer from 'multer';
 import fs from 'fs';
+import multer from 'multer';
 
 import * as courseModel from '../models/course.model.js';
 import * as categoryModel from '../models/category.model.js';
 import * as instructorModel from '../models/instructor.model.js';
+import { authRequired, requireInstructor } from '../middlewares/auth.mdw.js';
 
 const router = express.Router();
 
-/* -------------------------- Auth middlewares (basic) -------------------------- */
-function authRequired(req, res, next) {
-  if (!req.session?.auth || !req.session.user) {
-    req.session.flash = { type: 'warning', message: 'Vui lòng đăng nhập.' };
-    return res.redirect('/account/login');
-  }
-  next();
-}
-function requireInstructor(req, res, next) {
-  if (req.session.user?.role !== 'instructor') {
-    return res.sendStatus(403);
-  }
-  next();
-}
-
-/* ---------------------------------- Helpers --------------------------------- */
+/* ----------------------------- Helper: slugify ----------------------------- */
 function slugify(str = '') {
   return str
     .normalize('NFD')
@@ -36,237 +21,184 @@ function slugify(str = '') {
     .toLowerCase();
 }
 
-/* ------------------------------- Multer setup ------------------------------- */
+/* ------------------------------- Multer setup ------------------------------ */
 const uploadDir = 'public/uploads';
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || '');
-    const base = path.basename(file.originalname || 'file', ext);
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext);
     cb(null, `${slugify(base)}-${Date.now()}${ext}`);
   },
 });
-const upload = multer({ storage });
 
-/* =============================== INSTRUCTOR UI ============================== */
+const fileFilter = (_req, file, cb) => {
+  // cho ảnh & video cơ bản; tuỳ bạn siết lại MIME
+  const allow = /image\/|video\//.test(file.mimetype);
+  if (!allow) return cb(new Error('Only image/video files are allowed'));
+  cb(null, true);
+};
 
-/** GET /instructor/my-courses
- *  Liệt kê course của chính instructor (phân trang)
- *  View: vwCourse/my-courses.hbs
- */
-router.get(
-  '/my-courses',
-  authRequired,
-  requireInstructor,
-  async (req, res, next) => {
-    try {
-      const instructorUserId = req.session.user.id;
-      // Lấy instructor_id từ user_id
-      const ins = await instructorModel.findByUserId(instructorUserId);
-      if (!ins) return res.status(404).send('Không tìm thấy instructor.');
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 1024 * 1024 * 200 }, // 200MB, điều chỉnh tuỳ ý
+});
 
-      const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-      const limit = Math.max(parseInt(req.query.limit || '8', 10), 1);
-      const offset = (page - 1) * limit;
+/* ============================ INSTRUCTOR FEATURE ============================ */
 
-      // Model bạn cần có: findPageByInstructor(instructorId, offset, limit)
-      // và countByInstructor(instructorId)
-      const [rows, cnt] = await Promise.all([
-        courseModel.findPageByInstructor(ins.id, offset, limit),
-        courseModel.countByInstructor(ins.id),
-      ]);
+// 📘 My Courses list
+router.get('/my-courses', authRequired, requireInstructor, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const instructor = await instructorModel.findByUserId(userId);
+    if (!instructor) return res.status(404).send('Instructor not found');
 
-      const total = Number(cnt?.amount ?? cnt?.count ?? 0);
-      const totalPages = Math.max(Math.ceil(total / limit), 1);
+    const page = Number(req.query.page) || 1;
+    const limit = 6;
+    const offset = (page - 1) * limit;
 
-      res.render('vwCourse/my-courses', {
-        courses: rows,
-        page,
-        totalPages,
-        limit,
-      });
-    } catch (err) {
-      next(err);
-    }
+    // Gợi ý: ẩn course đã remove
+    const [rows, countObj] = await Promise.all([
+      courseModel.findPageByInstructor(instructor.id, offset, limit, { excludeRemoved: true }),
+      courseModel.countByInstructor(instructor.id, { excludeRemoved: true }),
+    ]);
+    const total = Number(countObj?.amount || 0);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    res.render('vwCourse/my-courses', {
+      title: 'My Courses',
+      courses: rows,
+      page,
+      totalPages,
+    });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
-/** GET /instructor/courses/new
- *  Form tạo course
- *  View: vwCourse/course-form.hbs
- */
-router.get(
-  '/courses/new',
-  authRequired,
-  requireInstructor,
-  async (_req, res, next) => {
-    try {
-      const categories = await categoryModel.findAll();
-      res.render('vwCourse/course-form', {
-        isNew: true,
-        categories,
-        course: {},
-      });
-    } catch (err) {
-      next(err);
-    }
+// 📘 New Course form
+router.get('/courses/new', authRequired, requireInstructor, async (_req, res, next) => {
+  try {
+    const categories = await categoryModel.findAll();
+    res.render('vwCourse/course-form', { title: 'New Course', categories, course: {} });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
-/** POST /instructor/courses
- *  Tạo course mới
- */
-router.post(
-  '/courses',
-  authRequired,
-  requireInstructor,
-  async (req, res, next) => {
-    try {
-      const instructorUserId = req.session.user.id;
-      const ins = await instructorModel.findByUserId(instructorUserId);
-      if (!ins) return res.status(404).send('Không tìm thấy instructor.');
+// 📘 Create Course
+router.post('/courses', authRequired, requireInstructor, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const instructor = await instructorModel.findByUserId(userId);
+    if (!instructor) return res.status(400).send('Instructor profile not found');
 
-      const {
-        title,
-        short_desc,
-        long_desc_html,
-        cover_url, // nếu upload client-side -> gửi đường dẫn; hoặc dùng /upload ở dưới
-        price,
-        promo_price,
-        cat_id,
-      } = req.body;
+    const data = {
+      instructor_id: instructor.id,
+      cat_id: Number(req.body.cat_id),
+      title: req.body.title?.trim(),
+      short_desc: req.body.short_desc?.trim() || null,
+      long_desc_html: req.body.long_desc_html || '',
+      cover_url: req.body.cover_url || null,   // lấy từ ô input hidden sau khi upload
+      price: Number(req.body.price || 0),
+      promo_price: req.body.promo_price ? Number(req.body.promo_price) : null,
+      is_removed: false,
+      is_completed: false,
+      last_updated_at: new Date(),
+    };
 
-      const course = {
-        instructor_id: ins.id,
-        cat_id: Number(cat_id),
-        title: title?.trim(),
-        short_desc: short_desc?.trim(),
-        long_desc_html: long_desc_html || '',
-        cover_url: cover_url || null,
-        price: Number(price || 0),
-        promo_price: promo_price ? Number(promo_price) : null,
-        slug: slugify(title),
-        is_hidden: false,
-        is_completed: false,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+    // Optional: validate cat_id tồn tại
+    // const cat = await categoryModel.findById(data.cat_id);
+    // if (!cat) return res.status(400).send('Invalid category');
 
-      // Model: add(course) -> returning id
-      const inserted = await courseModel.add(course);
-      const courseId =
-        Array.isArray(inserted) ? inserted[0]?.id || inserted[0] : inserted?.id;
+    await courseModel.add(data);
 
-      req.session.flash = { type: 'success', message: 'Tạo khoá học thành công!' };
-      return res.redirect(`/instructor/courses/${courseId}/edit`);
-    } catch (err) {
-      next(err);
-    }
+    req.session.flash = { type: 'success', message: 'Course created successfully.' };
+    res.redirect('/instructor/my-courses');
+  } catch (err) {
+    next(err);
   }
-);
+});
 
-/** GET /instructor/courses/:id/edit
- *  Sửa course
- *  View: vwCourse/course-form.hbs
- */
-router.get(
-  '/courses/:id/edit',
-  authRequired,
-  requireInstructor,
-  async (req, res, next) => {
-    try {
-      const id = Number(req.params.id);
-      const course = await courseModel.findById(id);
-      if (!course) return res.sendStatus(404);
+// 📘 Edit Course form
+router.get('/courses/:id/edit', authRequired, requireInstructor, async (req, res, next) => {
+  try {
+    const userId = req.session.user.id;
+    const instructor = await instructorModel.findByUserId(userId);
+    if (!instructor) return res.status(400).send('Instructor profile not found');
 
-      const categories = await categoryModel.findAll();
-      res.render('vwCourse/course-form', {
-        isNew: false,
-        categories,
-        course,
-      });
-    } catch (err) {
-      next(err);
-    }
+    const course = await courseModel.findById(req.params.id);
+    if (!course) return res.sendStatus(404);
+
+    // Check ownership
+    if (course.instructor_id !== instructor.id) return res.sendStatus(403);
+
+    const categories = await categoryModel.findAll();
+    res.render('vwCourse/course-form', { title: 'Edit Course', course, categories });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
-/** POST /instructor/courses/:id
- *  Cập nhật course
- */
-router.post(
-  '/courses/:id',
-  authRequired,
-  requireInstructor,
-  async (req, res, next) => {
-    try {
-      const id = Number(req.params.id);
-      const {
-        title,
-        short_desc,
-        long_desc_html,
-        cover_url,
-        price,
-        promo_price,
-        cat_id,
-      } = req.body;
+// 📘 Update Course
+router.post('/courses/:id', authRequired, requireInstructor, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.session.user.id;
+    const instructor = await instructorModel.findByUserId(userId);
+    if (!instructor) return res.status(400).send('Instructor profile not found');
 
-      const patch = {
-        title: title?.trim(),
-        short_desc: short_desc?.trim(),
-        long_desc_html: long_desc_html || '',
-        cover_url: cover_url || null,
-        price: Number(price || 0),
-        promo_price: promo_price ? Number(promo_price) : null,
-        cat_id: Number(cat_id),
-        slug: slugify(title),
-        updated_at: new Date(),
-      };
+    const course = await courseModel.findById(id);
+    if (!course) return res.sendStatus(404);
+    if (course.instructor_id !== instructor.id) return res.sendStatus(403);
 
-      await courseModel.updateById(id, patch);
-      req.session.flash = { type: 'success', message: 'Cập nhật khoá học thành công!' };
-      res.redirect(`/instructor/courses/${id}/edit`);
-    } catch (err) {
-      next(err);
-    }
+    const patch = {
+      title: req.body.title?.trim(),
+      short_desc: req.body.short_desc?.trim() || null,
+      long_desc_html: req.body.long_desc_html || '',
+      cat_id: Number(req.body.cat_id),
+      cover_url: req.body.cover_url || course.cover_url || null,
+      price: Number(req.body.price || 0),
+      promo_price: req.body.promo_price ? Number(req.body.promo_price) : null,
+      last_updated_at: new Date(),
+    };
+
+    await courseModel.patch(id, patch);
+    req.session.flash = { type: 'success', message: 'Course updated successfully.' };
+    res.redirect('/instructor/my-courses');
+  } catch (err) {
+    next(err);
   }
-);
+});
 
-/** POST /instructor/courses/:id/complete
- *  Đánh dấu đủ nội dung
- */
-router.post(
-  '/courses/:id/complete',
-  authRequired,
-  requireInstructor,
-  async (req, res, next) => {
-    try {
-      const id = Number(req.params.id);
-      await courseModel.updateById(id, { is_completed: true, updated_at: new Date() });
-      req.session.flash = { type: 'success', message: 'Đã đánh dấu hoàn thành.' };
-      res.redirect('/instructor/my-courses');
-    } catch (err) {
-      next(err);
-    }
-  }
-);
+// 📘 Mark Course Completed
+router.post('/courses/:id/complete', authRequired, requireInstructor, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.session.user.id;
+    const instructor = await instructorModel.findByUserId(userId);
+    if (!instructor) return res.status(400).send('Instructor profile not found');
 
-/** POST /instructor/upload
- *  Upload file (thumbnail/video) – dùng Uppy/Multer
- *  Client gửi field 'file'
- *  Trả về JSON: { url: '/uploads/xxx.ext' }
- */
-router.post(
-  '/upload',
-  authRequired,
-  requireInstructor,
-  upload.single('file'),
-  (req, res) => {
-    const relPath = req.file?.path?.replace(/^public/, '') || '';
-    return res.json({ url: relPath });
+    const course = await courseModel.findById(id);
+    if (!course) return res.sendStatus(404);
+    if (course.instructor_id !== instructor.id) return res.sendStatus(403);
+
+    await courseModel.patch(id, { is_completed: true, last_updated_at: new Date() });
+    req.session.flash = { type: 'success', message: 'Marked as completed.' };
+    res.redirect('/instructor/my-courses');
+  } catch (err) {
+    next(err);
   }
-);
+});
+
+// 📘 Upload (Uppy/Multer)
+router.post('/upload', authRequired, requireInstructor, upload.single('file'), (req, res) => {
+  // Static đang serve từ /public → trả về path bắt đầu từ /
+  const relPath = req.file?.path?.replace(/^public/, '') || '';
+  res.json({ url: relPath }); // ví dụ: /uploads/abc-123.jpg
+});
 
 export default router;
