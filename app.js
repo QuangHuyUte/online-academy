@@ -4,6 +4,8 @@ import hbs_sections from 'express-handlebars-sections';
 import session from 'express-session';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
+import { restrictAdmin, checkAuthenticated } from './middlewares/auth.mdw.js';
+
 
 dotenv.config();
 const app = express();
