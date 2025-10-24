@@ -1,0 +1,51 @@
+<form action="" method="post">
+  <div class="card">
+    <div class="card-header">Change Password</div>
+    <div class="card-body">
+       {{#if error}}
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <strong>Error.</strong> Invalid password.
+            </div>
+        {{/if}}
+        <div class="mb-3">
+          <label for="txtID" class="form-label">ID</label>
+          <input
+            type="text"
+            class="form-control"
+            id="txtID"
+            name="id"
+            value="{{user.id}}"
+            readonly
+          />
+        </div>
+        <div class="mb-3">
+          <label for="txtcurPass" class="form-label">Current Password</label>
+          <input
+            type="password"
+            class="form-control"
+            id="txtcurPass"
+            name="currentPassword"
+          />
+        </div>
+        <div class="mb-3">
+          <label for="txtnewPass" class="form-label">New Password</label>
+          <input
+            type="password"
+            class="form-control"
+            id="txtnewPass"
+            name="newPassword"
+          />
+        </div>
+        <div class="mb-3">
+          <label for="txtConfirmPass" class="form-label">Comfirm Password</label>
+          <input type="password" class="form-control" id="txtConfirmPass" />
+        </div>
+    </div>
+    <div class="card-footer text-muted">
+      <button type="submit" name="" id="" class="btn btn-primary">
+        Save
+      </button>
+    </div>
+  </div>
+</form>

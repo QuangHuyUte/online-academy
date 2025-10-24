@@ -1,0 +1,49 @@
+<form action="" method="post">
+  <div class="card">
+    <h5 class="card-header">Your profile</h5>
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="txtID" class="form-label">ID</label>
+        <input type="text" class="form-control" id="txtID" name="id" value="{{user.id}}" readonly/>
+      </div>
+      <div class="mb-3">
+        <label for="txtName" class="form-label">Name</label>
+        <input type="text" class="form-control" id="txtName" name="name" value="{{user.name}}" />
+      </div>
+      <div class="mb-3">
+        <label for="txtEmail" class="form-label">Email address</label>
+        <input
+          type="email"
+          class="form-control"
+          id="txtEmail"
+          aria-describedby="emailHelp"
+          name="email"
+          value="{{user.email}}"
+          disabled
+        />
+        <div id="emailHelp" class="form-text">We'll never share your email with
+          anyone else.
+        </div>
+      </div>
+      <div class="mb-3">
+        <label for="txtRole" class="form-label">Role</label>
+        <select class="form-select" id="txtRole" name="role">
+          <option value="student">Student</option>
+          <option value="instructor">Instructor</option>
+        </select>
+        <script>
+          (function() {
+            try {
+              var sel = document.getElementById('txtRole');
+              var role = '{{user.role}}' || '';
+              if (sel && role) sel.value = role;
+            } catch (e) { /* ignore */ }
+          })();
+        </script>
+      </div>
+    </div>
+    <div class="card-footer text-muted">
+      <button type="submit" formaction="/account/profile" class="btn btn-primary">Update Profile</button>
+    </div>
+  </div>
+</form>

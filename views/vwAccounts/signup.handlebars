@@ -1,0 +1,85 @@
+{{#fill_Content 'js'}}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+    crossorigin="anonymous"></script>
+<script>
+    function handleSubmit(e) {
+        e.preventDefault();
+        //alert("Stop")
+        const email = document.querySelector('#txtEmail').value;
+        if (email.length === 0) {
+            alert('Please enter email.');
+            return;
+        }   
+        const password = document.querySelector('#txtPassword').value;
+        if (password.length === 0) {
+            alert('Please enter password.');
+            return;
+        }
+
+       fetch(`/account/is-available?email=${email}`) 
+            .then(function (res) {
+                console.log(res);
+                return res.json();
+            })
+            .then(function (data) {
+                if (data === false) {
+                    alert('email is not available.');
+                return;
+                }
+                e.target.submit();
+            })
+            .catch(function (err) {
+                console.log(err);
+                alert('An error occurred. Please try again.');
+            });
+
+
+    }
+    
+    document.querySelector('#frmRegister').addEventListener('submit', handleSubmit);
+</script>
+{{/fill_Content}}
+
+
+<div class="container my-5"> 
+    <div class="row justify-content-center"> 
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card">
+                <h5 class="card-header">Acount Registration</h5>
+                <div class="card-body">
+                    <form method="post" action="/account/signup" id="frmRegister">
+                        <div class="mb-3">
+                            <label for="txtName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="txtName" name="name" autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label for="txtPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="txtPassword" name="password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="txtConfirm" class="form-label">Password Confirm</label>
+                            <input type="password" class="form-control" id="txtConfirm" name="confirm_password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="txtEmail" class="form-label">Email address</label>
+                            <input type="email" class="form-control" id="txtEmail" aria-describedby="emailHelp"
+                                name="email">
+                            <div id="emailHelp" class="form-text">We'll never share your email with anyone else.
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="selRole" class="form-label">Role</label>
+                            <select class="form-select" id="selRole" name="role">
+                                <option value="student" selected>Student</option>
+                                <option value="instructor">Instructor</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i
+                                class="bi bi-check2-square"></i> Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
