@@ -7,7 +7,7 @@ import morgan from 'morgan';
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
@@ -17,16 +17,15 @@ app.use(morgan('dev'));
 app.engine('handlebars', engine({
   helpers: { fillContent: hbs_sections() }
 }));
-
 app.set('view engine', 'handlebars');
 app.set('views', './views');
 
-// app.use(session({
-//   secret: process.env.SESSION_SECRET,
-//   resave: false,
-//   saveUninitialized: true,
-//   cookie: { secure: false }
-// }));
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false }
+}));
 
 app.get('/', (req, res) => {
   res.render('vwHome/index');
