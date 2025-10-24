@@ -1,0 +1,72 @@
+{{#fill_Content 'js'}}
+<script>
+    function handleSubmit(e) {
+        e.preventDefault();
+        
+        const username = document.querySelector('#txtUsername').value;
+        if (username.length === 0) {
+            alert('Please enter username.');
+            return;
+        }
+        const password = document.querySelector('#txtPassword').value;
+        if (password.length === 0) {
+            alert('Please enter password.');
+            return;
+        }
+
+        fetch(`/account/is-password-correct?username=${username}&password=${password}`)
+            .then(function (res) {
+                console.log(res);
+                return res.json();
+            })
+            .then(function (data)  {
+                if (data === false) {
+                    alert('Wrong username or password.');
+                    return;
+                }
+                alert('Login successfully.');
+                e.target.submit();
+            })
+            .catch(function (err) {
+                console.error(err);
+                alert('Error occurred. Please try again later.');
+            });
+    }
+    //alert("Hello")
+    document.querySelector('form').addEventListener('submit', handleSubmit);
+</script>
+{{/fill_Content}}
+
+<div class="d-flex justify-content-center align-items-center min-vh-100">
+    <div class="w-100" style="max-width:420px;">
+        <form action="" method="post">
+            <div class="card">
+                <h5 class="d-flex justify-content-center">Sign In</h5>
+                <div class="card-body">
+                    {{#if error}}
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <strong>Error.</strong> Invalid Email or password.
+                    </div>
+                    {{/if}}
+                    <div class="mb-3">
+                        <label for="txtEmail" class="form-label">Email</label>
+                        <input type="text" class="form-control" id="txtEmail" name="email" autofocus />
+                    </div>
+                    <div class="mb-3">
+                        <label for="txtPassword" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="txtPassword" name="password" />
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <div class="d-grid gap-2">
+                         <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-in-right "></i>
+                        Sign In
+                    </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
