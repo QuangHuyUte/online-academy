@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
+import sanitizeHtml from 'sanitize-html';
 
 import * as courseModel from '../models/course.model.js';
 import * as categoryModel from '../models/category.model.js';
@@ -10,16 +11,27 @@ import { authRequired, requireInstructor } from '../middlewares/auth.mdw.js';
 
 const router = express.Router();
 
-/* ----------------------------- Helper: slugify ----------------------------- */
+/* ----------------------------- Helper utils ----------------------------- */
 function slugify(str = '') {
   return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
+    .trim().replace(/\s+/g, '-')
     .toLowerCase();
 }
+
+const toNum = (v) => (v === '' || v == null ? null : Number(v));
+
+const sanitizeLongHtml = (html = '') =>
+  sanitizeHtml(html, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'span', 'iframe']),
+    allowedAttributes: {
+      a: ['href', 'name', 'target', 'rel'],
+      img: ['src', 'alt', 'width', 'height', 'loading'],
+      iframe: ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
+      '*': ['style'],
+    },
+  });
 
 /* ------------------------------- Multer setup ------------------------------ */
 const uploadDir = 'public/uploads';
@@ -34,45 +46,45 @@ const storage = multer.diskStorage({
   },
 });
 
+// Siết MIME (an toàn hơn)
 const fileFilter = (_req, file, cb) => {
-  // cho ảnh & video cơ bản; tuỳ bạn siết lại MIME
-  const allow = /image\/|video\//.test(file.mimetype);
-  if (!allow) return cb(new Error('Only image/video files are allowed'));
+  const isImage = /^image\/(png|jpe?g|webp|gif)$/i.test(file.mimetype);
+  const isVideo = /^video\/(mp4|webm|ogg)$/i.test(file.mimetype);
+  if (!isImage && !isVideo) return cb(new Error('Only png/jpg/webp/gif/mp4/webm/ogg allowed'));
   cb(null, true);
 };
 
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 1024 * 1024 * 200 }, // 200MB, điều chỉnh tuỳ ý
+  limits: { fileSize: 1024 * 1024 * 200 }, // 200MB
 });
+
+/* --------------------------- Protect all routes ---------------------------- */
+router.use(authRequired, requireInstructor);
 
 /* ============================ INSTRUCTOR FEATURE ============================ */
 
 // 📘 My Courses list
-router.get('/my-courses', authRequired, requireInstructor, async (req, res, next) => {
+router.get('/my-courses', async (req, res, next) => {
   try {
-    const userId = req.session.user.id;
-    const instructor = await instructorModel.findByUserId(userId);
-    if (!instructor) return res.status(404).send('Instructor not found');
+    const me = await instructorModel.findByUserId(req.session.user.id);
+    if (!me) return res.status(404).send('Instructor not found');
 
-    const page = Number(req.query.page) || 1;
+    const page = Math.max(1, Number(req.query.page) || 1);
     const limit = 6;
     const offset = (page - 1) * limit;
 
-    // Gợi ý: ẩn course đã remove
-    const [rows, countObj] = await Promise.all([
-      courseModel.findPageByInstructor(instructor.id, offset, limit, { excludeRemoved: true }),
-      courseModel.countByInstructor(instructor.id, { excludeRemoved: true }),
+    const [rows, { amount }] = await Promise.all([
+      courseModel.findPageByInstructor(me.id, offset, limit, { excludeRemoved: true }),
+      courseModel.countByInstructor(me.id, { excludeRemoved: true }),
     ]);
-    const total = Number(countObj?.amount || 0);
-    const totalPages = Math.max(1, Math.ceil(total / limit));
 
     res.render('vwCourse/my-courses', {
       title: 'My Courses',
       courses: rows,
       page,
-      totalPages,
+      totalPages: Math.max(1, Math.ceil(Number(amount || 0) / limit)),
     });
   } catch (err) {
     next(err);
@@ -80,7 +92,7 @@ router.get('/my-courses', authRequired, requireInstructor, async (req, res, next
 });
 
 // 📘 New Course form
-router.get('/courses/new', authRequired, requireInstructor, async (_req, res, next) => {
+router.get('/courses/new', async (_req, res, next) => {
   try {
     const categories = await categoryModel.findAll();
     res.render('vwCourse/course-form', { title: 'New Course', categories, course: {} });
@@ -90,33 +102,45 @@ router.get('/courses/new', authRequired, requireInstructor, async (_req, res, ne
 });
 
 // 📘 Create Course
-router.post('/courses', authRequired, requireInstructor, async (req, res, next) => {
+router.post('/courses', async (req, res, next) => {
   try {
-    const userId = req.session.user.id;
-    const instructor = await instructorModel.findByUserId(userId);
-    if (!instructor) return res.status(400).send('Instructor profile not found');
+    const me = await instructorModel.findByUserId(req.session.user.id);
+    if (!me) return res.status(400).send('Instructor profile not found');
 
-    const data = {
-      instructor_id: instructor.id,
+    const payload = {
+      instructor_id: me.id,
       cat_id: Number(req.body.cat_id),
       title: req.body.title?.trim(),
       short_desc: req.body.short_desc?.trim() || null,
-      long_desc_html: req.body.long_desc_html || '',
-      cover_url: req.body.cover_url || null,   // lấy từ ô input hidden sau khi upload
-      price: Number(req.body.price || 0),
-      promo_price: req.body.promo_price ? Number(req.body.promo_price) : null,
+      long_desc_html: sanitizeLongHtml(req.body.long_desc_html || ''),
+      cover_url: req.body.cover_url || null, // set từ input hidden sau khi upload
+      price: toNum(req.body.price),
+      promo_price: toNum(req.body.promo_price),
       is_removed: false,
       is_completed: false,
-      last_updated_at: new Date(),
     };
 
-    // Optional: validate cat_id tồn tại
-    // const cat = await categoryModel.findById(data.cat_id);
-    // if (!cat) return res.status(400).send('Invalid category');
+    // Validate
+    if (!payload.title) {
+      res.flash('error', 'Title không được để trống.');
+      return res.redirect('back');
+    }
+    if (payload.price != null && payload.price < 0) {
+      res.flash('error', 'Giá không hợp lệ.');
+      return res.redirect('back');
+    }
+    if (payload.promo_price != null && payload.price != null && payload.promo_price > payload.price) {
+      res.flash('error', 'Giá khuyến mãi không được lớn hơn giá gốc.');
+      return res.redirect('back');
+    }
+    const cat = await categoryModel.findById(payload.cat_id);
+    if (!cat) {
+      res.flash('error', 'Category không tồn tại.');
+      return res.redirect('back');
+    }
 
-    await courseModel.add(data);
-
-    req.session.flash = { type: 'success', message: 'Course created successfully.' };
+    await courseModel.add(payload);
+    res.flash('success', 'Course created successfully.');
     res.redirect('/instructor/my-courses');
   } catch (err) {
     next(err);
@@ -124,17 +148,14 @@ router.post('/courses', authRequired, requireInstructor, async (req, res, next) 
 });
 
 // 📘 Edit Course form
-router.get('/courses/:id/edit', authRequired, requireInstructor, async (req, res, next) => {
+router.get('/courses/:id/edit', async (req, res, next) => {
   try {
-    const userId = req.session.user.id;
-    const instructor = await instructorModel.findByUserId(userId);
-    if (!instructor) return res.status(400).send('Instructor profile not found');
+    const me = await instructorModel.findByUserId(req.session.user.id);
+    if (!me) return res.status(400).send('Instructor profile not found');
 
     const course = await courseModel.findById(req.params.id);
     if (!course) return res.sendStatus(404);
-
-    // Check ownership
-    if (course.instructor_id !== instructor.id) return res.sendStatus(403);
+    if (course.instructor_id !== me.id) return res.sendStatus(403);
 
     const categories = await categoryModel.findAll();
     res.render('vwCourse/course-form', { title: 'Edit Course', course, categories });
@@ -144,50 +165,73 @@ router.get('/courses/:id/edit', authRequired, requireInstructor, async (req, res
 });
 
 // 📘 Update Course
-router.post('/courses/:id', authRequired, requireInstructor, async (req, res, next) => {
+router.post('/courses/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const userId = req.session.user.id;
-    const instructor = await instructorModel.findByUserId(userId);
-    if (!instructor) return res.status(400).send('Instructor profile not found');
+
+    const me = await instructorModel.findByUserId(req.session.user.id);
+    if (!me) return res.status(400).send('Instructor profile not found');
 
     const course = await courseModel.findById(id);
     if (!course) return res.sendStatus(404);
-    if (course.instructor_id !== instructor.id) return res.sendStatus(403);
+    if (course.instructor_id !== me.id) return res.sendStatus(403);
 
     const patch = {
       title: req.body.title?.trim(),
       short_desc: req.body.short_desc?.trim() || null,
-      long_desc_html: req.body.long_desc_html || '',
+      long_desc_html: sanitizeLongHtml(req.body.long_desc_html || ''),
       cat_id: Number(req.body.cat_id),
       cover_url: req.body.cover_url || course.cover_url || null,
-      price: Number(req.body.price || 0),
-      promo_price: req.body.promo_price ? Number(req.body.promo_price) : null,
-      last_updated_at: new Date(),
+      price: toNum(req.body.price),
+      promo_price: toNum(req.body.promo_price),
     };
 
-    await courseModel.patch(id, patch);
-    req.session.flash = { type: 'success', message: 'Course updated successfully.' };
+    if (!patch.title) {
+      res.flash('error', 'Title không được để trống.');
+      return res.redirect('back');
+    }
+    if (patch.price != null && patch.price < 0) {
+      res.flash('error', 'Giá không hợp lệ.');
+      return res.redirect('back');
+    }
+    if (patch.promo_price != null && patch.price != null && patch.promo_price > patch.price) {
+      res.flash('error', 'Giá khuyến mãi không được lớn hơn giá gốc.');
+      return res.redirect('back');
+    }
+    const cat = await categoryModel.findById(patch.cat_id);
+    if (!cat) {
+      res.flash('error', 'Category không tồn tại.');
+      return res.redirect('back');
+    }
+
+    await courseModel.patch(id, patch); // model đã tự set last_updated_at (khuyến nghị)
+    res.flash('success', 'Course updated successfully.');
     res.redirect('/instructor/my-courses');
   } catch (err) {
     next(err);
   }
 });
 
-// 📘 Mark Course Completed
-router.post('/courses/:id/complete', authRequired, requireInstructor, async (req, res, next) => {
+// 📘 Mark Course Completed (chỉ khi đủ nội dung)
+router.post('/courses/:id/complete', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const userId = req.session.user.id;
-    const instructor = await instructorModel.findByUserId(userId);
-    if (!instructor) return res.status(400).send('Instructor profile not found');
+
+    const me = await instructorModel.findByUserId(req.session.user.id);
+    if (!me) return res.status(400).send('Instructor profile not found');
 
     const course = await courseModel.findById(id);
     if (!course) return res.sendStatus(404);
-    if (course.instructor_id !== instructor.id) return res.sendStatus(403);
+    if (course.instructor_id !== me.id) return res.sendStatus(403);
 
-    await courseModel.patch(id, { is_completed: true, last_updated_at: new Date() });
-    req.session.flash = { type: 'success', message: 'Marked as completed.' };
+    const ok = await courseModel.canComplete(id);
+    if (!ok) {
+      res.flash('error', 'Khoá học chưa đủ nội dung (cần ít nhất 1 Chapter và 1 Lesson).');
+      return res.redirect('back');
+    }
+
+    await courseModel.markCompleted(id); // model đã set last_updated_at
+    res.flash('success', 'Marked as completed.');
     res.redirect('/instructor/my-courses');
   } catch (err) {
     next(err);
@@ -195,10 +239,17 @@ router.post('/courses/:id/complete', authRequired, requireInstructor, async (req
 });
 
 // 📘 Upload (Uppy/Multer)
-router.post('/upload', authRequired, requireInstructor, upload.single('file'), (req, res) => {
-  // Static đang serve từ /public → trả về path bắt đầu từ /
+router.post('/upload', upload.single('file'), (req, res) => {
   const relPath = req.file?.path?.replace(/^public/, '') || '';
   res.json({ url: relPath }); // ví dụ: /uploads/abc-123.jpg
+});
+
+// Multer error handler: trả JSON để Uppy hiện thông báo
+router.use((err, _req, res, next) => {
+  if (err instanceof multer.MulterError || /Only .* allowed/i.test(err.message)) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
 });
 
 export default router;

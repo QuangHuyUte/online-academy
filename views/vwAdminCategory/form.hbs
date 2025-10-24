@@ -4,23 +4,29 @@
   </div>
 
   <div class="col-9">
-    <h3>{{#if category}}Edit Category{{else}}New Category{{/if}}</h3>
+    <h3>{{#if category.id}}Edit Category{{else}}New Category{{/if}}</h3>
 
-    <form method="post" action="{{action}}">
+    <form method="post" action="{{#if category.id}}/admin/categories/{{category.id}}{{else}}/admin/categories{{/if}}">
+      {{#if category.id}}
+        <input type="hidden" name="id" value="{{category.id}}">
+      {{/if}}
+
       <div class="mb-3">
         <label class="form-label">Name</label>
         <input name="name" class="form-control" value="{{category.name}}" required>
       </div>
+
       <div class="mb-3">
         <label class="form-label">Slug</label>
         <input name="slug" class="form-control" value="{{category.slug}}">
       </div>
+
       <div class="mb-3">
         <label class="form-label">Parent Category</label>
         <select name="parent_id" class="form-select">
           <option value="">-- None --</option>
           {{#each parents}}
-            <option value="{{this.id}}" {{#ifeq this.id ../category.parent_id}}selected{{/ifeq}}>
+            <option value="{{this.id}}" {{#if (eq this.id ../category.parent_id)}}selected{{/if}}>
               {{this.name}}
             </option>
           {{/each}}
@@ -29,6 +35,12 @@
 
       <button class="btn btn-success">Save</button>
       <a href="/admin/categories" class="btn btn-outline-secondary">Cancel</a>
+
+      {{#if category.id}}
+        <button formaction="/admin/categories/{{category.id}}/delete" formmethod="post"
+                class="btn btn-danger float-end"
+                onclick="return confirm('Delete this category?')">Delete</button>
+      {{/if}}
     </form>
   </div>
 </div>

@@ -6,46 +6,82 @@
   <div class="col-9">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h3>Courses Management</h3>
-      <form class="d-flex" method="get">
+      <form class="d-flex" method="get" action="/admin/courses">
         <input name="q" class="form-control me-2" value="{{q}}" placeholder="Search title...">
         <button class="btn btn-outline-primary">Search</button>
       </form>
     </div>
 
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>#</th><th>Title</th><th>Category</th><th>Instructor</th><th>Price</th><th>Status</th><th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each courses}}
-        <tr>
-          <td>{{addOne @index}}</td>
-          <td>{{this.title}}</td>
-          <td>{{this.cat_name}}</td>
-          <td>{{this.ins_name}}</td>
-          <td>${{this.price}}</td>
-          <td>
-            {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
-            {{#if this.is_removed}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
-          </td>
-          <td>
-            {{#if this.is_removed}}
-              <form action="/admin/courses/{{this.id}}/unhide" method="post" class="d-inline">
-                <button class="btn btn-sm btn-success">Unhide</button>
-              </form>
-            {{else}}
-              <form action="/admin/courses/{{this.id}}/hide" method="post" class="d-inline">
-                <button class="btn btn-sm btn-warning">Hide</button>
-              </form>
-            {{/if}}
-          </td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
+    {{> flash}}
 
-    {{> pagination pagination}}
+    {{#if courses.length}}
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Instructor</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each courses}}
+          <tr>
+            <td>{{inc (add ../offset @index)}}</td>
+            <td>{{this.title}}</td>
+            <td>{{this.category}}</td>
+            <td>{{this.instructor}}</td>
+            <td>
+              {{#if this.promo_price}}
+                <span class="text-decoration-line-through me-1">
+                  {{formatCurrency this.price 'USD' 'en-US'}}
+                </span>
+                <strong>{{formatCurrency this.promo_price 'USD' 'en-US'}}</strong>
+              {{else}}
+                {{#if this.price}}
+                  {{formatCurrency this.price 'USD' 'en-US'}}
+                {{else}}—{{/if}}
+              {{/if}}
+            </td>
+            <td>
+              {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
+              {{#if this.is_removed}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
+            </td>
+            <td class="text-end">
+              <form action="/admin/courses/{{this.id}}/remove" method="post" class="d-inline">
+                <button class="btn btn-sm {{#if this.is_removed}}btn-success{{else}}btn-warning{{/if}}">
+                  {{#if this.is_removed}}Unhide{{else}}Hide{{/if}}
+                </button>
+              </form>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      {{!-- Pagination via helper (baseUrl KHÔNG chứa &page=) --}}
+      {{#with (buildPagination page totalPages (concat "/admin/courses?q=" (encodeURIComponent q))) as |p|}}
+        <nav>
+          <ul class="pagination">
+            {{#if p.hasPrev}}
+              <li class="page-item"><a class="page-link" href="{{p.prevUrl}}">Prev</a></li>
+            {{/if}}
+            {{#each p.pages}}
+              <li class="page-item {{#if this.active}}active{{/if}}">
+                <a class="page-link" href="{{this.url}}">{{this.page}}</a>
+              </li>
+            {{/each}}
+            {{#if ../p.hasNext}}
+              <li class="page-item"><a class="page-link" href="{{p.nextUrl}}">Next</a></li>
+            {{/if}}
+          </ul>
+        </nav>
+      {{/with}}
+    {{else}}
+      <div class="alert alert-info">Không có khoá học nào.</div>
+    {{/if}}
   </div>
 </div>

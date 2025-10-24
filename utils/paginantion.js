@@ -1,4 +1,3 @@
-// utils/pagination.js
 export function makePagination(page, total, limit) {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const current = Math.min(Math.max(1, Number(page) || 1), totalPages);

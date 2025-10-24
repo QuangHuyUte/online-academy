@@ -1,4 +1,3 @@
-// middleware/flash.js
 export default function flash(req, res, next) {
   // helper gắn flash từ route: res.flash('success', 'Saved!')
   res.flash = (type, message) => {

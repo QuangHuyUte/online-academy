@@ -8,7 +8,7 @@ import session from 'express-session';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 
-import hbsHelpers from './helpers/handlebars.js';     // <-- helpers tự viết
+import hbsHelpers from './helpers/helpers.js';    
 import flash from './middleware/flash.js';
 import instructorRoutes from './routes/instructor.route.js';
 import adminRoutes from './routes/admin.route.js';
