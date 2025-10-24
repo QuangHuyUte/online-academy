@@ -51,17 +51,23 @@ export function countByInstructor(instructorId, { excludeRemoved = false } = {})
 }
 
 export async function canComplete(courseId) {
-  const [{ exists_section }] = await db
-    .raw('SELECT EXISTS (SELECT 1 FROM sections WHERE course_id = ?) AS exists_section', [courseId]);
-  const [{ exists_lesson }] = await db
-    .raw(`
-      SELECT EXISTS (
+  const { rows: r1 } = await db.raw(
+    'SELECT EXISTS (SELECT 1 FROM sections WHERE course_id = ?) AS exists_section',
+    [courseId]
+  );
+  const { rows: r2 } = await db.raw(
+    `SELECT EXISTS (
         SELECT 1 FROM lessons 
         WHERE section_id IN (SELECT id FROM sections WHERE course_id = ?)
-      ) AS exists_lesson
-    `, [courseId]);
+      ) AS exists_lesson`,
+    [courseId]
+  );
+
+  const exists_section = r1?.[0]?.exists_section;
+  const exists_lesson = r2?.[0]?.exists_lesson;
   return Boolean(exists_section && exists_lesson);
 }
+
 
 export function markCompleted(id) {
   return db('courses')
