@@ -739,4 +739,3 @@ VALUES
 ((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
  (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
  4, 'Helpful but could use more case studies.', now() - interval '2 days');
-

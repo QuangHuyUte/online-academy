@@ -2,10 +2,11 @@
   "name": "online-academy",
   "version": "1.0.0",
   "description": "A full-stack web learning platform built with ExpressJS + Handlebars + Supabase (PostgreSQL).",
+  "type": "module",
   "main": "app.js",
   "scripts": {
-  "start": "node app.js",
-  "dev": "nodemon app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "repository": {
     "type": "git",

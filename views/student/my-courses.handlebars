@@ -1,0 +1,90 @@
+<main class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold mb-1">My Courses</h3>
+      <p class="text-muted mb-0">Các khóa học bạn đã đăng ký</p>
+    </div>
+    <a href="/student/enroll" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Đăng ký khóa học
+    </a>
+  </div>
+
+  {{#if hasCourses}}
+    <div class="row g-3">
+      {{#each courses}}
+        <div class="col-md-4">
+          <div class="card h-100 border-0 shadow-sm">
+            <!-- Ảnh khóa học -->
+            <img src="{{cover_url}}" class="card-img-top" alt="{{title}}">
+
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title mb-1">{{title}}</h5>
+              <p class="text-muted small mb-2">by {{instructor_name}}</p>
+              <p class="card-text text-truncate-3 mb-3">{{short_desc}}</p>
+
+              <!-- 🟩 Thanh tiến độ -->
+              <div class="progress mb-3" style="height: 18px;">
+                <div
+                  class="progress-bar bg-success fw-semibold"
+                  role="progressbar"
+                  style="width: {{progress_percent}}%;"
+                  aria-valuenow="{{progress_percent}}"
+                  aria-valuemin="0"
+                  aria-valuemax="100">
+                  {{progress_percent}}%
+                </div>
+              </div>
+
+              <!-- Nút học ngay -->
+              <a href="/student/player/{{id}}" class="btn btn-outline-primary w-100 mt-auto">
+                <i class="bi bi-play-circle"></i> Học ngay
+              </a>
+            </div>
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="alert alert-info text-center">
+      Bạn chưa đăng ký khóa nào.<br>
+      Hãy quay lại trang <a href="/student/enroll" class="alert-link">Đăng ký khóa học</a> để tham gia nhé.
+    </div>
+  {{/if}}
+</main>
+
+<style>
+  .card-img-top {
+    height: 180px;
+    object-fit: cover;
+  }
+
+  .text-truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-outline-primary {
+    font-weight: 500;
+  }
+
+  .progress {
+    background-color: #e9ecef;
+    border-radius: 8px;
+  }
+
+  .progress-bar {
+    border-radius: 8px;
+    transition: width 0.6s ease;
+  }
+</style>

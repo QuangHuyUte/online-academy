@@ -1,34 +1,52 @@
-import express from 'express';
-import { engine } from 'express-handlebars';
-import hbs_sections from 'express-handlebars-sections';
-import session from 'express-session';
-import dotenv from 'dotenv';
-import morgan from 'morgan';
+import express from "express";
+import { engine } from "express-handlebars";
+import hbs_sections from "express-handlebars-sections";
+import studentRoute from "./routes/student.route.js";
+import database from "./utils/database.js";
 
-dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3000;
+const __dirname = import.meta.dirname;
 
-// Middleware
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
-app.use(morgan('dev'));
+app.use(express.json());
 
-app.engine('handlebars', engine({
-  helpers: { fillContent: hbs_sections() }
-}));
-app.set('view engine', 'handlebars');
-app.set('views', './views');
+app.engine(
+  "handlebars",
+  engine({
+    helpers: {
+      fill_section: hbs_sections(),
+      formatNumber(v) {
+        return new Intl.NumberFormat("en-US").format(v);
+      },
+      eq(a, b) {
+        return a === b;
+      },
+    },
+  })
+);
+app.set("view engine", "handlebars");
+app.set("views", __dirname + "/views");
 
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false }
-}));
-
-app.get('/', (req, res) => {
-  res.render('vwHome/index');
+// ✅ DEV-LOGIN: lấy 1 user role=student để test
+app.use(async (req, res, next) => {
+  if (!req.session) req.session = {};
+  if (!req.session.user) {
+    const user = await database("users")
+      .where({ email: "jason@academy.com" }) 
+      .first("id", "name", "email");
+    req.session.user = user;
+    // {id, name, email}
+  }
+  res.locals.authUser = req.session.user;
+  next();
 });
 
-app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+
+app.use("/student", studentRoute);
+
+const PORT = process.env.APP_PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running at http://localhost:${PORT}`);
+});
+
+export default app;

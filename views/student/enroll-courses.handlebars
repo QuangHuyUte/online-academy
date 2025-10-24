@@ -1,0 +1,160 @@
+<main class="container py-4">
+  <h3 class="fw-bold mb-4 text-primary">
+    <i class="bi bi-grid"></i> Danh mục khóa học
+  </h3>
+
+  <!-- ====== Thanh chọn lĩnh vực ====== -->
+  <div class="d-flex flex-wrap gap-2 mb-4 category-bar">
+    {{#each categoryCourses}}
+      <button
+        class="btn btn-outline-primary category-btn"
+        data-cat="{{id}}"
+        onclick="showCategory('{{id}}')"
+      >
+        {{name}}
+      </button>
+    {{/each}}
+  </div>
+
+  <!-- ====== Vùng hiển thị khóa học ====== -->
+  <div id="coursesContainer">
+    {{#each categoryCourses}}
+      <div class="category-section mb-5" id="cat-{{id}}" style="display:none;">
+        <h5 class="fw-bold mb-3 text-secondary">
+          <i class="bi bi-folder2"></i> {{name}}
+        </h5>
+        {{#if courses.length}}
+          <div class="d-flex flex-row flex-nowrap overflow-auto gap-3 pb-3">
+            {{#each courses}}
+              <div class="card h-100 shadow-sm border-0 course-card" style="min-width: 260px;">
+                <img src="{{thumbnail_url}}" class="card-img-top" alt="{{title}}" />
+                <div class="card-body">
+                  <h6 class="fw-bold mb-1 text-truncate">{{title}}</h6>
+                  <p class="text-muted small text-truncate-2">{{short_desc}}</p>
+                  <form method="POST" action="/student/enroll/{{id}}">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                      <i class="bi bi-bag-plus"></i> Đăng ký
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {{/each}}
+          </div>
+        {{else}}
+          <p class="text-muted fst-italic">Chưa có khóa học nào trong lĩnh vực này.</p>
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
+</main>
+
+<!-- ====== Script ====== -->
+<script>
+  const buttons = document.querySelectorAll(".category-btn");
+  const sections = document.querySelectorAll(".category-section");
+
+  function showCategory(catId) {
+    // Ẩn tất cả sections
+    sections.forEach((s) => (s.style.display = "none"));
+
+    // Hiện section được chọn
+    const section = document.getElementById("cat-" + catId);
+    if (section) section.style.display = "block";
+
+    // Đổi màu nút đang chọn
+    buttons.forEach((b) => b.classList.remove("active"));
+    const activeBtn = document.querySelector(`[data-cat="${catId}"]`);
+    if (activeBtn) activeBtn.classList.add("active");
+  }
+
+  // Hiển thị lĩnh vực đầu tiên mặc định
+  if (buttons.length > 0) showCategory(buttons[0].dataset.cat);
+</script>
+
+<!-- ====== Style ====== -->
+<style>
+  body {
+    background-color: #f8f9fa;
+  }
+
+  /* ===== THANH DANH MỤC ===== */
+  .category-bar {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 8px;
+  }
+
+  .category-btn {
+    border-radius: 20px;
+    font-weight: 500;
+    padding: 6px 16px;
+    font-size: 0.9rem;
+  }
+
+  .category-btn.active {
+    background-color: #0d6efd;
+    color: #fff;
+    border-color: #0d6efd;
+  }
+
+  .course-card {
+    min-width: 220px;       
+    max-width: 230px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    overflow: hidden;
+  }
+
+  .course-card img {
+    height: 130px;          
+    object-fit: cover;
+  }
+
+  .course-card .card-body {
+    padding: 10px 12px;
+  }
+
+  .course-card h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .course-card p {
+    font-size: 0.8rem;
+    height: 2.6em;
+  }
+
+  .course-card button {
+    font-size: 0.85rem;
+    padding: 4px 0;
+  }
+
+  /* ===== HIỆU ỨNG ===== */
+  .course-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ===== DANH SÁCH NGANG ===== */
+  .category-section .d-flex {
+    gap: 16px;
+  }
+
+  .text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @media (max-width: 991px) {
+    .course-card {
+      min-width: 180px;
+      max-width: 200px;
+    }
+    .course-card img {
+      height: 100px;
+    }
+  }
+</style>
