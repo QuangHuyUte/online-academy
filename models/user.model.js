@@ -17,4 +17,5 @@ export default {
     patch(id,user) {
         return db('users').where('id', id).update(user);
     }
+    
 }
