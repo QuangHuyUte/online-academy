@@ -2,45 +2,50 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import userModel from '../models/user.model.js';
 import { checkAuthenticated } from '../middlewares/auth.mdw.js';
+import otpModel, { generateOTP } from '../models/otp.model.js';
 
 const router = express.Router();
 
 router.post('/send-otp', async function (req, res) {
     const email = req.body.email;
-    const mockOtp = '123456'; // Mã OTP cố định (mock)
+    const existingUser = await userModel.findByEmail(email);
     
-    // Lưu mã OTP vào session 
-    req.session.otp = {
-        code: mockOtp,
-        email: email,
-        timestamp: Date.now(),
-        expires: 5 * 60 * 1000 // Hạn 5 phút
-    };
+    // Đảm bảo email chưa được đăng ký
+    if (existingUser) {
+        return res.json({ success: false, message: 'Email đã được sử dụng.' });
+    }
 
-    console.log(`[MOCK OTP Đăng ký]: Mã OTP giả lập cho ${email} là ${mockOtp}`);
+    const otp = generateOTP(); 
     
-    return res.json({ success: true, mock_code: mockOtp });
+    try {
+        await otpModel.add(email, otp);
+
+        console.log(`[DATABASE OTP Đăng ký]: Mã OTP cho ${email} là ${otp}`);
+        
+        req.session.emailToVerify = email; 
+
+        return res.json({ success: true, mock_code: otp }); 
+
+    } catch (error) {
+        console.error('Lỗi khi lưu OTP vào DB:', error);
+        return res.json({ success: false, message: 'Lỗi server khi tạo OTP.' });
+    }
 });
 
 router.post('/verify-otp', async function (req, res) {
-    const {email, otp} = req.body;
-    const sessionOtp = req.session.otp;
-    if (!sessionOtp || sessionOtp.email !== email) {
-        return res.json({ success: false, message: 'Yêu cầu không hợp lệ hoặc email không khớp.' });
+    const { email, otp } = req.body;
+    
+    const otpRecord = await otpModel.findByEmailAndOtp(email, otp);
+    
+    if (!otpRecord) {
+        return res.json({ success: false, message: 'Mã OTP không đúng hoặc đã hết hạn.' });
     }
 
-    if (Date.now() - sessionOtp.timestamp > sessionOtp.expires) {
-        delete req.session.otp;
-        return res.json({ success: false, message: 'Mã OTP đã hết hạn.' });
-    }
+    req.session.verifiedEmail = email;
+    
+    await otpModel.deleteOtp(email); 
 
-    if (otp === sessionOtp.code) {
-        // Đặt cờ verified trong session. 
-        req.session.otp.verified = true;
-        return res.json({ success: true, message: 'Xác thực OTP thành công.' });
-    } else {
-        return res.json({ success: false, message: 'Mã OTP không đúng.' });
-    }
+    return res.json({ success: true, message: 'Xác thực OTP thành công.' });
 });
 
 router.get('/signup', function (req, res) {
@@ -73,28 +78,24 @@ router.get('/is-password-correct', async function(req, res) {
 
 
 router.post('/signup', async function (req, res) {
-    // 1. Kiểm tra xác nhận OTP trong session
-    const isOtpVerified = req.session.otp && req.session.otp.verified === true && req.session.otp.email === req.body.email;
+    const isEmailVerified = req.session.verifiedEmail === req.body.email;
     
-    if (!isOtpVerified) {
-        // Trả lại trang đăng ký với thông báo lỗi
+    if (!isEmailVerified) {
         return res.render('vwAccounts/signup', { 
             error: true, 
             message: 'Vui lòng xác thực OTP trước khi đăng ký.' 
         });
     }
 
-    // 2. Kiểm tra lại email không trùng (bảo vệ lần cuối ở backend)
     const existingUser = await userModel.findByEmail(req.body.email);
     if (existingUser) {
-        delete req.session.otp; 
+        delete req.session.verifiedEmail; 
         return res.render('vwAccounts/signup', { 
             error: true, 
             message: 'Email đã tồn tại.' 
         });
     }
 
-    // 3. Tiến hành đăng ký (Logic cũ)
     const hash  = bcrypt.hashSync(req.body.password, 10);
     const user = {
         name: req.body.name,
@@ -106,8 +107,7 @@ router.post('/signup', async function (req, res) {
 
     await userModel.add(user);
     
-    // 4. Dọn dẹp session sau khi thành công
-    delete req.session.otp;
+    delete req.session.verifiedEmail; 
     
     res.render('vwAccounts/signin');
 });
