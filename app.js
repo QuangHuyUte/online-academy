@@ -27,6 +27,7 @@ app.use(session({
 app.engine('handlebars', engine({
   helpers: { fill_Content: hbs_sections() }
 }));
+app.use(express.json());
 app.set('view engine', 'handlebars');
 app.set('views', './views');
 app.use(express.urlencoded(
