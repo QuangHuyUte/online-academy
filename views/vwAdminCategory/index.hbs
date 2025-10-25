@@ -22,7 +22,7 @@
       <tbody>
         {{#each categories}}
         <tr>
-          <td>{{addOne @index}}</td>
+          <td>{{inc @index}}</td>
           <td>{{this.name}}</td>
           <td><code>{{this.slug}}</code></td>
           <td>{{this.parent_name}}</td>

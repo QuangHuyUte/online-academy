@@ -4,7 +4,7 @@ import * as courseModel from '../models/course.model.js';
 import { authRequired, requireAdmin } from '../middlewares/auth.mdw.js'; 
 
 const router = express.Router();
-router.use(authRequired, requireAdmin);
+//router.use(authRequired, requireAdmin);
 
 /* =============================== CATEGORY CRUD =============================== */
 

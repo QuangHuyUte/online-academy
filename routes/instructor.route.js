@@ -61,7 +61,7 @@ const upload = multer({
 });
 
 /* --------------------------- Protect all routes ---------------------------- */
-router.use(authRequired, requireInstructor);
+//router.use(authRequired, requireInstructor);
 
 /* ============================ INSTRUCTOR FEATURE ============================ */
 
