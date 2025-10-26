@@ -3,18 +3,19 @@
     function handleSubmit(e) {
         e.preventDefault();
         
-        const username = document.querySelector('#txtUsername').value;
-        if (username.length === 0) {
-            alert('Please enter username.');
+        const email = document.querySelector('#txtEmail').value;
+        if (email.length === 0) {
+            alert('Please enter Email.');
             return;
         }
+        
         const password = document.querySelector('#txtPassword').value;
         if (password.length === 0) {
             alert('Please enter password.');
             return;
         }
 
-        fetch(`/account/is-password-correct?username=${username}&password=${password}`)
+        fetch(`/account/is-password-correct?email=${email}&password=${password}`)
             .then(function (res) {
                 console.log(res);
                 return res.json();
@@ -32,14 +33,20 @@
                 alert('Error occurred. Please try again later.');
             });
     }
-    //alert("Hello")
-    document.querySelector('form').addEventListener('submit', handleSubmit);
+    document.addEventListener('DOMContentLoaded', function () {
+        const frm = document.getElementById('frmSignIn') || document.querySelector('form');
+        if (!frm) {
+            console.error('Sign-in form not found when attaching handler');
+            return;
+        }
+        frm.addEventListener('submit', handleSubmit);
+    });
 </script>
 {{/fill_Content}}
 
 <div class="d-flex justify-content-center align-items-center min-vh-100">
     <div class="w-100" style="max-width:420px;">
-        <form action="" method="post">
+    <form id="frmSignIn" action="" method="post">
             <div class="card">
                 <h5 class="d-flex justify-content-center">Sign In</h5>
                 <div class="card-body">

@@ -19,27 +19,14 @@
           aria-describedby="emailHelp"
           name="email"
           value="{{user.email}}"
-          disabled
         />
         <div id="emailHelp" class="form-text">We'll never share your email with
           anyone else.
         </div>
       </div>
-      <div class="mb-3">
+     <div class="mb-3">
         <label for="txtRole" class="form-label">Role</label>
-        <select class="form-select" id="txtRole" name="role">
-          <option value="student">Student</option>
-          <option value="instructor">Instructor</option>
-        </select>
-        <script>
-          (function() {
-            try {
-              var sel = document.getElementById('txtRole');
-              var role = '{{user.role}}' || '';
-              if (sel && role) sel.value = role;
-            } catch (e) { /* ignore */ }
-          })();
-        </script>
+        <input type="text" class="form-control" id="txtRole" name="role" value="{{user.role}} " disabled />
       </div>
     </div>
     <div class="card-footer text-muted">
