@@ -64,6 +64,7 @@ router.get('/is-available', async function(req, res) {
 router.get('/is-password-correct', async function(req, res) {
     const email = req.query.email;
     const password = req.query.password;
+    console.log(email, password);
     const user = await userModel.findByEmail(email);
     if(!user) {
         return res.json(false);
@@ -153,12 +154,10 @@ router.post('/profile', checkAuthenticated, async function (req, res) {
     const user = {
         name: req.body.name,
         email: req.body.email,
-        role: req.body.role,
     };
     await userModel.patch(id, user);
     req.session.authUser.name = user.name;
     req.session.authUser.email = user.email;
-    req.session.authUser.role = user.role;
 
     res.render('vwAccounts/profile', {
         user: req.session.authUser,
