@@ -1,0 +1,151 @@
+{{#fill_Content 'js'}}
+<script>
+    const frmRegister = document.querySelector('#frmRegister');
+    const txtEmail = document.querySelector('#txtEmail');
+    const txtPassword = document.querySelector('#txtPassword');
+    const txtConfirm = document.querySelector('#txtConfirm');
+    const otpContainer = document.querySelector('#otpContainer');
+    const txtOTP = document.querySelector('#txtOTP');
+    const btnSubmit = document.querySelector('#btnSubmit');
+    const emailHelp = document.querySelector('#emailHelp'); 
+
+    function showMessage(msg, isError = false) {
+        emailHelp.innerHTML = isError 
+            ? `<span class="text-danger">${msg}</span>` 
+            : `<span class="text-success">${msg}</span>`;
+    }
+
+    async function handleSignup(e) {
+        e.preventDefault();
+
+        const email = txtEmail.value;
+        const password = txtPassword.value;
+        const confirmPassword = txtConfirm.value;
+
+        if (email.length === 0 || password.length === 0 || confirmPassword.length === 0) {
+            showMessage('Vui lòng nhập đầy đủ các trường.', true);
+            return;
+        }
+        if (password !== confirmPassword) {
+            showMessage('Xác nhận mật khẩu không khớp.', true);
+            return;
+        }
+
+
+        let res = await fetch(`/account/is-available?email=${email}`);
+        let isAvailable = await res.json();
+
+        if (isAvailable === false) {
+            showMessage('Email đã được sử dụng. Vui lòng chọn email khác.', true);
+            return;
+        }
+
+
+        let otpRes = await fetch('/account/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        });
+        let otpData = await otpRes.json();
+        
+        if (otpData.success) {
+            showMessage(`Mã OTP giả lập (${otpData.mock_code}) đã được gửi. Vui lòng kiểm tra email và nhập mã.`, false);
+            
+            btnSubmit.innerHTML = '<i class="bi bi-check2-square"></i> Xác nhận OTP';
+            otpContainer.style.display = 'block';
+            
+            txtEmail.readOnly = true;
+            txtPassword.readOnly = true;
+            txtConfirm.readOnly = true;
+
+            frmRegister.removeEventListener('submit', handleSignup);
+            frmRegister.addEventListener('submit', handleVerifyAndSubmit); 
+        } else {
+            showMessage('Lỗi khi gửi OTP. Vui lòng thử lại.', true);
+        }
+    }
+
+    async function handleVerifyAndSubmit(e) {
+        e.preventDefault();
+        
+        const email = txtEmail.value;
+        const otp = txtOTP.value;
+
+        if (otp.length === 0) {
+            showMessage('Vui lòng nhập mã OTP.', true);
+            return;
+        }
+        
+        let res = await fetch('/account/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, otp: otp })
+        });
+        let data = await res.json();
+        
+        if (data.success) {
+            showMessage('Xác thực OTP thành công! Đang tiến hành đăng ký...', false);
+            
+            // OTP đã verified trong session. Tiến hành SUBMIT form thật sự.
+            // Phải mở khóa các trường để dữ liệu được gửi đi trong POST request
+            txtEmail.readOnly = false;
+            txtPassword.readOnly = false;
+            txtConfirm.readOnly = false;
+
+            frmRegister.removeEventListener('submit', handleVerifyAndSubmit);
+            frmRegister.submit(); 
+        } else {
+            showMessage(data.message, true);
+        }
+    }
+    
+    frmRegister.addEventListener('submit', handleSignup);
+</script>
+{{/fill_Content}}
+
+
+<div class="container my-5"> 
+    <div class="row justify-content-center"> 
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card">
+                <h5 class="card-header">Acount Registration</h5>
+                <div class="card-body">
+                    <form method="post" action="/account/signup" id="frmRegister">
+                        <div class="mb-3">
+                            <label for="txtName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="txtName" name="name" autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label for="txtPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="txtPassword" name="password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="txtConfirm" class="form-label">Password Confirm</label>
+                            <input type="password" class="form-control" id="txtConfirm" name="confirm_password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="txtEmail" class="form-label">Email address</label>
+                            <input type="email" class="form-control" id="txtEmail" aria-describedby="emailHelp"
+                                name="email">
+                            <div id="emailHelp" class="form-text">We'll never share your email with anyone else.
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="selRole" class="form-label">Role</label>
+                            <select class="form-select" id="selRole" name="role">
+                                <option value="student" selected>Student</option>
+                                <option value="instructor">Instructor</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="otpContainer" style="display: none;">
+                            <label for="txtOTP" class="form-label">Mã OTP (6 chữ số)</label>
+                            <input type="text" class="form-control" id="txtOTP" name="otp" maxlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="btnSubmit"><i
+                                class="bi bi-check2-square"></i> Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
