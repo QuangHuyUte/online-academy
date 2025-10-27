@@ -4,8 +4,8 @@
   "description": "A full-stack web learning platform built with ExpressJS + Handlebars + Supabase (PostgreSQL).",
   "main": "app.js",
   "scripts": {
-  "start": "node app.js",
-  "dev": "nodemon app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
   "homepage": "https://github.com/QuangHuyUte/online-academy#readme",
   "dependencies": {
     "bcryptjs": "^3.0.2",
+    "dayjs": "^1.11.18",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-handlebars": "^8.0.3",

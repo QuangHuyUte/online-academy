@@ -1,0 +1,33 @@
+<div class="col-md-3 mb-4">
+  <div class="card course-card shadow-sm border-0 h-100">
+    <div class="course-img">
+      <img src="{{this.cover_url}}" class="card-img-top" alt="{{this.title}}">
+    </div>
+
+    <div class="card-body d-flex flex-column">
+      <h6 class="card-title fw-semibold text-truncate">{{this.title}}</h6>
+
+      <p class="text-muted small mb-1">
+        👥 {{this.students_count}} học viên
+      </p>
+
+      <p class="fw-bold mb-1">
+        💰 
+        {{#if this.promo_price}}
+          <span class="text-danger">{{this.promo_price}} $</span>
+          <del class="text-muted ms-2 small">{{this.price}} $</del>
+        {{else}}
+          <span class="text-primary">{{this.price}} $</span>
+        {{/if}}
+      </p>
+
+      <p class="text-warning fw-semibold mb-1">
+        ⭐ {{this.rating_avg}}
+      </p>
+
+      <p class="text-muted small mt-auto mb-0">
+        📅 {{formatDate this.create_at "DD/MM/YYYY HH:mm"}}
+      </p>
+    </div>
+  </div>
+</div>
