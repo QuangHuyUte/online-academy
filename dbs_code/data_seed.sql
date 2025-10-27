@@ -739,4 +739,65 @@ VALUES
 ((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
  (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
  4, 'Helpful but could use more case studies.', now() - interval '2 days');
+-- ========================================================
+-- 07_update_stats.sql + 08_sanity_check.sql
+-- Người thực hiện: VŨ
+-- Nhiệm vụ:
+--   07: Cập nhật số học viên và đánh giá trung bình cho khóa học
+--   08: Kiểm tra tổng quan DB + test FTS
+-- ========================================================
 
+-- ========================================================
+-- 07: CẬP NHẬT THỐNG KÊ KHÓA HỌC
+-- ========================================================
+
+-- 1. Cập nhật số học viên (students_count) cho mỗi khóa
+UPDATE courses c
+SET students_count = sub.cnt
+FROM (
+  SELECT course_id, COUNT(*) AS cnt
+  FROM enrollments
+  GROUP BY course_id
+) sub
+WHERE c.id = sub.course_id;
+
+-- 2. Cập nhật số đánh giá (rating_count) và điểm trung bình (rating_avg)
+UPDATE courses c
+SET rating_avg = sub.avg, rating_count = sub.cnt
+FROM (
+  SELECT course_id, ROUND(AVG(rating), 2) AS avg, COUNT(*) AS cnt
+  FROM reviews
+  GROUP BY course_id
+) sub
+WHERE c.id = sub.course_id;
+
+-- 3. Cập nhật số view (view_count) của mỗi course
+UPDATE courses
+SET view_count = FLOOR(100 + random() * 900); -- tạo số ngẫu nhiên 100–999
+
+
+-- ========================================================
+-- 08: SANITY CHECK + FTS TEST
+-- ========================================================
+
+-- 1. Tổng số bản ghi của tất cả bảng (gộp bằng UNION ALL)
+SELECT 'categories' AS table_name, COUNT(*) AS total FROM categories
+UNION ALL
+SELECT 'users', COUNT(*) FROM users
+UNION ALL
+SELECT 'courses', COUNT(*) FROM courses
+UNION ALL
+SELECT 'sections', COUNT(*) FROM sections
+UNION ALL
+SELECT 'lessons', COUNT(*) FROM lessons
+UNION ALL
+SELECT 'enrollments', COUNT(*) FROM enrollments
+UNION ALL
+SELECT 'reviews', COUNT(*) FROM reviews
+UNION ALL
+SELECT 'watchlist', COUNT(*) FROM watchlist;
+
+-- 2. Test FTS: tìm các khóa học chứa từ khóa 'web'
+SELECT id, title
+FROM courses
+WHERE fts @@ to_tsquery('web');
