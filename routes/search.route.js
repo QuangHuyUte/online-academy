@@ -3,12 +3,9 @@ import courseModel from '../models/course.model.js';
 const router = express.Router();
 
 router.get('/', async function (req, res) {
-  const featured_newest = await courseModel.findNewest7day();
-  const featured_bestseller = await courseModel.finBestSellerthanAvg();
 
   const keyword = req.query.keyword || '';
-  console.log('Keyword:', keyword);
-  const sort = req.query.sort || 'rating';
+  const sort = req.query.sort || '';
   const limit = 4;
   const page = parseInt(req.query.page) || 1;
   const offset = (page - 1) * limit;
@@ -27,7 +24,7 @@ router.get('/', async function (req, res) {
     const total = await courseModel.countCourses();
     totalCount = parseInt(total.count);
   }
-
+  console.log(courses)
   // tính page_numbers 
   const nPages = Math.ceil(totalCount / limit);
   const page_numbers = [];
@@ -37,14 +34,14 @@ router.get('/', async function (req, res) {
       isCurrent: i === page
     });
   }
-
+console.log(courses)
   res.render('search/results', {
     courses,
     page_numbers,
     sort,
     keyword,
-    featured_newest,
-    featured_bestseller
+    page,
+    totalPages: nPages
   });
 });
 

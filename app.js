@@ -4,7 +4,7 @@ import hbs_sections from 'express-handlebars-sections';
 import session from 'express-session';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
-
+import dayjs from 'dayjs';
 import { restrictAdmin, checkAuthenticated } from './middlewares/auth.mdw.js';
 // ROUTES & MODELS
 import accountRouter from './routes/account.route.js';
@@ -37,8 +37,14 @@ app.use(session({
 
 // Handlebars setup
 app.engine('handlebars', engine({
-  helpers: { fill_Content: hbs_sections() },
-  eq: (a, b) => a === b, // dòng này của vũ
+  helpers: {
+    fill_Content: hbs_sections(),
+    eq: (a, b) => a === b, // dòng này của vũ
+    subtract: (a, b) => a - b,//vũ
+    add: (a, b) => a + b,//vũ
+    formatDate: (date, format) => dayjs(date).format(format || 'DD/MM/YYYY'),//vũ
+  },
+
   partialsDir: path.join(__dirname, 'views', 'partials')// vũ too
 }));
 app.use(express.json());
@@ -76,46 +82,34 @@ app.use(async function (req, res, next) {
   next();
 });
 
-//  HOME
+// HOME
 app.get('/', async (req, res) => {
-  try {
-
-    const [featuredCourses, mostViewedCourses, newestCourses, newestTotal, topCategories] = await Promise.all([
-      courseModel.getFeaturedCourses(),
-      courseModel.getMostViewedCourses(),
-      courseModel.getNewestCourses(4, 0),
-      courseModel.countNewestCourses(),
-      courseModel.getTopCategories(),
-    ]);
-
-    const newestTotalRemaining = Math.max(0, newestTotal - 4);
-    const newestAdditionalPages = newestTotalRemaining > 0 ? Math.ceil(newestTotalRemaining / 6) : 0;
-    const newestTotalPages = 1 + newestAdditionalPages;
-    const newestPageNumbers = [];
-    for (let i = 1; i <= newestTotalPages; i++) {
-      newestPageNumbers.push({ value: i, isActive: i === 1, url: i === 1 ? '/' : `/courses/newest?page=${i}` });
+  const courses_bestseller = await courseModel.finBestSellerthanAvg();
+  const courses_newest = await courseModel.findNewest7day();
+  // Hàm chunk
+  function chunkArray(arr, chunkSize = 4) {
+    if (!Array.isArray(arr) || arr.length === 0) return [];
+    const result = [];
+    for (let i = 0; i < arr.length; i += chunkSize) {
+      result.push(arr.slice(i, i + chunkSize));
     }
-
-    res.render('vwHome/index', {
-      featuredCourses,
-      mostViewedCourses,
-      newestCourses,
-      topCategories,
-      newestPageNumbers,
-      newestCurrentPage: 1,
-      newestTotalPages,
-      newestNextPage: newestTotalPages > 1 ? 2 : null
-    });
-  } catch (err) {
-    console.error(err);
-    res.render('vwHome/index', {
-      featuredCourses: [],
-      mostViewedCourses: [],
-      newestCourses: [],
-      topCategories: [],
-    });
+    return result;
   }
+
+  // Tạo slides
+  const slides_bestseller = chunkArray(courses_bestseller, 4);
+  const slides_newest = chunkArray(courses_newest, 4);
+  
+  console.log(slides_newest.length);
+  console.log(slides_bestseller.length);
+  // Render
+  res.render('vwHome/index', {
+    slides_bestseller,
+    slides_newest,
+  });
 });
+
+
 
 // ROUTES
 app.use('/account', accountRouter);
