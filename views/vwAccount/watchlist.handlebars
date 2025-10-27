@@ -1,0 +1,30 @@
+<div class="container py-4">
+    <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-heart-fill text-danger"></i> Danh sách yêu thích</h3>
+
+    {{#if courses.length}}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {{#each courses}}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0 hover-shadow">
+                <img src="{{cover_url}}" class="card-img-top" alt="{{title}}" style="height:180px; object-fit:cover;">
+                <div class="card-body">
+                    <h6 class="fw-bold text-truncate">{{title}}</h6>
+                    <p class="text-warning mb-2">★ {{rating_avg}} ({{rating_count}})</p>
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold text-danger">{{promo_price}}₫</span>
+                        <small class="text-decoration-line-through text-muted">{{price}}₫</small>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top-0">
+                    <a href="/courses/details?id={{id}}" class="btn btn-outline-primary w-100 btn-sm">
+                        <i class="bi bi-eye"></i> Xem chi tiết
+                    </a>
+                </div>
+            </div>
+        </div>
+        {{/each}}
+    </div>
+    {{else}}
+    <p class="text-muted">Chưa có khóa học nào trong danh sách yêu thích.</p>
+    {{/if}}
+</div>
