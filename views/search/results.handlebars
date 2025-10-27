@@ -1,0 +1,82 @@
+<!-- Bộ lọc -->
+<section class="container mx-auto px-4 mt-6 items-center">
+    <form method="get">
+        <label for="sort" class="mr-2 font-semibold">Arrange by:</label>
+        <select name="sort" id="sort" class="border px-3 py-2 rounded-lg" onchange="this.form.submit()">
+            <option value="">Select sorting criteria</option>
+            <option value="rating" {{#if (eq sort "rating" )}}selected{{/if}}>Rating: High to Low</option>
+            <option value="price" {{#if (eq sort "price" )}}selected{{/if}}>Price: Low to High</option>
+            <option value="create_at" {{#if (eq sort "create_at" )}}selected{{/if}}>Newest</option>
+            <option value="students_count" {{#if (eq sort "students_count" )}}selected{{/if}}>Best Seller</option>
+        </select>
+    </form>
+</section>
+
+<!-- Danh sách khóa học -->
+{{#if (eq courses.length 0)}}
+<div class="alert alert-info text-center shadow-sm p-4 mt-5 rounded-4"
+    style="max-width: 700px; margin: 0 auto; background-color: #f8f9fa;">
+    <h5 class="mb-3 text-primary fw-semibold">The course you are looking for was not found.</h5>
+    <p class="mb-0 text-muted">
+        <span class="fw-bold text-dark">Contact Truong Vu again or call the hotline 0336363636 to get advice from Vien Ngoc Bao.</span>
+        If you have any suggestions or requests.
+    </p>
+</div>
+{{else}}
+<div class="container mx-auto px-4">
+    {{#if keyword}}
+    <h2 class="text-2xl font-bold mb-4 mt-6">Kết quả tìm kiếm cho "{{keyword}}"</h2>
+    <div class="row g-4">
+        {{#each courses}}
+        {{> cardCourses}}
+        {{/each}}
+    </div>
+    {{else}}
+    <div class="row g-4">
+        {{#each courses}}
+        {{> cardCourses}}
+        {{/each}}
+    </div>
+    {{/if}}
+</div>
+{{/if}}
+
+
+<!-- Phân trang -->
+<div class="row">
+    <nav aria-label="...">
+        <ul class="pagination dflex justify-content-center mt-4">
+            <li class="page-item ">
+                <a class="page-link"
+                    href="?page={{#if (eq page 1)}}{{page}}{{else}}{{subtract page 1}}{{/if}}&sort={{sort}}"
+                    aria-label="Previous">
+                    &laquo;
+                </a>
+            </li>
+
+            {{#each page_numbers}}
+            {{#if isCurrent}}
+            <li class="page-item active">
+                <a class="page-link" href="javascript:void(0);">{{value}}</a>
+            </li>
+            {{else}}
+            <li class="page-item">
+                <a class="page-link" href="?page={{value}}&sort={{../sort}}">{{value}}</a>
+            </li>
+            {{/if}}
+            {{/each}}
+
+
+            <li class="page-item ">
+                <a class="page-link"
+                    href="?page={{#if (eq page totalPages)}}{{page}}{{else}}{{add page 1}}{{/if}}&sort={{sort}}"
+                    aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+
+
+        </ul>
+    </nav>
+
+</div>

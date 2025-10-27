@@ -1,0 +1,93 @@
+{{#fill_Content 'css'}}
+<link rel="stylesheet" href="/css/styleSignin.css" />
+{{/fill_Content}}
+
+{{#fill_Content 'js'}}
+<script>
+    function handleSubmit(e) {
+        e.preventDefault();
+        
+        const email = document.querySelector('#txtEmail').value;
+        if (email.length === 0) {
+            alert('Please enter Email.');
+            return;
+        }
+        
+        const password = document.querySelector('#txtPassword').value;
+        if (password.length === 0) {
+            alert('Please enter password.');
+            return;
+        }
+
+        fetch(`/account/is-password-correct?email=${email}&password=${password}`)
+            .then(function (res) {
+                console.log(res);
+                return res.json();
+            })
+            .then(function (data)  {
+                if (data === false) {
+                    alert('Wrong Email or password.');
+                    return;
+                }
+                alert('Login successfully.');
+                e.target.submit();
+            })
+            .catch(function (err) {
+                console.error(err);
+                alert('Error occurred. Please try again later.');
+            });
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const frm = document.getElementById('frmSignIn') || document.querySelector('form');
+        if (!frm) {
+            console.error('Sign-in form not found when attaching handler');
+            return;
+        }
+        frm.addEventListener('submit', handleSubmit);
+    });
+</script>
+{{/fill_Content}}
+<div class="signin-scope">
+<div class="login_form">
+    <!-- Login form container -->
+    <form id="frmSignIn" action="/account/signin" method="post">
+      <h3>Log in with</h3>
+      <div class="login_option">
+        <!-- Google button -->
+        <div class="option">
+          <a href="#">
+            <img src="https://th.bing.com/th/id/R.0fa3fe04edf6c0202970f2088edea9e7?rik=joOK76LOMJlBPw&riu=http%3a%2f%2fpluspng.com%2fimg-png%2fgoogle-logo-png-open-2000.png&ehk=0PJJlqaIxYmJ9eOIp9mYVPA4KwkGo5Zob552JPltDMw%3d&risl=&pid=ImgRaw&r=0" alt="Google" />
+            <span>Google</span>
+          </a>
+        </div>
+        <!-- Apple button -->
+        <div class="option">
+          <a href="#">
+            <img src="https://tse2.mm.bing.net/th/id/OIP.xbl5Q9A03db7zcxaI1dBWgHaJl?rs=1&pid=ImgDetMain&o=7&rm=3" alt="Apple" />
+            <span>Apple</span>
+          </a>
+        </div>
+      </div>
+      <!-- Login option separator -->
+      <p class="separator">
+        <span>or</span>
+      </p>
+      <!-- Email input box -->
+      <div class="input_box">
+        <label for="txtEmail">Email</label>
+        <input type="email" id="txtEmail" name="email" placeholder="Enter email address" required />
+      </div>
+      <!-- Paswwrod input box -->
+      <div class="input_box">
+        <div class="password_title">
+          <label for="txtPassword">Password</label>
+        </div>
+        <input type="password" id="txtPassword" name="password" placeholder="Enter your password" required />
+      </div>
+       <!-- Login button -->
+      <button type="submit">Log In</button>
+      <p class="sign_up">Don't have an account? <a href="/account/signup">Sign up</a></p>
+    </form>
+  </div>
+</div>
+

@@ -35,3 +35,10 @@ export async function findAllByUser(userId) {
     )
     .where('w.user_id', userId);
 }
+
+export default {
+  addWatchlist,
+  remove,
+  exists,
+  findAllByUser
+};

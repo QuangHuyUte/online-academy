@@ -34,3 +34,9 @@ export async function hasReviewed(userId, courseId) {
     .first();
   return !!row;
 }
+export default {
+  findByCourseId,
+  addRating,
+  hasEnrolled,
+  hasReviewed
+};

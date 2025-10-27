@@ -110,6 +110,7 @@
                         <script>
                             document.getElementById('watchlistForm').addEventListener('submit', async (e) => {
                                 e.preventDefault();
+
                                 const btn = document.getElementById('watchlistBtn');
                                 const courseId = document.getElementById('courseId').value;
                                 const isAdded = btn.classList.contains('btn-danger');
@@ -124,8 +125,14 @@
 
                                     const result = await res.json();
 
+                                    // 🧩 Xử lý phản hồi
+                                    if (res.status === 401) {
+                                        alert(result.message || 'Vui lòng đăng nhập trước khi thêm yêu thích.');
+                                        return (window.location.href = '/account/signin');
+                                    }
+
                                     if (result.success) {
-                                        // 🟢 Cập nhật giao diện
+                                        // 🟢 Cập nhật UI ngay lập tức
                                         btn.classList.toggle('btn-danger');
                                         btn.classList.toggle('btn-outline-danger');
 
@@ -134,11 +141,13 @@
                                         } else {
                                             btn.innerHTML = '<i class="bi bi-heart-fill"></i> Đã yêu thích';
                                         }
+
                                     } else {
-                                        alert(result.message || 'Lỗi khi thêm vào yêu thích.');
+                                        alert(result.message || 'Lỗi khi xử lý yêu thích.');
                                     }
+
                                 } catch (err) {
-                                    console.error('Error:', err);
+                                    console.error('❌ Watchlist button error:', err);
                                     alert('Không thể kết nối đến máy chủ.');
                                 }
                             });
