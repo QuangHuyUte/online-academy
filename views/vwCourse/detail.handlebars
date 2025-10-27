@@ -47,22 +47,19 @@
 
 <div class="container py-5">
 
-    <!-- Header: Title + Rating -->
     <!-- 🌈 HEADER -->
     <!-- Logo HCMUTE góc trái -->
-
-
     <div class="position-absolute top-0 start-0" style="margin-top: 10px; margin-left: 15px;">
         <img src="https://hcmute.edu.vn/Resources/Images/Logo/Logo%20HCMUTE-Corel-white%20background.jpg" alt="HCMUTE"
             style="width: 75px; height: 75px; object-fit: cover;">
     </div>
 
-
-
     <div class="course-header mb-5">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-md-8">
+
+                <!-- LEFT -->
+                <div class="col-md-8 text-white">
                     <h1 class="fw-bold">{{course.title}}</h1>
                     <p class="mb-3">{{course.short_desc}}</p>
 
@@ -82,6 +79,7 @@
                         </p>
                     </div>
 
+                    <!-- RIGHT -->
                     <div class="col-md-4 text-center">
                         {{#if course.preview_video}}
                         <iframe width="100%" height="230" src="{{course.preview_video}}" title="{{course.title}}"
@@ -89,11 +87,17 @@
                         {{else}}
                         <img src="{{course.cover_url}}" alt="{{course.title}}" class="img-fluid rounded shadow">
                         {{/if}}
+
                         <h4 class="text-warning fw-bold mt-3">{{course.promo_price}}₫</h4>
+                        {{#if course.price}}
                         <p class="text-decoration-line-through text-light small">{{course.price}}₫</p>
+                        {{/if}}
+
                         <button class="btn btn-light text-primary fw-bold px-4 py-2 mt-2 w-75">
                             <i class="bi bi-cart-plus"></i> Đăng ký học
                         </button>
+
+                        <!-- 🧡 WATCHLIST BUTTON -->
                         <form id="watchlistForm" class="mt-3">
                             <input type="hidden" id="courseId" value="{{course.id}}">
                             <button type="submit" id="watchlistBtn"
@@ -111,29 +115,36 @@
                                 const isAdded = btn.classList.contains('btn-danger');
                                 const url = isAdded ? '/courses/watchlist/remove' : '/courses/watchlist/add';
 
-                                const res = await fetch(url, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ course_id: courseId })
-                                });
-                                const result = await res.json();
+                                try {
+                                    const res = await fetch(url, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ course_id: courseId })
+                                    });
 
-                                if (result.success) {
-                                    alert(result.message);
-                                    btn.classList.toggle('btn-danger');
-                                    btn.classList.toggle('btn-outline-danger');
-                                    const icon = btn.querySelector('i');
-                                    if (isAdded) {
-                                        icon.classList.replace('bi-heart-fill', 'bi-heart');
-                                        btn.innerHTML = '<i class="bi bi-heart"></i> Thêm vào yêu thích';
+                                    const result = await res.json();
+
+                                    if (result.success) {
+                                        // 🟢 Cập nhật giao diện
+                                        btn.classList.toggle('btn-danger');
+                                        btn.classList.toggle('btn-outline-danger');
+
+                                        if (isAdded) {
+                                            btn.innerHTML = '<i class="bi bi-heart"></i> Thêm vào yêu thích';
+                                        } else {
+                                            btn.innerHTML = '<i class="bi bi-heart-fill"></i> Đã yêu thích';
+                                        }
                                     } else {
-                                        icon.classList.replace('bi-heart', 'bi-heart-fill');
-                                        btn.innerHTML = '<i class="bi bi-heart-fill"></i> Đã yêu thích';
+                                        alert(result.message || 'Lỗi khi thêm vào yêu thích.');
                                     }
+                                } catch (err) {
+                                    console.error('Error:', err);
+                                    alert('Không thể kết nối đến máy chủ.');
                                 }
                             });
                         </script>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -203,17 +214,18 @@
 
 
             <!-- Đánh giá -->
+            <!-- Đánh giá -->
             <div class="tab-pane fade" id="reviews" role="tabpanel">
                 {{#if hasReviews}}
                 {{#each reviews}}
                 <div class="border-bottom pb-3 mb-3">
                     <div class="d-flex align-items-center mb-2">
-                        <strong class="me-2">{{user_name}}</strong>
+                        <div class="fw-bold me-2">{{user_name}}</div>
                         <div class="text-warning">
                             {{#each (range 1 6)}}
                             {{#ifCond this '<=' ../rating}}★{{else}}☆{{/ifCond}} {{/each}} </div>
                         </div>
-                        <p>{{comment}}</p>
+                        <p class="mb-1">{{comment}}</p>
                         <small class="text-muted">Gửi ngày {{formatDate created_at}}</small>
                     </div>
                     {{/each}}
@@ -221,50 +233,35 @@
                     <p>Chưa có đánh giá nào cho khóa học này.</p>
                     {{/if}}
 
-                    <hr class="my-4">
+                    <!-- 📝 Form gửi đánh giá -->
+                    <hr>
+                    <h5 class="fw-bold mt-4">Gửi đánh giá của bạn</h5>
+                    <form action="/courses/reviews/add" method="POST" class="mt-3">
+                        <input type="hidden" name="course_id" value="{{course.id}}">
 
-                    <!-- Form gửi đánh giá -->
-                    <h5 class="fw-bold mb-3">Gửi đánh giá của bạn</h5>
-                    <form id="reviewForm">
-                        <input type="hidden" id="courseId" value="{{course.id}}">
                         <div class="mb-3">
-                            <label class="form-label">Chọn số sao:</label>
-                            <select class="form-select w-auto" id="rating" required>
-                                <option value="">-- Chọn --</option>
-                                <option value="5">★★★★★</option>
-                                <option value="4">★★★★☆</option>
-                                <option value="3">★★★☆☆</option>
-                                <option value="2">★★☆☆☆</option>
-                                <option value="1">★☆☆☆☆</option>
+                            <label class="form-label fw-semibold">Chọn số sao:</label>
+                            <select name="rating" class="form-select w-auto d-inline-block" required>
+                                <option value="5">⭐⭐⭐⭐⭐ (5 - Tuyệt vời)</option>
+                                <option value="4">⭐⭐⭐⭐ (4 - Tốt)</option>
+                                <option value="3">⭐⭐⭐ (3 - Khá)</option>
+                                <option value="2">⭐⭐ (2 - Trung bình)</option>
+                                <option value="1">⭐ (1 - Kém)</option>
                             </select>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Nhận xét:</label>
-                            <textarea class="form-control" id="comment" rows="3" required></textarea>
+                            <label class="form-label fw-semibold">Nhận xét của bạn:</label>
+                            <textarea name="comment" class="form-control" rows="3" placeholder="Nhập đánh giá..."
+                                required></textarea>
                         </div>
+
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-send"></i> Gửi đánh giá
                         </button>
                     </form>
                 </div>
 
-                <script>
-                    document.getElementById('reviewForm').addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const courseId = document.getElementById('courseId').value;
-                        const rating = document.getElementById('rating').value;
-                        const comment = document.getElementById('comment').value;
-
-                        const res = await fetch('/courses/details/review', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ course_id: courseId, rating, comment })
-                        });
-                        const result = await res.json();
-                        alert(result.message);
-                        if (result.success) location.reload();
-                    });
-                </script>
 
                 <!-- Giảng viên -->
                 <div class="row align-items-center">
