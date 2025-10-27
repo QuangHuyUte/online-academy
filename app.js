@@ -4,21 +4,29 @@ import hbs_sections from 'express-handlebars-sections';
 import session from 'express-session';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
+
 import { restrictAdmin, checkAuthenticated } from './middlewares/auth.mdw.js';
+// ROUTES & MODELS
 import accountRouter from './routes/account.route.js';
 import categoryModel from './models/category.model.js';
 import courseRouter from './routes/course.route.js';
 import courseModel from './models/course.model.js';
+import searchRouter from './routes/search.route.js';
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// __dirname setup
+import path from 'path';
+const __dirname = import.meta.dirname;
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(morgan('dev'));
 
+// Session setup
 app.set('trust proxy', 1);
 app.use(session({
   secret: 'sgghgfgghjgjffhgjgfh',
@@ -27,8 +35,11 @@ app.use(session({
   cookie: { secure: false }
 }));
 
+// Handlebars setup
 app.engine('handlebars', engine({
   helpers: { fill_Content: hbs_sections() },
+  eq: (a, b) => a === b, // dòng này của vũ
+  partialsDir: path.join(__dirname, 'views', 'partials')// vũ too
 }));
 app.use(express.json());
 app.set('view engine', 'handlebars');
@@ -109,6 +120,7 @@ app.get('/', async (req, res) => {
 // ROUTES
 app.use('/account', accountRouter);
 app.use('/courses', courseRouter);
+app.use('/search', searchRouter); //vũ too
 app.use(function (req, res) {
   res.status(404).render('404');
 });
