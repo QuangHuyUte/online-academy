@@ -1,3 +1,7 @@
+{{#fill_Content 'css'}}
+<link rel="stylesheet" href="/css/styleSignin.css" />
+{{/fill_Content}}
+
 {{#fill_Content 'js'}}
 <script>
     function handleSubmit(e) {
@@ -22,7 +26,7 @@
             })
             .then(function (data)  {
                 if (data === false) {
-                    alert('Wrong username or password.');
+                    alert('Wrong Email or password.');
                     return;
                 }
                 alert('Login successfully.');
@@ -43,37 +47,47 @@
     });
 </script>
 {{/fill_Content}}
-
-<div class="d-flex justify-content-center align-items-center min-vh-100">
-    <div class="w-100" style="max-width:420px;">
-    <form id="frmSignIn" action="" method="post">
-            <div class="card">
-                <h5 class="d-flex justify-content-center">Sign In</h5>
-                <div class="card-body">
-                    {{#if error}}
-                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        <strong>Error.</strong> Invalid Email or password.
-                    </div>
-                    {{/if}}
-                    <div class="mb-3">
-                        <label for="txtEmail" class="form-label">Email</label>
-                        <input type="text" class="form-control" id="txtEmail" name="email" autofocus />
-                    </div>
-                    <div class="mb-3">
-                        <label for="txtPassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="txtPassword" name="password" />
-                    </div>
-                </div>
-                <div class="card-footer text-muted">
-                    <div class="d-grid gap-2">
-                         <button type="submit" class="btn btn-outline-primary">
-                        <i class="bi bi-box-arrow-in-right "></i>
-                        Sign In
-                    </button>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
+<div class="signin-scope">
+<div class="login_form">
+    <!-- Login form container -->
+    <form id="frmSignIn" action="/account/signin" method="post">
+      <h3>Log in with</h3>
+      <div class="login_option">
+        <!-- Google button -->
+        <div class="option">
+          <a href="#">
+            <img src="https://th.bing.com/th/id/R.0fa3fe04edf6c0202970f2088edea9e7?rik=joOK76LOMJlBPw&riu=http%3a%2f%2fpluspng.com%2fimg-png%2fgoogle-logo-png-open-2000.png&ehk=0PJJlqaIxYmJ9eOIp9mYVPA4KwkGo5Zob552JPltDMw%3d&risl=&pid=ImgRaw&r=0" alt="Google" />
+            <span>Google</span>
+          </a>
+        </div>
+        <!-- Apple button -->
+        <div class="option">
+          <a href="#">
+            <img src="https://tse2.mm.bing.net/th/id/OIP.xbl5Q9A03db7zcxaI1dBWgHaJl?rs=1&pid=ImgDetMain&o=7&rm=3" alt="Apple" />
+            <span>Apple</span>
+          </a>
+        </div>
+      </div>
+      <!-- Login option separator -->
+      <p class="separator">
+        <span>or</span>
+      </p>
+      <!-- Email input box -->
+      <div class="input_box">
+        <label for="txtEmail">Email</label>
+        <input type="email" id="txtEmail" name="email" placeholder="Enter email address" required />
+      </div>
+      <!-- Paswwrod input box -->
+      <div class="input_box">
+        <div class="password_title">
+          <label for="txtPassword">Password</label>
+        </div>
+        <input type="password" id="txtPassword" name="password" placeholder="Enter your password" required />
+      </div>
+       <!-- Login button -->
+      <button type="submit">Log In</button>
+      <p class="sign_up">Don't have an account? <a href="/account/signup">Sign up</a></p>
+    </form>
+  </div>
 </div>
+

@@ -1,3 +1,7 @@
+{{#fill_Content 'css'}}
+<link rel="stylesheet" href="/css/styleSignup.css">
+{{/fill_Content}}
+
 {{#fill_Content 'js'}}
 <script>
     const frmRegister = document.querySelector('#frmRegister');
@@ -23,11 +27,11 @@
         const confirmPassword = txtConfirm.value;
 
         if (email.length === 0 || password.length === 0 || confirmPassword.length === 0) {
-            showMessage('Vui lòng nhập đầy đủ các trường.', true);
+            showMessage('Please fill in all the fields.', true);
             return;
         }
         if (password !== confirmPassword) {
-            showMessage('Xác nhận mật khẩu không khớp.', true);
+            showMessage('Password confirmation does not match.', true);
             return;
         }
 
@@ -36,7 +40,7 @@
         let isAvailable = await res.json();
 
         if (isAvailable === false) {
-            showMessage('Email đã được sử dụng. Vui lòng chọn email khác.', true);
+            showMessage('The email is already in use. Please choose another email.', true);
             return;
         }
 
@@ -49,9 +53,9 @@
         let otpData = await otpRes.json();
         
         if (otpData.success) {
-            showMessage(`Mã OTP giả lập (${otpData.mock_code}) đã được gửi. Vui lòng kiểm tra email và nhập mã.`, false);
+            showMessage(`The simulated OTP (${otpData.mock_code}) has been sent. Please check your email and enter the code.`, false);
             
-            btnSubmit.innerHTML = '<i class="bi bi-check2-square"></i> Xác nhận OTP';
+            btnSubmit.innerHTML = '<i class="bi bi-check2-square"></i> Accept OTP';
             otpContainer.style.display = 'block';
             
             txtEmail.readOnly = true;
@@ -61,7 +65,7 @@
             frmRegister.removeEventListener('submit', handleSignup);
             frmRegister.addEventListener('submit', handleVerifyAndSubmit); 
         } else {
-            showMessage('Lỗi khi gửi OTP. Vui lòng thử lại.', true);
+            showMessage('Error sending OTP. Please try again.', true);
         }
     }
 
@@ -72,7 +76,7 @@
         const otp = txtOTP.value;
 
         if (otp.length === 0) {
-            showMessage('Vui lòng nhập mã OTP.', true);
+            showMessage('Please enter the OTP code.', true);
             return;
         }
         
@@ -84,7 +88,7 @@
         let data = await res.json();
         
         if (data.success) {
-            showMessage('Xác thực OTP thành công! Đang tiến hành đăng ký...', false);
+            showMessage('OTP verification successful! Proceeding with registration...', false);
             
             // OTP đã verified trong session. Tiến hành SUBMIT form thật sự.
             // Phải mở khóa các trường để dữ liệu được gửi đi trong POST request
@@ -103,12 +107,12 @@
 </script>
 {{/fill_Content}}
 
-
-<div class="container my-5"> 
+<div class="signup-scope">
+    <div class="container my-5 mb-10"> 
     <div class="row justify-content-center"> 
         <div class="col-12 col-md-8 col-lg-6">
-            <div class="card">
-                <h5 class="card-header">Acount Registration</h5>
+            <div class="register_form ">
+                <h3 class="card-header">Acount Registration</h3>
                 <div class="card-body">
                     <form method="post" action="/account/signup" id="frmRegister">
                         <div class="mb-3">
@@ -138,7 +142,7 @@
                             </select>
                         </div>
                         <div class="mb-3" id="otpContainer" style="display: none;">
-                            <label for="txtOTP" class="form-label">Mã OTP (6 chữ số)</label>
+                            <label for="txtOTP" class="form-label">Code OTP</label>
                             <input type="text" class="form-control" id="txtOTP" name="otp" maxlength="6">
                         </div>
                         <button type="submit" class="btn btn-primary" id="btnSubmit"><i
@@ -148,4 +152,5 @@
             </div>
         </div>
     </div>
+</div>
 </div>
