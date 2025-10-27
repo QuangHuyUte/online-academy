@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import userModel from '../models/user.model.js';
+import passport from 'passport';
 import { checkAuthenticated } from '../middlewares/auth.mdw.js';
 import otpModel, { generateOTP } from '../models/otp.model.js';
 
@@ -194,4 +195,25 @@ router.post('/changePassword', checkAuthenticated, async function (req, res) {
         user: req.session.authUser,
     });
 });
+
+router.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/account/signin' }),
+    async function(req, res) {
+        // Successful authentication via Passport; ensure session flags and redirect.
+        try {
+            // req.user should be populated by passport.deserializeUser
+            if (req.user) {
+                req.session.isAuthenticated = true;
+                req.session.authUser = req.user;
+            }
+        } catch (e) {
+            console.error('Error saving auth session after Google callback', e);
+        }
+        const url = req.session.url || '/';
+        delete req.session.url;
+        res.redirect(url);
+    });
 export default router;

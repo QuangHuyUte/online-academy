@@ -11,6 +11,9 @@ export default {
     getAllUsers() {
         return db('users');
     },
+    findById(id) {
+        return db('users').where('id', id).first();
+    },
     getpasswordHash(name) {
         return db('users').where('name', name).select('password_hash').first();
     },
