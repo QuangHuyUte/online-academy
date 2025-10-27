@@ -1,51 +1,122 @@
-<form action="" method="post">
-  <div class="card">
-    <div class="card-header">Change Password</div>
-    <div class="card-body">
-       {{#if error}}
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                <strong>Error.</strong> Invalid password.
+{{#fill_Content 'css'}}
+  <link rel="stylesheet" href="/css/styleChangePass.css">
+{{/fill_Content}}
+
+{{#fill_Content 'js'}}
+<script>
+  function handleSubmit(e) {
+    e.preventDefault();
+    const frmChangePwd = document.querySelector('form');
+    const txtNewPass = document.querySelector('#txtnewPass');
+    const txtConfirmPass = document.querySelector('#txtConfirmPass');
+    const txtcurPass = document.querySelector('#txtcurPass');
+    const email = document.querySelector('#txtEmail').value;
+
+    // validate input values (use .value, not element.length)
+    if (!txtcurPass || !txtcurPass.value || txtcurPass.value.trim().length === 0) {
+      alert('Please enter current password');
+      return;
+    }
+
+    if (!txtNewPass || !txtNewPass.value || !txtConfirmPass || txtNewPass.value.trim().length === 0 || txtConfirmPass.value.trim().length === 0) {
+        alert('Please enter the new password and confirmation');
+        return;
+    }
+
+    if (txtNewPass.value !== txtConfirmPass.value) {
+        alert('New password and confirm password do not match.');
+        return;
+    }
+  // encode values and avoid sending empty password
+  const currentPwd = txtcurPass.value || '';
+  fetch(`/account/is-password-correct?email=${encodeURIComponent(email)}&password=${encodeURIComponent(currentPwd)}`)
+            .then(function (res) {
+                console.log(res);
+                return res.json();
+            })
+            .then(function (data)  {
+                if (data === false) {
+                    alert('Wrong password.');
+                    return;
+                }
+                alert('Change Password Successfully')
+                e.target.submit();
+            })
+            .catch(function (err) {
+                console.error(err);
+                alert('Error occurred. Please try again later.');
+            });
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    const frm = document.getElementById('frmChangePwd') || document.querySelector('form');
+    if (!frm) {
+      console.error('Change password form not found when attaching handler');
+      return;
+    }
+    frm.addEventListener('submit', handleSubmit);
+  });
+</script>
+{{/fill_Content}}
+
+<div class="change-pwd-scope">
+    <form action="" method="post" id ="frmChangePwd">
+      <div class="card">
+        <div class="card-header">Change Password</div>
+        <div class="card-body">
+           {{#if error}}
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <strong>Error.</strong> Invalid password.
+                </div>
+            {{/if}}
+            <div class="mb-3">
+              <input
+                type="text"
+                class="form-control"
+                id="txtEmail"
+                name="email"
+                hidden
+                value="{{user.email}}"
+              />
             </div>
-        {{/if}}
-        <div class="mb-3">
-          <label for="txtID" class="form-label">ID</label>
-          <input
-            type="text"
-            class="form-control"
-            id="txtID"
-            name="id"
-            value="{{user.id}}"
-            readonly
-          />
+            <div class="mb-3">
+              <input
+                type="text"
+                class="form-control"
+                id="txtID"
+                name="id"
+                value="{{user.id}}"
+               hidden
+              />
+            </div>
+            <div class="mb-3">
+              <label for="txtcurPass" class="form-label">Current Password</label>
+              <input
+                type="password"
+                class="form-control"
+                id="txtcurPass"
+                name="currentPassword"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="txtnewPass" class="form-label">New Password</label>
+              <input
+                type="password"
+                class="form-control"
+                id="txtnewPass"
+                name="newPassword"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="txtConfirmPass" class="form-label">Comfirm Password</label>
+              <input type="password" class="form-control" id="txtConfirmPass" />
+            </div>
         </div>
-        <div class="mb-3">
-          <label for="txtcurPass" class="form-label">Current Password</label>
-          <input
-            type="password"
-            class="form-control"
-            id="txtcurPass"
-            name="currentPassword"
-          />
+        <div class="card-footer text-muted">
+          <button type="submit" name="" id="" class="btn btn-primary">
+            Save Changes
+        </button>
         </div>
-        <div class="mb-3">
-          <label for="txtnewPass" class="form-label">New Password</label>
-          <input
-            type="password"
-            class="form-control"
-            id="txtnewPass"
-            name="newPassword"
-          />
-        </div>
-        <div class="mb-3">
-          <label for="txtConfirmPass" class="form-label">Comfirm Password</label>
-          <input type="password" class="form-control" id="txtConfirmPass" />
-        </div>
-    </div>
-    <div class="card-footer text-muted">
-      <button type="submit" name="" id="" class="btn btn-primary">
-        Save
-      </button>
-    </div>
-  </div>
-</form>
+      </div>
+    </form>
+</div>
