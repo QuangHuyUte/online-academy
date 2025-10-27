@@ -1,95 +1,55 @@
-<div class="container mt-4">
+<div class="container mt-4 p-4 rounded-3" style="background-color: #f8f9fa;">
+  <h2 class="mb-4 text-primary fw-bold text-center">Best Seller Courses</h2>
+</div>
 
-  <div id="carouselExampleRide" class="carousel slide mb-5 carousel-fixed-frame" data-bs-ride="true">
+<div class="container mt-4">
+  <div id="carouselExample" class="carousel slide">
     <div class="carousel-inner">
-      {{#each featuredCourses}}
+      {{#each slides_bestseller}}
       <div class="carousel-item {{#if @first}}active{{/if}}">
-        <img src="{{image}}" class="d-block w-100 fixed-cover-img" alt="{{title}}">
-        <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded p-2">
-          <h5>{{title}}</h5>
-          <p>{{shortDesc}}</p>
+        <div class="row">
+          {{#each this}}
+          {{> cardCourses}}
+          {{/each}}
         </div>
       </div>
       {{/each}}
     </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleRide" data-bs-slide="prev">
-      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-      <span class="visually-hidden">Previous</span>
-    </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleRide" data-bs-slide="next">
-      <span class="carousel-control-next-icon" aria-hidden="true"></span>
-      <span class="visually-hidden">Next</span>
-    </button>
+  <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Previous</span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Next</span>
+  </button>
   </div>
+</div>
 
-  <h3 class="mb-4 text-center">👀 Most Viewed Course</h3>
-  <div class="row mb-5">
-    {{#each mostViewedCourses}}
-    <div class="col-md-3 mb-3">
-      <a href="/courses/{{id}}" class="course-card-link text-decoration-none text-reset">
-        <div class="card h-100 shadow-sm border-0 card-hover">
-          <img src="{{image}}" class="card-img-top grid-fixed-img" alt="{{title}}">
-          <div class="card-body">
-            <h5 class="card-title">{{title}}</h5>
-            <p class="card-text text-muted">{{shortDesc}}</p>
-          </div>
+<div class="container mt-4 p-4 rounded-3" style="background-color: #f8f9fa;">
+  <h2 class="mb-4 text-primary fw-bold text-center">Top newest course</h2>
+</div>
+
+<div class="container mt-4">
+  <div id="carouselExample" class="carousel slide">
+    <div class="carousel-inner">
+      {{#each slides_newest}}
+      <div class="carousel-item {{#if @first}}active{{/if}}">
+        <div class="row">
+          {{#each this}}
+          {{> cardCourses}}
+          {{/each}}
         </div>
-      </a>
-    </div>
-    {{/each}}
-  </div>
-
-  <h3 class="mb-4 text-center">🆕 Newest Course</h3>
-  <div class="row mb-5">
-    {{#each newestCourses}}
-    <div class="col-md-3 mb-3">
-      <a href="/courses/{{id}}" class="course-card-link text-decoration-none text-reset">
-        <div class="card h-100 shadow-sm border-0 card-hover">
-          <img src="{{image}}" class="card-img-top grid-fixed-img" alt="{{title}}">
-          <div class="card-body">
-            <h5 class="card-title">{{title}}</h5>
-            <p class="text-muted small mb-1">{{category_name}} </p>
-            <p class="text-muted small mb-1">Instructor: {{teacher_name}}</p>
-            <p class="small mb-2">⭐ {{rating}} ({{rating_count}} Rating)</p>
-            <p class="fw-bold mb-0">
-              {{#if promo_price}}
-                <span class="text-danger">{{promo_price}}₫</span>
-                <del class="text-muted ms-2">{{price}}₫</del>
-              {{else}}
-                <span>{{price}}₫</span>
-              {{/if}}
-            </p>
-          </div>
-        </div>
-      </a>
-    </div>
-    {{/each}}
-  </div>
-
-  <!-- Pagination for newest courses -->
-  {{#if newestPageNumbers}}
-  <nav aria-label="Newest course pagination">
-    <ul class="pagination justify-content-center">
-      {{#each newestPageNumbers}}
-      <li class="page-item {{#if isActive}}active{{/if}}">
-        <a class="page-link" href="{{url}}">{{value}}</a>
-      </li>
+      </div>
       {{/each}}
-      {{#if newestNextPage}}
-        <li class="page-item"><a class="page-link" href="/courses/newest?page={{newestNextPage}}">Next</a></li>
-      {{/if}}
-    </ul>
-  </nav>
-  {{/if}}
-
-  <h3 class="mb-4 text-center">🏆 Most Popular Field</h3>
-  <ul class="list-group">
-    {{#each topCategories}}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        {{name}}
-        <span class="badge bg-primary rounded-pill">{{enroll_count}}</span>
-      </li>
-    {{/each}}
-  </ul>
-  <div style="height:80px"></div>
+    </div>
+  <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Previous</span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Next</span>
+  </button>
+  </div>
 </div>

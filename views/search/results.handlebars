@@ -1,39 +1,57 @@
 <!-- Bộ lọc -->
 <section class="container mx-auto px-4 mt-6 items-center">
-  <form method="get">
-    <label for="sort" class="mr-2 font-semibold">Sắp xếp theo:</label>
-    <select name="sort" id="sort" class="border px-3 py-2 rounded-lg" onchange="this.form.submit()">
-      <option value="rating" {{#if (eq sort "rating")}}selected{{/if}}>Điểm đánh giá giảm dần</option>
-      <option value="price" {{#if (eq sort "price")}}selected{{/if}}>Giá tăng dần</option>
-      <option value="create_at" {{#if (eq sort "create_at")}}selected{{/if}}>Ngày đăng mới nhất</option>
-      <option value="students_count" {{#if (eq sort "students_count")}}selected{{/if}}>Bán chạy</option>
-    </select>
-  </form>
+    <form method="get">
+        <label for="sort" class="mr-2 font-semibold">Arrange by:</label>
+        <select name="sort" id="sort" class="border px-3 py-2 rounded-lg" onchange="this.form.submit()">
+            <option value="">Select sorting criteria</option>
+            <option value="rating" {{#if (eq sort "rating" )}}selected{{/if}}>Rating: High to Low</option>
+            <option value="price" {{#if (eq sort "price" )}}selected{{/if}}>Price: Low to High</option>
+            <option value="create_at" {{#if (eq sort "create_at" )}}selected{{/if}}>Newest</option>
+            <option value="students_count" {{#if (eq sort "students_count" )}}selected{{/if}}>Best Seller</option>
+        </select>
+    </form>
 </section>
 
 <!-- Danh sách khóa học -->
+{{#if (eq courses.length 0)}}
+<div class="alert alert-info text-center shadow-sm p-4 mt-5 rounded-4"
+    style="max-width: 700px; margin: 0 auto; background-color: #f8f9fa;">
+    <h5 class="mb-3 text-primary fw-semibold">The course you are looking for was not found.</h5>
+    <p class="mb-0 text-muted">
+        <span class="fw-bold text-dark">Contact Truong Vu again or call the hotline 0336363636 to get advice from Vien Ngoc Bao.</span>
+        If you have any suggestions or requests.
+    </p>
+</div>
+{{else}}
 <div class="container mx-auto px-4">
     {{#if keyword}}
-        <h2 class="text-2xl font-bold mb-4 mt-6">Kết quả tìm kiếm cho "{{keyword}}"</h2>
-        <div class="row g-4">
-            {{#each courses}}
-                {{> cardCourses}}
-            {{/each}}
-        </div>
+    <h2 class="text-2xl font-bold mb-4 mt-6">Kết quả tìm kiếm cho "{{keyword}}"</h2>
+    <div class="row g-4">
+        {{#each courses}}
+        {{> cardCourses}}
+        {{/each}}
+    </div>
     {{else}}
-        <div class="row g-4">
-            {{#each courses}}
-                {{> cardCourses}}
-            {{/each}}
-        </div>
+    <div class="row g-4">
+        {{#each courses}}
+        {{> cardCourses}}
+        {{/each}}
+    </div>
     {{/if}}
 </div>
+{{/if}}
+
+
 <!-- Phân trang -->
 <div class="row">
     <nav aria-label="...">
-        <ul class="pagination">
-            <li class="page-item disabled">
-                <a class="page-link">Previous</a>
+        <ul class="pagination dflex justify-content-center mt-4">
+            <li class="page-item ">
+                <a class="page-link"
+                    href="?page={{#if (eq page 1)}}{{page}}{{else}}{{subtract page 1}}{{/if}}&sort={{sort}}"
+                    aria-label="Previous">
+                    &laquo;
+                </a>
             </li>
 
             {{#each page_numbers}}
@@ -49,30 +67,16 @@
             {{/each}}
 
 
-            <li class="page-item">
-                <a class="page-link" href="#">Next</a>
+            <li class="page-item ">
+                <a class="page-link"
+                    href="?page={{#if (eq page totalPages)}}{{page}}{{else}}{{add page 1}}{{/if}}&sort={{sort}}"
+                    aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
             </li>
+
 
         </ul>
     </nav>
 
 </div>
-<!-- Featured Newest Section -->
-<section class="container mx-auto px-4 mt-10">
-    <h2 class="text-2xl font-bold mb-4">Khóa học mới nhất</h2>
-    <div class="row g-4">
-        {{#each featured_newest}}
-            {{> cardCourses}}
-        {{/each}}
-    </div>
-</section>
-<!-- Featured Bestsellers Section -->
-<section class="container mx-auto px-4 mt-10 mb-10">
-    <h2 class="text-2xl font-bold mb-4">Khóa học bán chạy nhất</h2>
-    <div class="row g-4">
-        {{#each featured_bestseller}}
-            {{> cardCourses}}
-        {{/each}}
-    </div>
-</section>
-    
