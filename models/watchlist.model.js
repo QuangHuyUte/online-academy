@@ -1,6 +1,7 @@
 import db from '../utils/db.js';
 
-export async function add(userId, courseId) {
+export async function addWatchlist(userId, courseId) {
+  
   return db('watchlist').insert({
     user_id: userId,
     course_id: courseId
