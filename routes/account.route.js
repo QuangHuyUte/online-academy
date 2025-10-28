@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import userModel from '../models/user.model.js';
+import passport from 'passport';
 import { checkAuthenticated } from '../middlewares/auth.mdw.js';
 import otpModel, { generateOTP } from '../models/otp.model.js';
 import watchlistModel from '../models/watchlist.model.js';
@@ -223,32 +224,13 @@ router.get('/watchlist', async (req, res) => {
   }
 });
 
-router.post("/signin", async (req, res) => {
-  const { email, password } = req.body;
-
-  const user = await accountModel.findByEmail(email);
-  if (!user) {
-    return res.render("vwAccounts/signin", { error: "Account not found" });
-  }
-
-  const passwordCorrect = await accountModel.verifyPassword(email, password);
-  if (!passwordCorrect) {
-    return res.render("vwAccounts/signin", { error: "Incorrect password" });
-  }
-  req.session.authUser = user;
-  req.session.isAuthenticated = true;
-
-  console.log("✅ Logged in user:", user);
-  res.redirect("/");
-});
-
+// My Courses routes
 router.get("/my-courses", async (req, res) => {
   if (!req.session.authUser) {
     return res.redirect("/account/signin");
   }
 
   // BẮT BUỘC: lấy đúng khóa ID thật đang lưu trong session
-  // (project của bạn dùng users.id; enrollments.user_id tham chiếu users.id)
   const auth = req.session.authUser;
   const userId = auth?.user_id ?? auth?.id ?? auth?.account_id;
 
@@ -259,9 +241,6 @@ router.get("/my-courses", async (req, res) => {
 
   const myCourses = await myCourseModel.getMyCoursesProgress(userId);
 
-  // debug:
-  // console.log("MyCourses length =", myCourses.length);
-
   res.render("vwAccount/my-courses", {
     layout: "main",
     myCourses,
@@ -269,17 +248,23 @@ router.get("/my-courses", async (req, res) => {
   });
 });
 
-router.get("/my-courses", async (req, res) => {
-  const userId = req.session.authUser?.id;
-  if (!userId) return res.redirect("/account/signin");
+// Google Authentication routes
+router.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-  const myCourses = await courseModel.getMyCoursesProgress(userId);
-
-  res.render("vwAccount/my-courses", {
-    layout: "main",
-    courses: myCourses,
-  });
-});
-
-
+router.get('/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/account/signin' }),
+    async function(req, res) {
+        try {
+            if (req.user) {
+                req.session.isAuthenticated = true;
+                req.session.authUser = req.user;
+            }
+        } catch (e) {
+            console.error('Error saving auth session after Google callback', e);
+        }
+        const url = req.session.url || '/';
+        delete req.session.url;
+        res.redirect(url);
+    });
 export default router;

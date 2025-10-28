@@ -2,6 +2,10 @@ import express from 'express';
 import { engine } from 'express-handlebars';
 import hbs_sections from 'express-handlebars-sections';
 import session from 'express-session';
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import bcrypt from 'bcryptjs';
+import userModel from './models/user.model.js';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 import dayjs from 'dayjs';
@@ -42,6 +46,53 @@ app.use((req, res, next) => {
   res.locals.flash = req.session.flash;
   delete req.session.flash; // hiển thị xong là xoá
   next();
+});
+
+// Initialize passport after session middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Passport Google strategy
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_CALLBACK_URL || '/account/auth/google/callback'
+}, async function(accessToken, refreshToken, profile, done) {
+  try {
+    const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+    if (!email) return done(null, false);
+
+    let user = await userModel.findByEmail(email);
+    if (!user) {
+      // create a new user with a random password hash placeholder
+      const placeholder = bcrypt.hashSync(profile.id + Date.now(), 10);
+      const newUser = {
+        name: profile.displayName || email.split('@')[0],
+        email: email,
+        password_hash: placeholder,
+        role: 'student',
+        created_at: new Date()
+      };
+      await userModel.add(newUser);
+      user = await userModel.findByEmail(email);
+    }
+    return done(null, user);
+  } catch (err) {
+    return done(err);
+  }
+}));
+
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async function(id, done) {
+  try {
+    const user = await userModel.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
 });
 
 // Handlebars setup
@@ -92,6 +143,7 @@ app.engine('handlebars', engine({
 app.use(express.json());
 app.set('view engine', 'handlebars');
 app.set('views', './views');
+
 
 //CATEGORIES 2 CẤP
 app.use(async function (req, res, next) {
