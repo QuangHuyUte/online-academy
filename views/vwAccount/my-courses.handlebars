@@ -1,10 +1,10 @@
 <div class="container py-4">
   <h2 class="fw-bold mb-1">My Courses</h2>
-  <p class="text-muted mb-4">Các khóa học bạn đã đăng ký</p>
+  <p class="text-muted mb-4">Courses you have registered for</p>
 
   {{#if empty}}
     <div class="alert alert-info text-center">
-      Bạn chưa đăng ký khóa học nào.
+      You have not registered for any course yet.
     </div>
   {{else}}
     <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -60,7 +60,7 @@
                   </div>
                 </div>
                 <p class="small text-muted mt-1 text-center">
-                  {{progress_percent}}% hoàn thành
+                  {{progress_percent}}% completed
                 </p>
               </div>
 
