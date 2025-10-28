@@ -14,17 +14,54 @@
 }
 
 
-.carousel-control-prev-icon,
-.carousel-control-next-icon {
-  background-color: rgba(0,0,0,0.5); /* nền bán trong suốt */
-  border-radius: 50%;
-  padding: 10px;
+/* MultiCarousel container */
+.MultiCarousel {
+    overflow: hidden;
+    position: relative;
+    padding: 15px 0;
 }
 
-.carousel-control-prev:hover .carousel-control-prev-icon,
-.carousel-control-next:hover .carousel-control-next-icon {
-  background-color: rgba(0,0,0,1); /* nổi bật hơn khi hover */
+.MultiCarousel-inner {
+  display: flex;           /* dùng flex thay float */
+  transition: transform 0.5s ease;
 }
+
+.MultiCarousel-inner .item {
+  flex: 0 0 25%;           /* 4 item mỗi slide */
+  padding: 0 10px;         /* khoảng cách giữa card */
+  box-sizing: border-box;  /* để padding không làm rộng vượt */
+}
+
+.MultiCarousel-inner .item .card img {
+  width: 100%;             /* ảnh luôn full card */
+  height: auto;            /* giữ tỷ lệ gốc */
+  object-fit: cover;       /* nếu muốn crop gọn */
+}
+
+/* Buttons */
+.MultiCarousel .leftBtn,
+.MultiCarousel .rightBtn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background-color: rgba(0,0,0,0.5);
+    border: none;
+    color: white;
+    width: 35px;
+    height: 35px;
+    cursor: pointer;
+    z-index: 2;
+}
+.MultiCarousel .leftBtn { left: 0; }
+.MultiCarousel .rightBtn { right: 0; }
+.MultiCarousel .leftBtn:disabled,
+.MultiCarousel .rightBtn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+
 
 
 
