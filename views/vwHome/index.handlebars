@@ -1,0 +1,89 @@
+<section class="hero-banner position-relative text-white text-center mb-5">
+  <img src="/imgs/upscalemedia-transformed.jpeg" 
+       class="img-fluid w-100" 
+       alt="Online Learning Banner">
+  <div class="hero-content position-absolute top-50 start-50 translate-middle">
+  </div>
+</section>
+
+
+<div class="container mt-4 p-4 rounded-3" style="background-color: #f8f9fa;">
+  <h2 class="mb-4 text-primary fw-bold text-center">Featured Course</h2>
+</div>
+
+<div class="container mt-5">
+  <div class="MultiCarousel" data-slide="4">
+    <button class="leftBtn">&lt;</button>
+    <div class="MultiCarousel-inner">
+      {{#each courses_bestseller}}
+      <div class="item">
+        {{> cardCourses}}
+      </div>
+      {{/each}}
+    </div>
+    <button class="rightBtn">&gt;</button>
+  </div>
+</div>
+
+<div class="container mt-4 p-4 rounded-3" style="background-color: #f8f9fa;">
+  <h2 class="mb-4 text-primary fw-bold text-center">Top 10 Most Viewed Courses</h2>
+</div>
+
+<div class="container mt-5">
+  <div class="MultiCarousel" data-slide="4">
+    <button class="leftBtn">&lt;</button>
+    <div class="MultiCarousel-inner">
+      {{#each Top10ViewedCourses}}
+      <div class="item">
+        {{> cardCourses}}
+      </div>
+      {{/each}}
+    </div>
+    <button class="rightBtn">&gt;</button>
+  </div>
+</div>
+
+
+<div class="container mt-4 p-4 rounded-3" style="background-color: #f8f9fa;">
+  <h2 class="mb-4 text-primary fw-bold text-center">Top 10 Newest Course</h2>
+</div>
+
+<div class="container mt-5">
+  <div class="MultiCarousel" data-slide="4">
+    <button class="leftBtn">&lt;</button>
+    <div class="MultiCarousel-inner">
+      {{#each courses_newest}}
+      <div class="item">
+        {{> cardCourses}}
+      </div>
+      {{/each}}
+    </div>
+    <button class="rightBtn">&gt;</button>
+  </div>
+</div>
+
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-fire text-danger me-2"></i>
+        Top Enrolled Categories
+      </h5>
+      <small class="text-muted">Enrollments</small>
+    </div>
+
+    {{#if topfield}}
+      <ul class="list-group list-group-flush">
+        {{#each topfield}}
+          <li class="list-group-item py-3 d-flex justify-content-between align-items-center">
+            <span class="fw-semibold"> {{this.name}}</span>
+            <span class="badge bg-primary rounded-pill">{{this.enroll_count}}</span>
+          </li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="text-muted mb-0">No enrollment data available.</p>
+    {{/if}}
+  </div>
+</div>

@@ -902,16 +902,7 @@ SELECT 'watchlist', COUNT(*) FROM watchlist;
 SELECT id, title
 FROM courses
 WHERE fts @@ to_tsquery('web');
-<<<<<<<<< Temporary merge branch 1
-<<<<<<<<< Temporary merge branch 1
-<<<<<<<<< Temporary merge branch 1
+<<<<<<< HEAD
 
->>>>>>> 54841f8b6cd5fd7f31a08b3242a5d0b8bc6e5e83
-=========
->>>>>>>>> Temporary merge branch 2
-=========
-
->>>>>>> 54841f8b6cd5fd7f31a08b3242a5d0b8bc6e5e83
->>>>>>>>> Temporary merge branch 2
-=========
->>>>>>>>> Temporary merge branch 2
+=======
+>>>>>>> origin/feature/course-detail-watchlist-reviews

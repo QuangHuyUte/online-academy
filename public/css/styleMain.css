@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* ========================================= */
+/* ===== Global Font for Main Components ===== */
+/* ========================================= */
+/* Áp dụng font Montserrat cho toàn bộ các thành phần chính */
+.navbar, .container .nav-pills, .card-footer {
+    font-family: "Montserrat", sans-serif !important;
+}
+
+/* ========================================= */
+/* ===== Navbar Customization (bg-dark) ===== */
+/* ========================================= */
+.navbar.bg-dark {
+    /* Màu nền tối và đường viền màu chủ đạo */
+    background-color: #171645 !important; 
+    border-bottom: 3px solid #626cd6; 
+    font-weight: 500;
+}
+
+.navbar-brand {
+    font-weight: 700 !important;
+}
+
+/* luôn cho dropdown ở navbar nổi lên trên */
+.navbar .dropdown-menu { 
+  position: absolute; 
+  z-index: 3000;        /* > sticky panel */
+}
+
+/* hạ z-index của sidebar bài giảng */
+.learning-sidebar.sticky-top {
+  z-index: 5;           /* thấp hơn dropdown */
+}
+
+
+.navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.85); /* Màu chữ mặc định */
+    transition: 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #626cd6 !important; /* Màu hover chủ đạo */
+}
+
+/* Tùy chỉnh thanh tìm kiếm */
+.navbar .form-control {
+    border: 1px solid #DADAF2;
+    border-radius: 5px;
+    background: #F8F8FB;
+    font-size: 16px;
+    padding: 8px 15px;
+}
+
+.navbar .btn-outline-success {
+    color: #fff;
+    border-color: #626cd6;
+    background-color: #626cd6;
+    transition: 0.3s ease;
+}
+
+.navbar .btn-outline-success:hover {
+    color: #fff;
+    background-color: #4954d0;
+    border-color: #4954d0;
+}
+
+/* ========================================= */
+/* ===== Categories Nav (nav-pills) & Dropdown ===== */
+/* ========================================= */
+.nav-pills .nav-link {
+    color: #171645;
+    font-weight: 500;
+    transition: 0.2s ease;
+}
+
+.nav-pills .nav-link:hover {
+    color: #626cd6;
+}
+
+/* Tùy chỉnh Dropdown Menu */
+.dropdown-menu {
+    border: 1px solid #DADAF2;
+    border-radius: 6px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    /* Các quy tắc cho hiển thị ngang */
+    min-width: fit-content !important; 
+    white-space: nowrap; 
+    padding: 0.5rem !important; 
+    margin-top: 10px !important; /* Đẩy xuống để chừa chỗ cho mũi tên */
+}
+
+.dropdown-item:focus, .dropdown-item:hover {
+    color: #fff;
+    background-color: #626cd6;
+}
+
+/* Tùy chỉnh Dropdown Item trong Menu con (dạng pill ngang) */
+.dropdown-menu .dropdown-item {
+    display: inline-block; 
+    padding: 0.5rem 0.75rem !important; 
+    margin: 5px; 
+    border-radius: 50rem; 
+}
+
+/* ========================================= */
+/* ===== Footer Customization ===== */
+/* ========================================= */
+.card-footer.bg-dark {
+    /* Màu nền tối và đường viền màu chủ đạo */
+    background-color: #171645 !important;
+    border-top: 3px solid #626cd6;
+    font-weight: 500;
+}
