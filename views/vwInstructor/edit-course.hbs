@@ -25,8 +25,13 @@
         <select name="cat_id" class="form-select" required>
           <option value="">-- Select category --</option>
           {{#each categories}}
-            <option value="{{this.id}}" {{#if (eq this.id ../course.cat_id)}}selected{{/if}}>
-              {{this.name}}
+            {{!-- ✅ Disable danh mục cha (parent_id null) --}}
+            <option 
+              value="{{this.id}}" 
+              {{#if (eq this.id ../course.cat_id)}}selected{{/if}}
+              {{#unless this.parent_id}}disabled{{/unless}}
+            >
+              {{#unless this.parent_id}}[Group] {{/unless}}{{this.name}}
             </option>
           {{/each}}
         </select>
@@ -62,7 +67,7 @@
 
   <div class="d-flex justify-content-between">
     <a href="/instructor/my-courses" class="btn btn-outline-secondary">Cancel</a>
-    <button class="btn btn-primary" type="submit">
+    <button id="btnSubmit" class="btn btn-primary" type="submit">
       {{#if course.id}}Update{{else}}Create{{/if}}
     </button>
   </div>
@@ -122,7 +127,7 @@
     }
   });
 
-  // --- Client-side validate before submit ---
+  // --- Client-side validate + chống double-submit ---
   document.getElementById('frmCourse')?.addEventListener('submit', (e) => {
     const price = parseFloat(document.querySelector('[name="price"]')?.value || '');
     const promo = parseFloat(document.querySelector('[name="promo_price"]')?.value || '');
@@ -138,5 +143,9 @@
     }
     // đảm bảo TinyMCE sync nội dung về textarea
     if (window.tinymce) tinymce.triggerSave();
+
+    // ✅ chống double-submit
+    const btn = document.getElementById('btnSubmit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
   });
 </script>

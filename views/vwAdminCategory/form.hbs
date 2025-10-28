@@ -4,21 +4,30 @@
   </div>
 
   <div class="col-9">
-    <h3>{{#if category.id}}Edit Category{{else}}New Category{{/if}}</h3>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h3 class="mb-0">
+        {{#if category.id}}Edit Category{{else}}New Category{{/if}}
+      </h3>
+      <a href="/admin/categories" class="btn btn-outline-secondary">Back</a>
+    </div>
 
-    <form method="post" action="{{#if category.id}}/admin/categories/{{category.id}}{{else}}/admin/categories{{/if}}">
+    {{> flash}}
+
+    <form id="frmCategory" method="post" action="{{#if category.id}}/admin/categories/{{category.id}}{{else}}/admin/categories{{/if}}">
       {{#if category.id}}
         <input type="hidden" name="id" value="{{category.id}}">
       {{/if}}
 
       <div class="mb-3">
-        <label class="form-label">Name</label>
-        <input name="name" class="form-control" value="{{category.name}}" required>
+        <label class="form-label">Name <span class="text-danger">*</span></label>
+        <input name="name" class="form-control" value="{{category.name}}" placeholder="e.g. Web Development" required autofocus>
+        <div class="form-text">Tên hiển thị cho người dùng (bắt buộc).</div>
       </div>
 
       <div class="mb-3">
         <label class="form-label">Slug</label>
-        <input name="slug" class="form-control" value="{{category.slug}}">
+        <input name="slug" class="form-control" value="{{category.slug}}" placeholder="auto-generated-if-empty">
+        <div class="form-text">Để trống nếu muốn tự sinh từ Name. Chỉ gồm chữ thường, số, và dấu gạch ngang.</div>
       </div>
 
       <div class="mb-3">
@@ -26,21 +35,88 @@
         <select name="parent_id" class="form-select">
           <option value="">-- None --</option>
           {{#each parents}}
-            <option value="{{this.id}}" {{#if (eq this.id ../category.parent_id)}}selected{{/if}}>
+            <option
+              value="{{this.id}}"
+              {{#if (eq this.id ../category.parent_id)}}selected{{/if}}
+              {{!-- Không cho chọn chính nó làm cha --}}
+              {{#if (eq this.id ../category.id)}}disabled{{/if}}
+            >
               {{this.name}}
             </option>
           {{/each}}
         </select>
+        <div class="form-text">
+          Chỉ chọn danh mục <strong>cấp 1</strong> làm cha. Danh sách bên trên đã lọc sẵn các nhóm cấp 1.
+        </div>
       </div>
 
-      <button class="btn btn-success">Save</button>
-      <a href="/admin/categories" class="btn btn-outline-secondary">Cancel</a>
+      <div class="d-flex gap-2">
+        <button id="btnSave" class="btn btn-success">Save</button>
+        <a href="/admin/categories" class="btn btn-outline-secondary">Cancel</a>
 
-      {{#if category.id}}
-        <button formaction="/admin/categories/{{category.id}}/delete" formmethod="post"
-                class="btn btn-danger float-end"
-                onclick="return confirm('Delete this category?')">Delete</button>
-      {{/if}}
+        {{#if category.id}}
+          <button
+            formaction="/admin/categories/{{category.id}}/delete"
+            formmethod="post"
+            class="btn btn-danger ms-auto"
+            onclick="return confirm('Delete category {{category.name}}?');"
+          >
+            Delete
+          </button>
+        {{/if}}
+      </div>
     </form>
   </div>
 </div>
+
+<script>
+  // --- Tiny helpers ---
+  const $ = (s, r = document) => r.querySelector(s);
+  const slugify = (str = '') =>
+    str
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')     // bỏ dấu tiếng Việt
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g,'')                         // bỏ ký tự lạ
+      .trim().replace(/\s+/g,'-');                         // space -> dash
+
+  const $form = $('#frmCategory');
+  const $btnSave = $('#btnSave');
+  const $name = $('[name="name"]');
+  const $slug = $('[name="slug"]');
+  const $parent = $('[name="parent_id"]');
+  const categoryId = '{{category.id}}'; // string ('' nếu tạo mới)
+
+  // Tự sinh slug khi rời ô Name nếu slug đang trống
+  $name?.addEventListener('blur', () => {
+    if ($slug && !$slug.value.trim() && $name.value.trim()) {
+      $slug.value = slugify($name.value);
+    }
+  });
+
+  // Làm sạch slug theo thời gian thực
+  $slug?.addEventListener('input', (e) => {
+    const pos = e.target.selectionStart;
+    e.target.value = slugify(e.target.value);
+    try { e.target.selectionStart = e.target.selectionEnd = pos; } catch {}
+  });
+
+  // Không cho chọn chính nó làm parent (phòng khi route chưa lọc)
+  $parent?.addEventListener('change', (e) => {
+    const v = e.target.value;
+    if (categoryId && v && String(v) === String(categoryId)) {
+      alert('Category không thể là cha của chính nó.');
+      e.target.value = '';
+    }
+  });
+
+  // Validate tối thiểu + chống double submit
+  $form?.addEventListener('submit', (e) => {
+    if (!$name.value.trim()) {
+      e.preventDefault();
+      return alert('Name không được trống.');
+    }
+    // Không ép slug — BE sẽ tự sinh nếu để trống
+    $btnSave.disabled = true;
+    $btnSave.textContent = 'Saving...';
+  });
+</script>

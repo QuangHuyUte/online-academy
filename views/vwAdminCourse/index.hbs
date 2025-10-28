@@ -15,52 +15,64 @@
     {{> flash}}
 
     {{#if courses.length}}
-      <table class="table table-hover align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>#</th>
-            <th>Title</th>
-            <th>Category</th>
-            <th>Instructor</th>
-            <th>Price</th>
-            <th>Status</th>
-            <th class="text-end">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{#each courses}}
-          <tr>
-            <td>{{inc (add ../offset @index)}}</td>
-            <td>{{this.title}}</td>
-            <td>{{this.category}}</td>
-            <td>{{this.instructor}}</td>
-            <td>
-              {{#if this.promo_price}}
-                <span class="text-decoration-line-through me-1">
-                  {{formatCurrency this.price 'USD' 'en-US'}}
-                </span>
-                <strong>{{formatCurrency this.promo_price 'USD' 'en-US'}}</strong>
-              {{else}}
-                {{#if this.price}}
-                  {{formatCurrency this.price 'USD' 'en-US'}}
-                {{else}}—{{/if}}
-              {{/if}}
-            </td>
-            <td>
-              {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
-              {{#if this.is_removed}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
-            </td>
-            <td class="text-end">
-              <form action="/admin/courses/{{this.id}}/remove" method="post" class="d-inline">
-                <button class="btn btn-sm {{#if this.is_removed}}btn-success{{else}}btn-warning{{/if}}">
-                  {{#if this.is_removed}}Unhide{{else}}Hide{{/if}}
-                </button>
-              </form>
-            </td>
-          </tr>
-          {{/each}}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Instructor</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Updated</th>        {{!-- thêm cột nhỏ --}}
+              <th>Views</th>          {{!-- thêm cột nhỏ --}}
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each courses}}
+            <tr>
+              <td>{{inc (add ../offset @index)}}</td>
+              <td class="text-truncate" style="max-width: 320px;">{{this.title}}</td>
+              <td>{{this.category}}</td>
+              <td>{{this.instructor}}</td>
+              <td>
+                {{#if this.promo_price}}
+                  <span class="text-decoration-line-through me-1">
+                    {{formatCurrency this.price}}
+                  </span>
+                  <strong>{{formatCurrency this.promo_price}}</strong>
+                {{else}}
+                  {{#if this.price}}
+                    {{formatCurrency this.price}}
+                  {{else}}—{{/if}}
+                {{/if}}
+              </td>
+              <td>
+                {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
+                {{#if this.is_removed}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
+              </td>
+              <td class="text-muted small">
+                {{#if this.last_updated_at}}{{formatDate this.last_updated_at "DD/MM/YYYY HH:mm"}}{{else}}—{{/if}}
+              </td>
+              <td class="text-muted">{{#if this.view_count}}{{this.view_count}}{{else}}—{{/if}}</td>
+              <td class="text-end">
+                <form action="/admin/courses/{{this.id}}/remove" method="post" class="d-inline"
+                      onsubmit="return confirm('Bạn có chắc muốn {{#if this.is_removed}}hiển thị lại{{else}}ẩn{{/if}} khoá học này?');">
+                  {{!-- giữ lại q & page để quay về đúng nơi --}}
+                  <input type="hidden" name="q" value="{{../q}}">
+                  <input type="hidden" name="page" value="{{../page}}">
+                  <button class="btn btn-sm {{#if this.is_removed}}btn-success{{else}}btn-warning{{/if}}">
+                    {{#if this.is_removed}}Unhide{{else}}Hide{{/if}}
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
 
       {{!-- Pagination via helper (baseUrl KHÔNG chứa &page=) --}}
       {{#with (buildPagination page totalPages (concat "/admin/courses?q=" (encodeURIComponent q))) as |p|}}
@@ -74,7 +86,7 @@
                 <a class="page-link" href="{{this.url}}">{{this.page}}</a>
               </li>
             {{/each}}
-            {{#if ../p.hasNext}}
+            {{#if p.hasNext}}   {{!-- đã sửa ../p.hasNext -> p.hasNext --}}
               <li class="page-item"><a class="page-link" href="{{p.nextUrl}}">Next</a></li>
             {{/if}}
           </ul>

@@ -1,14 +1,27 @@
-<div class="list-group">
-  <a href="/admin/categories" class="list-group-item list-group-item-action">
-    <i class="bi bi-tags"></i> Categories
-  </a>
-  <a href="/admin/courses" class="list-group-item list-group-item-action">
-    <i class="bi bi-collection-play"></i> Courses
-  </a>
-  <a href="/admin/instructors" class="list-group-item list-group-item-action">
-    <i class="bi bi-person-badge"></i> Instructors
-  </a>
-  <a href="/admin/students" class="list-group-item list-group-item-action">
-    <i class="bi bi-people"></i> Students
-  </a>
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-dark text-white fw-semibold">
+    <i class="bi bi-gear-fill me-2"></i> Admin Panel
+  </div>
+
+  <div class="list-group list-group-flush">
+    <a href="/admin/categories"
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Category')}}active{{/if}}">
+      <span><i class="bi bi-tags me-2"></i> Categories</span>
+    </a>
+
+    <a href="/admin/courses"
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Course')}}active{{/if}}">
+      <span><i class="bi bi-collection-play me-2"></i> Courses</span>
+    </a>
+
+    <a href="/admin/instructors"
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Instructor')}}active{{/if}}">
+      <span><i class="bi bi-person-badge me-2"></i> Instructors</span>
+    </a>
+
+    <a href="/admin/students"
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Student')}}active{{/if}}">
+      <span><i class="bi bi-people me-2"></i> Students</span>
+    </a>
+  </div>
 </div>

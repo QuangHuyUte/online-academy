@@ -4,40 +4,151 @@
   </div>
 
   <div class="col-9">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
       <h3 class="mb-0">Categories</h3>
-      <a href="/admin/categories/new" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> New Category
-      </a>
+
+      <div class="d-flex gap-2">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input id="quickFilter" class="form-control" placeholder="Filter by name or slug...">
+        </div>
+        <a href="/admin/categories/new" class="btn btn-primary">
+          <i class="bi bi-plus-circle"></i> New Category
+        </a>
+      </div>
     </div>
 
     {{> flash}}
 
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>#</th><th>Name</th><th>Slug</th><th>Parent</th><th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#each categories}}
-        <tr>
-          <td>{{inc @index}}</td>
-          <td>{{this.name}}</td>
-          <td><code>{{this.slug}}</code></td>
-          <td>{{this.parent_name}}</td>
-          <td>
-            <a class="btn btn-sm btn-outline-primary" href="/admin/categories/{{this.id}}/edit">Edit</a>
-            <form action="/admin/categories/{{this.id}}/delete" method="post" class="d-inline"
-                  onsubmit="return confirm('Delete this category?');">
-              <button class="btn btn-sm btn-outline-danger">Delete</button>
-            </form>
-          </td>
-        </tr>
-        {{/each}}
-      </tbody>
-    </table>
+    {{#if categories.length}}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle" id="tblCategories">
+          <thead class="table-light">
+            <tr>
+              <th style="width:72px">#</th>
+              <th style="min-width:240px">Name</th>
+              <th style="min-width:220px">Slug</th>
+              <th style="min-width:220px">Parent</th>
+              <th style="width:200px">Type</th>
+              <th class="text-end" style="width:200px">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each categories}}
+            <tr>
+              <td>
+                {{#if ../offset}}
+                  {{inc (add ../offset @index)}}
+                {{else}}
+                  {{inc @index}}
+                {{/if}}
+              </td>
 
-    {{> pagination pagination}}
+              <td class="text-truncate" style="max-width:360px;">
+                <strong>{{this.name}}</strong>
+              </td>
+
+              <td class="text-truncate" style="max-width:320px;">
+                <code class="me-2">{{this.slug}}</code>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-copy-slug"
+                        data-slug="{{this.slug}}" title="Copy slug">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+              </td>
+
+              <td class="text-truncate" style="max-width:320px;">
+                {{#if this.parent_name}}
+                  <span class="badge bg-light text-dark border">{{this.parent_name}}</span>
+                {{else}}
+                  <span class="badge bg-secondary">None</span>
+                {{/if}}
+              </td>
+
+              <td>
+                {{#if this.parent_id}}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">Leaf</span>
+                {{else}}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Group</span>
+                {{/if}}
+              </td>
+
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="/admin/categories/{{this.id}}/edit">
+                  <i class="bi bi-pencil-square"></i> Edit
+                </a>
+
+                <form action="/admin/categories/{{this.id}}/delete"
+                      method="post" class="d-inline"
+                      onsubmit="return confirm('Delete category {{this.name}}?');">
+                  <button class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i> Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+
+      {{!-- Optional pagination: render if your partial/helper provides it --}}
+      {{#if pagination}}
+        {{> pagination pagination}}
+      {{/if}}
+
+      {{!-- Or, if you prefer the helper approach:
+      {{#if (and page totalPages)}}
+        {{#with (buildPagination page totalPages "/admin/categories") as |p|}}
+          <nav class="mt-2">
+            <ul class="pagination justify-content-center">
+              {{#if p.hasPrev}}<li class="page-item"><a class="page-link" href="{{p.prevUrl}}">Prev</a></li>{{/if}}
+              {{#each p.pages}}
+                <li class="page-item {{#if this.active}}active{{/if}}">
+                  <a class="page-link" href="{{this.url}}">{{this.page}}</a>
+                </li>
+              {{/each}}
+              {{#if p.hasNext}}<li class="page-item"><a class="page-link" href="{{p.nextUrl}}">Next</a></li>{{/if}}
+            </ul>
+          </nav>
+        {{/with}}
+      {{/if}}
+      --}}
+    {{else}}
+      <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <div>Chưa có danh mục nào.</div>
+        <a class="btn btn-primary" href="/admin/categories/new">
+          <i class="bi bi-plus-circle"></i> Create your first category
+        </a>
+      </div>
+    {{/if}}
   </div>
 </div>
+
+<script>
+  // Copy slug
+  document.querySelectorAll('.btn-copy-slug').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const slug = btn.getAttribute('data-slug') || '';
+      try {
+        await navigator.clipboard.writeText(slug);
+        const old = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2"></i>';
+        setTimeout(() => (btn.innerHTML = old), 900);
+      } catch {
+        alert('Cannot copy to clipboard.');
+      }
+    });
+  });
+
+  // Client-side quick filter (name/slug)
+  const $filter = document.getElementById('quickFilter');
+  const $rows = document.querySelectorAll('#tblCategories tbody tr');
+  $filter?.addEventListener('input', (e) => {
+    const q = (e.target.value || '').toLowerCase().trim();
+    $rows.forEach(tr => {
+      const name = (tr.querySelector('td:nth-child(2)')?.innerText || '').toLowerCase();
+      const slug = (tr.querySelector('td:nth-child(3)')?.innerText || '').toLowerCase();
+      tr.style.display = (!q || name.includes(q) || slug.includes(q)) ? '' : 'none';
+    });
+  });
+</script>

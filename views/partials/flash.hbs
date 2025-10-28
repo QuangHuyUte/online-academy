@@ -1,13 +1,39 @@
+{{!-- views/partials/flash.hbs --}}
 {{#if success}}
-  <div class="alert alert-success alert-dismissible fade show" role="alert">
-    {{success}}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i>{{success}}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 {{/if}}
 
 {{#if error}}
-  <div class="alert alert-danger alert-dismissible fade show" role="alert">
-    {{error}}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{error}}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 {{/if}}
+
+{{#if warning}}
+  <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-exclamation-circle-fill me-2"></i>{{warning}}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+{{/if}}
+
+{{#if info}}
+  <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>{{info}}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+{{/if}}
+
+<script>
+  // ✨ Auto-dismiss flash after 4 seconds
+  const flashes = document.querySelectorAll('.alert');
+  flashes.forEach(f => {
+    setTimeout(() => {
+      const bsAlert = bootstrap.Alert.getOrCreateInstance(f);
+      bsAlert.close();
+    }, 4000);
+  });
+</script>

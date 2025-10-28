@@ -1,3 +1,4 @@
+// routes/instructor.route.js
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -20,7 +21,12 @@ function slugify(str = '') {
     .toLowerCase();
 }
 
-const toNum = (v) => (v === '' || v == null ? null : Number(v));
+// ✅ toNum chuẩn hoá NaN -> null
+const toNum = (v) => {
+  if (v === '' || v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 
 const sanitizeLongHtml = (html = '') =>
   sanitizeHtml(html, {
@@ -46,7 +52,7 @@ const storage = multer.diskStorage({
   },
 });
 
-// Siết MIME (an toàn hơn)
+// Siết MIME
 const fileFilter = (_req, file, cb) => {
   const isImage = /^image\/(png|jpe?g|webp|gif)$/i.test(file.mimetype);
   const isVideo = /^video\/(mp4|webm|ogg)$/i.test(file.mimetype);
@@ -60,8 +66,26 @@ const upload = multer({
   limits: { fileSize: 1024 * 1024 * 200 }, // 200MB
 });
 
-/* --------------------------- Protect all routes ---------------------------- */
-//router.use(authRequired, requireInstructor);
+/* --------------------------- Auth protect all routes ---------------------------- */
+// ✅ BẬT LẠI bảo vệ
+router.use(authRequired, requireInstructor);
+
+router.post('/upload', upload.single('file'), (req, res) => {
+  // ✅ Normalize path (backslash -> slash) + thêm leading slash
+  let relPath = req.file?.path?.replace(/^public[\\/]/, '') || '';
+  relPath = relPath.split(path.sep).join('/');
+  if (!relPath.startsWith('/')) relPath = '/' + relPath;
+  return res.json({ url: relPath });
+});
+
+// Multer error handler: trả JSON để client hiện thông báo
+router.use((err, _req, res, next) => {
+  if (err instanceof multer.MulterError || /Only .* allowed/i.test(err.message)) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
+
 
 /* ============================ INSTRUCTOR FEATURE ============================ */
 
@@ -80,7 +104,7 @@ router.get('/my-courses', async (req, res, next) => {
       courseModel.countByInstructor(me.id, { excludeRemoved: true }),
     ]);
 
-    res.render('vwCourse/my-courses', {
+    res.render('vwInstructor/my-courses', {
       title: 'My Courses',
       courses: rows,
       page,
@@ -92,10 +116,14 @@ router.get('/my-courses', async (req, res, next) => {
 });
 
 // 📘 New Course form
-router.get('/courses/new', async (_req, res, next) => {
+router.get('/courses/new', async (req, res, next) => {
   try {
     const categories = await categoryModel.findAll();
-    res.render('vwCourse/course-form', { title: 'New Course', categories, course: {} });
+    res.render('vwInstructor/edit-course', {
+      title: 'New Course',
+      categories,
+      course: {},
+    });
   } catch (err) {
     next(err);
   }
@@ -113,14 +141,24 @@ router.post('/courses', async (req, res, next) => {
       title: req.body.title?.trim(),
       short_desc: req.body.short_desc?.trim() || null,
       long_desc_html: sanitizeLongHtml(req.body.long_desc_html || ''),
-      cover_url: req.body.cover_url || null, // set từ input hidden sau khi upload
+      cover_url: req.body.cover_url || null,
       price: toNum(req.body.price),
       promo_price: toNum(req.body.promo_price),
       is_removed: false,
       is_completed: false,
     };
 
-    // Validate
+    // ✅ Validate số hợp lệ (NaN -> null nhưng user nhập string rác)
+    if (payload.price == null && req.body.price?.trim()) {
+      res.flash('error', 'Giá không hợp lệ.');
+      return res.redirect('back');
+    }
+    if (payload.promo_price == null && req.body.promo_price?.trim()) {
+      res.flash('error', 'Giá khuyến mãi không hợp lệ.');
+      return res.redirect('back');
+    }
+
+    // Validate logic
     if (!payload.title) {
       res.flash('error', 'Title không được để trống.');
       return res.redirect('back');
@@ -133,9 +171,16 @@ router.post('/courses', async (req, res, next) => {
       res.flash('error', 'Giá khuyến mãi không được lớn hơn giá gốc.');
       return res.redirect('back');
     }
+
+    // ✅ Category tồn tại & là leaf (không phải cha)
     const cat = await categoryModel.findById(payload.cat_id);
     if (!cat) {
       res.flash('error', 'Category không tồn tại.');
+      return res.redirect('back');
+    }
+    const childrenCount = await categoryModel.countChildren?.(cat.id);
+    if (typeof childrenCount === 'number' && childrenCount > 0) {
+      res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
       return res.redirect('back');
     }
 
@@ -158,7 +203,11 @@ router.get('/courses/:id/edit', async (req, res, next) => {
     if (course.instructor_id !== me.id) return res.sendStatus(403);
 
     const categories = await categoryModel.findAll();
-    res.render('vwCourse/course-form', { title: 'Edit Course', course, categories });
+    res.render('vwInstructor/edit-course', {
+      title: 'Edit Course',
+      course,
+      categories,
+    });
   } catch (err) {
     next(err);
   }
@@ -186,6 +235,16 @@ router.post('/courses/:id', async (req, res, next) => {
       promo_price: toNum(req.body.promo_price),
     };
 
+    // ✅ Validate số hợp lệ (NaN -> null nhưng user nhập string rác)
+    if (patch.price == null && req.body.price?.trim()) {
+      res.flash('error', 'Giá không hợp lệ.');
+      return res.redirect('back');
+    }
+    if (patch.promo_price == null && req.body.promo_price?.trim()) {
+      res.flash('error', 'Giá khuyến mãi không hợp lệ.');
+      return res.redirect('back');
+    }
+
     if (!patch.title) {
       res.flash('error', 'Title không được để trống.');
       return res.redirect('back');
@@ -198,13 +257,20 @@ router.post('/courses/:id', async (req, res, next) => {
       res.flash('error', 'Giá khuyến mãi không được lớn hơn giá gốc.');
       return res.redirect('back');
     }
+
+    // ✅ Category leaf
     const cat = await categoryModel.findById(patch.cat_id);
     if (!cat) {
       res.flash('error', 'Category không tồn tại.');
       return res.redirect('back');
     }
+    const childrenCount = await categoryModel.countChildren?.(cat.id);
+    if (typeof childrenCount === 'number' && childrenCount > 0) {
+      res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
+      return res.redirect('back');
+    }
 
-    await courseModel.patch(id, patch); // model đã tự set last_updated_at (khuyến nghị)
+    await courseModel.patch(id, patch);
     res.flash('success', 'Course updated successfully.');
     res.redirect('/instructor/my-courses');
   } catch (err) {
@@ -230,26 +296,12 @@ router.post('/courses/:id/complete', async (req, res, next) => {
       return res.redirect('back');
     }
 
-    await courseModel.markCompleted(id); // model đã set last_updated_at
+    await courseModel.markCompleted(id);
     res.flash('success', 'Marked as completed.');
     res.redirect('/instructor/my-courses');
   } catch (err) {
     next(err);
   }
-});
-
-// 📘 Upload (Uppy/Multer)
-router.post('/upload', upload.single('file'), (req, res) => {
-  const relPath = req.file?.path?.replace(/^public/, '') || '';
-  res.json({ url: relPath }); // ví dụ: /uploads/abc-123.jpg
-});
-
-// Multer error handler: trả JSON để Uppy hiện thông báo
-router.use((err, _req, res, next) => {
-  if (err instanceof multer.MulterError || /Only .* allowed/i.test(err.message)) {
-    return res.status(400).json({ error: err.message });
-  }
-  next(err);
 });
 
 export default router;

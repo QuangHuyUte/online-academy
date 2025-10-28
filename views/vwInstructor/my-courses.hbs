@@ -25,7 +25,16 @@
           {{#each courses}}
           <tr>
             <td>{{inc @index}}</td>
-            <td>{{this.title}}</td>
+
+            <td class="text-truncate" style="max-width: 320px;">
+              <a href="/instructor/courses/{{this.id}}/edit" class="text-decoration-none">{{this.title}}</a>
+              <div class="small text-muted">
+                {{#if this.last_updated_at}}
+                  Updated: {{formatDate this.last_updated_at "DD/MM/YYYY HH:mm"}}
+                {{/if}}
+              </div>
+            </td>
+
             <td>
               {{#if this.category}}
                 {{this.category}}
@@ -33,6 +42,7 @@
                 {{this.cat_id}}
               {{/if}}
             </td>
+
             <td>
               {{#if this.promo_price}}
                 <span class="text-decoration-line-through me-1">
@@ -40,21 +50,36 @@
                 </span>
                 <strong>{{formatCurrency this.promo_price}}</strong>
               {{else}}
-                {{#if this.price}}{{formatCurrency this.price}}{{else}}—{{/if}}
+                {{#if this.price}}
+                  {{formatCurrency this.price}}
+                {{else}}
+                  —
+                {{/if}}
               {{/if}}
             </td>
+
             <td>
               {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
-              {{#if this.is_removed}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
+              {{#if this.is_removed}}
+                <span class="badge bg-secondary ms-1">Hidden</span>
+              {{/if}}
             </td>
+
             <td class="text-end">
-              <a href="/instructor/courses/{{this.id}}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+              <a href="/instructor/courses/{{this.id}}/edit" class="btn btn-sm btn-outline-primary">
+                Edit
+              </a>
 
               {{#unless this.is_completed}}
-              <form action="/instructor/courses/{{this.id}}/complete" method="post" class="d-inline"
-                    onsubmit="return confirm('Mark this course as completed?');">
-                <button class="btn btn-sm btn-success">Mark Completed</button>
-              </form>
+                <form action="/instructor/courses/{{this.id}}/complete" method="post" class="d-inline"
+                      onsubmit="return confirm('Mark this course as completed?');">
+                  <button class="btn btn-sm btn-success"
+                          {{#if this._cannotComplete}}
+                            disabled title="Cần ít nhất 1 Section và 1 Lesson"
+                          {{/if}}>
+                    Mark Completed
+                  </button>
+                </form>
               {{/unless}}
             </td>
           </tr>
@@ -63,25 +88,36 @@
       </table>
     </div>
 
-    {{!-- Pagination (baseUrl không chứa page=) --}}
+    {{!-- Pagination (buildPagination helper) --}}
     {{#with (buildPagination page totalPages "/instructor/my-courses") as |p|}}
-      <nav>
-        <ul class="pagination">
+      <nav aria-label="Courses pages">
+        <ul class="pagination justify-content-center mt-3">
           {{#if p.hasPrev}}
-            <li class="page-item"><a class="page-link" href="{{p.prevUrl}}">Prev</a></li>
+            <li class="page-item">
+              <a class="page-link" href="{{p.prevUrl}}">Prev</a>
+            </li>
           {{/if}}
+
           {{#each p.pages}}
             <li class="page-item {{#if this.active}}active{{/if}}">
               <a class="page-link" href="{{this.url}}">{{this.page}}</a>
             </li>
           {{/each}}
+
           {{#if p.hasNext}}
-            <li class="page-item"><a class="page-link" href="{{p.nextUrl}}">Next</a></li>
+            <li class="page-item">
+              <a class="page-link" href="{{p.nextUrl}}">Next</a>
+            </li>
           {{/if}}
         </ul>
       </nav>
     {{/with}}
   {{else}}
-    <div class="alert alert-info">Bạn chưa có khoá học nào.</div>
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+      <div>Bạn chưa có khoá học nào.</div>
+      <a class="btn btn-primary" href="/instructor/courses/new">
+        <i class="bi bi-plus-circle"></i> Create your first course
+      </a>
+    </div>
   {{/if}}
 </div>
