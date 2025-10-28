@@ -3,6 +3,9 @@ import courseModel from '../models/course.model.js';
 import categoryModel from '../models/category.model.js';
 import ratingModel from '../models/rating.model.js';
 import watchlistModel from '../models/watchlist.model.js';
+import db from "../utils/db.js";
+import * as sectionModel from "../models/section.model.js";
+import * as lessonModel from "../models/lesson.model.js";
 const router = express.Router();
 
 router.get('/', async (req, res) => {
@@ -107,6 +110,7 @@ router.get('/newest', async (req, res) => {
     res.status(500).send('Lỗi khi tải danh sách khóa học mới nhất');
   }
 });
+
 router.get('/details', async (req, res) => {
   const id = parseInt(req.query.id, 10);
   if (!id) return res.redirect('/courses');
@@ -127,10 +131,21 @@ router.get('/details', async (req, res) => {
     course.rating_count = reviews.length;
 
     const user_id = req.session.authUser?.id || null;
+
+    // ✅ Kiểm tra xem user đã đăng ký học khóa này chưa
+    let isEnrolled = false;
+    if (user_id) {
+      const enrolled = await db('enrollments')
+        .where({ user_id, course_id: id })
+        .first();
+      if (enrolled) isEnrolled = true;
+    }
+
+    // ✅ Kiểm tra xem có trong watchlist không (đã có sẵn)
     let inWatchlist = false;
     if (user_id) {
-    inWatchlist = await watchlistModel.exists(user_id, id);
-      };
+      inWatchlist = await watchlistModel.exists(user_id, id);
+    }
 
     res.render('vwCourse/detail', {
       course,
@@ -138,14 +153,50 @@ router.get('/details', async (req, res) => {
       related,
       reviews,
       inWatchlist,
+      isEnrolled, // ✅ truyền biến này sang view
       hasReviews: reviews.length > 0,
       outlineEmpty: outline.length === 0,
     });
   } catch (err) {
-  console.error('❌ Lỗi khi tải chi tiết khóa học:', err);
-  res.status(500).send('Không thể tải chi tiết khóa học.');
-}
+    console.error('❌ Lỗi khi tải chi tiết khóa học:', err);
+    res.status(500).send('Không thể tải chi tiết khóa học.');
+  }
 });
+
+
+router.post("/enroll/:id", async (req, res) => {
+  if (!req.session.authUser) {
+    // Nếu chưa đăng nhập, chuyển hướng tới login
+    return res.redirect("/account/signin");
+  }
+
+  const userId = req.session.authUser.user_id ?? req.session.authUser.id;
+  const courseId = req.params.id;
+
+  try {
+    // Kiểm tra xem đã đăng ký chưa
+    const existing = await db("enrollments")
+      .where({ user_id: userId, course_id: courseId })
+      .first();
+
+    if (!existing) {
+      await db("enrollments").insert({
+        user_id: userId,
+        course_id: courseId,
+        purchased_at: new Date(),
+      });
+    }
+
+    // Dùng flash message báo thành công
+    req.session.flash = { message: "Đăng ký khóa học thành công!" };
+    res.redirect(`/courses/details?id=${courseId}`);
+  } catch (err) {
+    console.error("Enroll error:", err);
+    req.session.flash = { message: "Lỗi khi đăng ký khóa học!" };
+    res.redirect(`/courses/details?id=${courseId}`);
+  }
+});
+
 // ✅ Chi tiết khóa học: /course/:id/details
 router.get('/:id/details', async (req, res) => {
   const id = +req.params.id || 0;
@@ -293,6 +344,33 @@ router.post('/reviews/add', async (req, res) => {
     res.redirect(`/courses/details?id=${course_id}`);
   } catch {
     res.status(500).send('Không thể gửi đánh giá.');
+  }
+});
+
+router.get("/learning/:id", async (req, res) => {
+  const courseId = parseInt(req.params.id, 10);
+  if (!req.session.authUser) {
+    req.session.flash = { message: "Vui lòng đăng nhập để học." };
+    return res.redirect(`/account/signin`);
+  }
+
+  try {
+    const course = await courseModel.findFullById(courseId);
+    const sections = await sectionModel.findByCourse(courseId);
+
+    // Lấy toàn bộ bài học theo từng section
+    for (const section of sections) {
+      section.lessons = await lessonModel.findBySection(section.id);
+    }
+
+    res.render("vwCourse/learning", {
+      layout: "main",
+      course,
+      sections,
+    });
+  } catch (err) {
+    console.error("❌ Lỗi khi tải trang học:", err);
+    res.status(500).send("Không thể tải trang học.");
   }
 });
 

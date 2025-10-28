@@ -93,9 +93,16 @@
                         <p class="text-decoration-line-through text-light small">{{course.price}}₫</p>
                         {{/if}}
 
-                        <button class="btn btn-light text-primary fw-bold px-4 py-2 mt-2 w-75">
-                            <i class="bi bi-cart-plus"></i> Đăng ký học
-                        </button>
+                        {{#if isEnrolled}}
+                        <button class="btn btn-secondary w-100" disabled>Đã đăng ký</button>
+                        {{else}}
+                        <form action="/courses/enroll/{{course.id}}" method="post">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                Đăng ký học
+                            </button>
+                        </form>
+                        {{/if}}
+
 
                         <!-- 🧡 WATCHLIST BUTTON -->
                         <form id="watchlistForm" class="mt-3">

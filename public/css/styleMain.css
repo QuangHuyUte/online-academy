@@ -22,6 +22,18 @@
     font-weight: 700 !important;
 }
 
+/* luôn cho dropdown ở navbar nổi lên trên */
+.navbar .dropdown-menu { 
+  position: absolute; 
+  z-index: 3000;        /* > sticky panel */
+}
+
+/* hạ z-index của sidebar bài giảng */
+.learning-sidebar.sticky-top {
+  z-index: 5;           /* thấp hơn dropdown */
+}
+
+
 .navbar-nav .nav-link {
     color: rgba(255, 255, 255, 0.85); /* Màu chữ mặc định */
     transition: 0.2s ease;

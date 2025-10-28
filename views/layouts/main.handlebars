@@ -1,120 +1,120 @@
 <html lang="en">
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css" />
+
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Online-Academy</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="/css/styleMain.css">
-    {{{_sections.css}}}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online-Academy</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+    crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="/css/styleMain.css">
+  {{{_sections.css}}}
 </head>
-
+<script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
 <body class="d-flex flex-column min-vh-100">
+  {{#if flash}}
+  <div class="alert alert-success alert-dismissible fade show text-center mb-0 rounded-0" role="alert">
+    {{flash.message}}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {{/if}}
 
-    {{! navbar }}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-1 rounded-3 shadow-sm">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">Online-Academy</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
-                aria-label="Toggle navigation">
+  {{! navbar }}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-1 rounded-3 shadow-sm">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">Online-Academy</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+        data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+        aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <form class="d-flex w-50 ms-3 mb-2 mb-lg-0 p-2 border rounded-pill" method="get" action="/search">
-                    <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search"
-                        name="keyword" />
-                    <button class="btn btn-outline-success" type="submit">Search</button>
-                </form>
-            </div>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <form class="d-flex w-50 ms-3 mb-2 mb-lg-0 p-2 border rounded-pill" method="get" action="/search">
+          <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" name="keyword" />
+          <button class="btn btn-outline-success" type="submit">Search</button>
+        </form>
+      </div>
 
-            <ul class="navbar-nav mb-2 mb-lg-0">
-                {{#if isAuthenticated}}
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Welcome,
-                        <b>{{authUser.name}}</b>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="/account/profile">View
-                                profile</a></li>
-                        <li><a class="dropdown-item" href="/account/watchlist">Watchlist</a></li>
-                        <li><a class="dropdown-item" href="/account/changePassword">Change Password</a></li>
-                        <li>
-                            <hr class="dropdown-divider" />
-                        </li>
-                        <li><a class="dropdown-item"
-                                href="javascript: document.querySelector('#frmSignout').submit();">Sign Out</a></li>
-                    </ul>
-                </li>
-                <form action="/account/signout" method="post" id="frmSignout"></form>
+      <ul class="navbar-nav mb-2 mb-lg-0">
+        {{#if isAuthenticated}}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Welcome, <b>{{authUser.name}}</b>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/account/profile">View profile</a></li>
+            <li><a class="dropdown-item" href="/account/my-courses">My Course</a></li>
+            <li><a class="dropdown-item" href="/account/watchlist">Watchlist</a></li>
+            <li><a class="dropdown-item" href="/account/changePassword">Change Password</a></li>
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+              <a class="dropdown-item" href="javascript: document.querySelector('#frmSignout').submit();">Sign Out</a>
+            </li>
+          </ul>
+        </li>
+        <form action="/account/signout" method="post" id="frmSignout"></form>
+        {{else}}
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="/account/signup">Sign up</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="/account/signin">Sign in</a>
+        </li>
+        {{/if}}
+      </ul>
+    </div>
+  </nav>
 
-                {{else}}
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/account/signup">Sign up</a>
-
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/account/signin">Sign in</a>
-
-                </li>
-                {{/if}}
+  {{! ẩn thanh menu bên signin và signup }}
+  {{#unless hideCategoriesNav}}
+  <div class="container my-1 rounded-3 shadow-sm bg-white p-2">
+    <div class="row justify-content-center">
+      <div class="col-auto">
+        <ul class="nav nav-pills">
+          {{#each lcCategories}}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="/" role="button" data-bs-toggle="dropdown"
+              aria-expanded="false">{{this.name}}</a>
+            <ul class="dropdown-menu p-3" style="min-width: 300px;">
+              <div class="d-flex flex-row flex-nowrap overflow-auto">
+                {{#each this.children}}
+                <a class="dropdown-item text-nowrap" href="/courses/category/{{this.id}}">{{this.name}}</a>
+                {{/each}}
+              </div>
             </ul>
-        </div>
-    </nav>
-
-    {{! ẩn thanh menu bên signin và signup }}
-    {{#unless hideCategoriesNav}}
-    <div class="container my-1 rounded-3 shadow-sm bg-white p-2">
-        <div class="row justify-content-center">
-            <div class="col-auto">
-                <ul class="nav nav-pills">
-                    {{#each lcCategories}}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="/" role="button" data-bs-toggle="dropdown"
-                            aria-expanded="false">
-                            {{this.name}}
-                        </a>
-                        <ul class="dropdown-menu p-3" style="min-width: 300px;">
-                            <div class="d-flex flex-row flex-nowrap overflow-auto"> {{#each this.children}}
-                                <a class="dropdown-item text-nowrap"
-                                    href="/courses/category/{{this.id}}">{{this.name}}</a>
-                                {{/each}}
-                            </div>
-
-                        </ul>
-                    </li>
-                    {{/each}}
-                </ul>
-            </div>
-        </div>
+          </li>
+          {{/each}}
+        </ul>
+      </div>
     </div>
-    {{/unless}}
+  </div>
+  {{/unless}}
 
-    {{! main content }}
-    {{{body}}}
+  {{! main content }}
+  {{{body}}}
 
-    {{!footer}}
-    <div class="card my-1 rounded-3 shadow-sm mt-auto">
-        <div class="card-footer bg-dark text-white text-center p-3"></div>
-    </div>
+  {{!footer}}
+  <div class="card my-1 rounded-3 shadow-sm mt-auto">
+    <div class="card-footer bg-dark text-white text-center p-3"></div>
+  </div>
 
-</body>
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
     crossorigin="anonymous"></script>
 
-<!-- MultiCarousel JS -->
-<script src="/js/multicarousel.js"></script>
+  <!-- MultiCarousel JS -->
+  <script src="/js/multicarousel.js"></script>
 
-{{{_sections.js}}}
+  {{{_sections.js}}}
 
+</body>
 </html>
