@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs';
 import userModel from '../models/user.model.js';
 import { checkAuthenticated } from '../middlewares/auth.mdw.js';
 import otpModel, { generateOTP } from '../models/otp.model.js';
+import watchlistModel from '../models/watchlist.model.js';
+import myCourseModel from "../models/myCourse.model.js";
+
 
 const router = express.Router();
 
@@ -131,6 +134,7 @@ router.post('/signin', async function (req, res) {
     }
     req.session.isAuthenticated = true;
     req.session.authUser = user
+    req.session.userId = user.id;//Cuong add de luu id nguoi dung dang nhap
     
     const url = req.session.url || '/';
     delete req.session.url;
@@ -194,4 +198,88 @@ router.post('/changePassword', checkAuthenticated, async function (req, res) {
         user: req.session.authUser,
     });
 });
+
+// ========== 🧡 WATCHLIST (bạn thêm) ==========
+router.get('/watchlist', async (req, res) => {
+  // Nếu chưa đăng nhập → reset và ẩn watchlist
+  if (!req.session.isAuthenticated || !req.session.authUser) {
+    return res.render('vwAccount/watchlist', {
+      watchlist: [],
+      hasCourses: false,
+      message: 'Bạn cần đăng nhập để xem danh sách yêu thích ❤️'
+    });
+  }
+
+  const user_id = req.session.authUser.id; // ✅ lấy đúng ID người đăng nhập
+  try {
+    const list = await watchlistModel.findAllByUser(user_id);
+    res.render('vwAccount/watchlist', {
+      watchlist: list,
+      hasCourses: list.length > 0,
+    });
+  } catch (err) {
+    console.error('❌ Error loading watchlist:', err);
+    res.status(500).send('Không thể tải danh sách yêu thích.');
+  }
+});
+
+router.post("/signin", async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await accountModel.findByEmail(email);
+  if (!user) {
+    return res.render("vwAccounts/signin", { error: "Account not found" });
+  }
+
+  const passwordCorrect = await accountModel.verifyPassword(email, password);
+  if (!passwordCorrect) {
+    return res.render("vwAccounts/signin", { error: "Incorrect password" });
+  }
+  req.session.authUser = user;
+  req.session.isAuthenticated = true;
+
+  console.log("✅ Logged in user:", user);
+  res.redirect("/");
+});
+
+router.get("/my-courses", async (req, res) => {
+  if (!req.session.authUser) {
+    return res.redirect("/account/signin");
+  }
+
+  // BẮT BUỘC: lấy đúng khóa ID thật đang lưu trong session
+  // (project của bạn dùng users.id; enrollments.user_id tham chiếu users.id)
+  const auth = req.session.authUser;
+  const userId = auth?.user_id ?? auth?.id ?? auth?.account_id;
+
+  if (!userId) {
+    console.error("❌ Không tìm thấy userId trong session:", auth);
+    return res.status(400).send("User ID not found in session");
+  }
+
+  const myCourses = await myCourseModel.getMyCoursesProgress(userId);
+
+  // debug:
+  // console.log("MyCourses length =", myCourses.length);
+
+  res.render("vwAccount/my-courses", {
+    layout: "main",
+    myCourses,
+    empty: myCourses.length === 0,
+  });
+});
+
+router.get("/my-courses", async (req, res) => {
+  const userId = req.session.authUser?.id;
+  if (!userId) return res.redirect("/account/signin");
+
+  const myCourses = await courseModel.getMyCoursesProgress(userId);
+
+  res.render("vwAccount/my-courses", {
+    layout: "main",
+    courses: myCourses,
+  });
+});
+
+
 export default router;

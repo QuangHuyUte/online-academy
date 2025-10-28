@@ -496,6 +496,8 @@ AND (
                      'Translation and Interpretation Basics')
     )
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
         -- =====================================================================
 -- 05_watchlist_progress.sql
 -- Người thực hiện: Bao
@@ -574,6 +576,7 @@ VALUES
     ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM lesson_details WHERE title='Props and State'), (SELECT duration_sec/2 FROM lesson_details WHERE title='Props and State'), FALSE, now() - interval '20 days'),
     ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM lesson_details WHERE title='Using useState and useEffect'), 60, FALSE, now() - interval '10 days'),
 =======
+>>>>>>> origin/feature/course-detail-watchlist-reviews
 );
 
 
@@ -774,6 +777,10 @@ VALUES
 ((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
  (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
  5, 'Perfect for beginners to cloud computing!', now() - interval '6 days'),
+<<<<<<< HEAD
+
+
+=======
 >>>>>>> 54841f8b6cd5fd7f31a08b3242a5d0b8bc6e5e83
 
     -- Hannah Vu (ID: 8) - Khóa AWS Cloud
@@ -790,6 +797,7 @@ VALUES
 ) AS progress_values (user_id, lesson_id, watched_sec, is_done, updated_at);
 );
 =======
+>>>>>>> origin/feature/course-detail-watchlist-reviews
 -- ========================================================
 -- 4️⃣ UI/UX Design for Beginners (4 reviews)
 -- ========================================================
@@ -894,3 +902,16 @@ SELECT 'watchlist', COUNT(*) FROM watchlist;
 SELECT id, title
 FROM courses
 WHERE fts @@ to_tsquery('web');
+<<<<<<<<< Temporary merge branch 1
+<<<<<<<<< Temporary merge branch 1
+<<<<<<<<< Temporary merge branch 1
+
+>>>>>>> 54841f8b6cd5fd7f31a08b3242a5d0b8bc6e5e83
+=========
+>>>>>>>>> Temporary merge branch 2
+=========
+
+>>>>>>> 54841f8b6cd5fd7f31a08b3242a5d0b8bc6e5e83
+>>>>>>>>> Temporary merge branch 2
+=========
+>>>>>>>>> Temporary merge branch 2
