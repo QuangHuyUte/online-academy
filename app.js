@@ -52,7 +52,11 @@ app.engine('handlebars', engine({
     eq: (a, b) => a === b,
     subtract: (a, b) => a - b,
     add: (a, b) => a + b,
-    formatDate: (date, format) => dayjs(date).format(format || 'DD/MM/YYYY'),
+    formatDate: (date) => {
+      if (!date) return '';
+      const parsed = dayjs(date);
+      return parsed.isValid() ? parsed.format('DD/MM/YYYY') : String(date);
+    },
 
     // range helper
     range: function (start, end) {
