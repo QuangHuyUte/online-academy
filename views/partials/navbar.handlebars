@@ -1,0 +1,26 @@
+<ul class="navbar-nav mx-auto">
+    {{#each lcCategories}}
+    <li class="nav-item dropdown px-3">
+        <a class="nav-link dropdown-toggle fw-semibold text-dark" href="/courses/category/{{id}}" role="button"
+            data-bs-toggle="dropdown" aria-expanded="false">
+            {{name}}
+        </a>
+        <ul class="dropdown-menu shadow-sm border-0">
+            {{#each children}}
+            <li>
+                <a class="dropdown-item" href="/courses/category/{{id}}">
+                    {{name}}
+                </a>
+            </li>
+            {{/each}}
+        </ul>
+    </li>
+    {{/each}}
+</ul>
+<style>
+    .navbar-nav .nav-link:hover {
+        color: #0d6efd;
+        text-decoration: underline;
+        transition: color 0.3s ease, text-decoration 0.3s ease;
+    }
+</style>

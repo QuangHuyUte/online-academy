@@ -1,7 +1,11 @@
 // models/category.model.js
 import db from '../utils/db.js';
 
-/** Lấy toàn bộ category, sắp xếp để render dạng cây 2 cấp */
+/* =========================
+ *  Core finders / CRUD
+ * ========================= */
+
+// Lấy toàn bộ category (dễ render 2 cấp)
 export function findAll() {
   return db('categories').orderBy([
     { column: 'parent_id', order: 'asc' },
@@ -29,32 +33,32 @@ export function findByParent(parentId) {
 }
 
 export function add(category) {
-  // Trả về [{ id }] (Knex + Postgres)
+  // Knex + Postgres trả về [{ id }]
   return db('categories').insert(category).returning('id');
 }
 
 export function patch(id, category) {
-  // Nếu có cột updated_at thì bật dòng dưới:
-  // category.updated_at = db.fn.now();
+  // nếu có cột updated_at: category.updated_at = db.fn.now();
   return db('categories').where('id', id).update(category);
 }
 
-/** XÓA THÔNG THƯỜNG (không khuyến nghị dùng trực tiếp ở route) */
+/** XÓA THÔNG THƯỜNG (tránh dùng trực tiếp ở route admin) */
 export function remove(id) {
   return db('categories').where('id', id).del();
 }
 
-/** Đếm số course đang gán vào category này */
+/* =========================
+ *  Counters & Safe Delete
+ * ========================= */
+
 export function countCourses(id) {
   return db('courses').where('cat_id', id).count('cat_id as amount').first();
 }
 
-/** Đếm số category con của category này */
 export function countChildren(id) {
   return db('categories').where('parent_id', id).count('id as amount').first();
 }
 
-/** Chỉ cho xóa nếu KHÔNG có course và KHÔNG có category con */
 export async function canDelete(id) {
   const [{ amount: c1 }, { amount: c2 }] = await Promise.all([
     countCourses(id),
@@ -64,7 +68,7 @@ export async function canDelete(id) {
 }
 
 /**
- * XÓA AN TOÀN: kiểm tra business rule rồi mới xóa
+ * XÓA AN TOÀN: chỉ xóa khi không có course và không có category con
  * @returns {Promise<{ok: boolean, affected?: number, reason?: 'HAS_COURSE_OR_CHILD' | 'NOT_FOUND'}>}
  */
 export async function safeRemove(id) {
@@ -73,6 +77,98 @@ export async function safeRemove(id) {
 
   const affected = await remove(id);
   if (!affected) return { ok: false, reason: 'NOT_FOUND' };
-
   return { ok: true, affected };
 }
+
+/* =========================
+ *  Helpers từ nhánh main
+ * ========================= */
+
+export function findCategoriesParent() {
+  return db('categories').whereNull('parent_id');
+}
+
+export function findCategoriesByParentId(parentId) {
+  return db('categories').where('parent_id', parentId);
+}
+
+export function findCoursesByCategoryId(categoryId) {
+  return db('courses').where('cat_id', categoryId);
+}
+
+export function findCategoryNotParent() {
+  return db('categories').whereNotNull('parent_id');
+}
+
+export function findAllCourse() {
+  return db('courses');
+}
+
+/**
+ * Top categories theo số enroll trong tuần hiện tại
+ * Trả về: [{ id, name, enroll_count }]
+ */
+export function getTopCategories(limit = 5) {
+  return db('categories as c')
+    .join('courses as co', 'c.id', 'co.cat_id')
+    .join('enrollments as e', 'co.id', 'e.course_id')
+    .select('c.id', 'c.name')
+    .count({ enroll_count: 'e.course_id' })
+    .whereRaw("date_trunc('week', e.purchased_at) = date_trunc('week', now())")
+    .groupBy('c.id', 'c.name')
+    .orderBy('enroll_count', 'desc')
+    .limit(limit)
+    .then(rows =>
+      rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        enroll_count: Number(r.enroll_count),
+      })),
+    );
+}
+
+/**
+ * Build menu 2 cấp: [{ id, name, children: [...] }]
+ */
+export async function getMenuCategories() {
+  const [parents, children] = await Promise.all([
+    findCategoriesParent(),
+    findCategoryNotParent(),
+  ]);
+
+  const result = parents.map(p => ({ ...p, children: [] }));
+  const byId = new Map(result.map(p => [p.id, p]));
+
+  for (const c of children) {
+    const parent = byId.get(c.parent_id);
+    if (parent) parent.children.push(c);
+  }
+  return result;
+}
+
+/* =========================
+ *  Default export (compat)
+ * ========================= */
+
+export default {
+  // core
+  findAll,
+  findAllWithParent,
+  findById,
+  findByParent,
+  add,
+  patch,
+  remove,
+  countCourses,
+  countChildren,
+  canDelete,
+  safeRemove,
+  // extras
+  findCategoriesParent,
+  findCategoriesByParentId,
+  findCoursesByCategoryId,
+  findCategoryNotParent,
+  findAllCourse,
+  getTopCategories,
+  getMenuCategories,
+};

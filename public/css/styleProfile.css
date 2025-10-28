@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* ========================================= */
+/* ===== Scope Class & Font (profile) ===== */
+/* ========================================= */
+.profile-scope {
+  font-family: "Montserrat", sans-serif;
+  padding: 20px;
+}
+
+/* ========================================= */
+/* ===== Card & Header (Tùy chỉnh Bootstrap) ===== */
+/* ========================================= */
+.profile-scope .card {
+  width: 100%;
+  max-width: 550px; /* Tăng max-width hơn so với form signin (435px) */
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); /* Shadow đồng bộ */
+  border: none;
+}
+
+.profile-scope .card-header {
+  /* Loại bỏ style Bootstrap, tạo style hiện đại */
+  background: #626cd6; /* Màu chủ đạo */
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  padding: 20px 30px;
+  border-bottom: none;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+/* ========================================= */
+/* ===== Form Fields (Tùy chỉnh Bootstrap input) ===== */
+/* ========================================= */
+.profile-scope .card-body {
+    padding: 30px;
+}
+
+.profile-scope form .mb-3 label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.profile-scope form .form-control {
+  width: 100%;
+  height: 57px;
+  border: 1px solid #DADAF2;
+  border-radius: 5px;
+  outline: none;
+  background: #F8F8FB; /* Màu nền input tương tự signin */
+  font-size: 17px;
+  padding: 0 20px;
+  transition: 0.2s ease;
+}
+
+.profile-scope form .form-control:focus {
+  border-color: #626cd6; /* Màu focus tương tự signin */
+  box-shadow: none; 
+  background: #fff;
+}
+
+.profile-scope .card-body .mb-3 {
+    margin-bottom: 25px !important; /* Tạo khoảng cách dọc giữa các trường */
+}
+
+/* ========================================= */
+/* ===== Footer & Button (Tùy chỉnh Bootstrap) ===== */
+/* ========================================= */
+.profile-scope .card-footer {
+    background: #fff;
+    border-top: 1px solid #DADAF2;
+    padding: 20px 30px;
+    text-align: right; /* Đẩy nút sang phải */
+}
+
+.profile-scope .card-footer .btn-primary {
+  height: 48px;
+  min-width: 150px;
+  border-radius: 5px;
+  border: none;
+  outline: none;
+  background: #626CD6;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.profile-scope .card-footer .btn-primary:hover {
+  background: #4954d0;
+}

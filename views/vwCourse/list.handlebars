@@ -1,0 +1,28 @@
+<div class="container mx-auto mt-6 px-4">
+    <h1 class="text-3xl font-bold mb-6">All Courses</h1>
+
+    {{#if empty}}
+    <p class="text-gray-600">No courses available.</p>
+    {{else}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {{#each courses}}
+        <div class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-4">
+            <img src="{{cover_url}}" alt="{{title}}" class="rounded mb-3 w-full h-40 object-cover">
+            <h2 class="text-lg font-semibold mb-2">{{title}}</h2>
+            <p class="text-gray-600 text-sm mb-3">{{short_desc}}</p>
+            <p class="text-sm text-gray-500">
+                👩‍🎓 Students: {{students_count}} |
+                ⭐ {{rating_avg}} ({{rating_count}} ratings)
+            </p>
+            <div class="flex items-center justify-between mt-3">
+                <span class="font-bold text-blue-600">₫{{promo_price}}</span>
+                <a href="/courses/details?id={{id}}"
+                    class="text-sm text-white bg-blue-500 px-3 py-1 rounded hover:bg-blue-600">
+                    View details
+                </a>
+            </div>
+        </div>
+        {{/each}}
+    </div>
+    {{/if}}
+</div>

@@ -1,0 +1,42 @@
+{{#fill_Content 'css'}}
+  <link rel="stylesheet" href="/css/styleProfile.css">
+{{/fill_Content}}
+
+<div class="profile-scope">
+    <form action="" method="post">
+      <div class="card">
+        <h5 class="card-header d-flex justify-content-center">Your profile</h5>
+        <div class="card-body">
+          <div class="mb-3">
+            <input type="text" class="form-control" id="txtID" name="id" value="{{user.id}}" hidden/>
+          </div>
+          <div class="mb-3">
+            <label for="txtName" class="form-label">Name</label>
+            <input type="text" class="form-control" id="txtName" name="name" value="{{user.name}}" />
+          </div>
+          <div class="mb-3">
+            <label for="txtEmail" class="form-label">Email address</label>
+            <input
+              type="email"
+              class="form-control"
+              id="txtEmail"
+              aria-describedby="emailHelp"
+              name="email"
+              value="{{user.email}}"
+            />
+            <div id="emailHelp" class="form-text">We'll never share your email with
+              anyone 
+              else.
+            </div>
+          </div>
+         <div class="mb-3">
+            <label for="txtRole" class="form-label">Role</label>
+            <input type="text" class="form-control" id="txtRole" name="role" value="{{user.role}} " disabled />
+          </div>
+        </div>
+        <div class="card-footer text-muted">
+          <button type="submit" formaction="/account/profile" class="btn btn-primary">Update Profile</button>
+        </div>
+      </div>
+    </form>
+</div>

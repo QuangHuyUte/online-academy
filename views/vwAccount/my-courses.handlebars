@@ -1,0 +1,73 @@
+<div class="container py-4">
+  <h2 class="fw-bold mb-1">My Courses</h2>
+  <p class="text-muted mb-4">Courses you have registered for</p>
+
+  {{#if empty}}
+    <div class="alert alert-info text-center">
+      You have not registered for any course yet.
+    </div>
+  {{else}}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      {{#each myCourses}}
+        <div class="col">
+          <div
+            class="card h-100 shadow-sm border-0"
+            style="border-radius: 12px;"
+          >
+            <img
+              src="{{cover_url}}"
+              alt="{{title}}"
+              class="card-img-top"
+              style="object-fit: cover; height: 200px;"
+            />
+            <div class="card-body">
+              <h5 class="card-title fw-semibold">{{this.title}}</h5>
+              <p class="card-text text-muted mb-1">by
+                {{this.instructor_name}}</p>
+              {{#if this.short_description}}
+                <p
+                  class="card-text small text-secondary"
+                >{{this.short_description}}</p>
+              {{/if}}
+
+              <!-- Progress (tạm 0%) -->
+              <div class="progress mb-3" style="height: 6px;">
+                <div
+                  class="progress-bar"
+                  role="progressbar"
+                  style="width: 0%;"
+                ></div>
+              </div>
+
+              <!-- Nút học ngay -->
+              <a
+                href="/courses/learning/{{course_id}}"
+                class="btn btn-outline-primary w-100 fw-semibold"
+              >
+                <i class="bi bi-play-circle"></i>
+                Học ngay
+              </a>
+              <div class="mt-2">
+                <div class="progress" style="height: 8px;">
+                  <div
+                    class="progress-bar bg-info"
+                    role="progressbar"
+                    style="width: {{progress_percent}}%;"
+                    aria-valuenow="{{progress_percent}}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                  </div>
+                </div>
+                <p class="small text-muted mt-1 text-center">
+                  {{progress_percent}}% completed
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  {{/if}}
+</div>

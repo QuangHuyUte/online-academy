@@ -1,13 +1,19 @@
+// models/user.model.js
 import db from '../utils/db.js';
 
-// ------- Finders cơ bản -------
+/* ===================== BASIC FINDERS ===================== */
 export function findById(id) {
   return db('users').where('id', id).first();
 }
 
+/** Tìm email không phân biệt hoa/thường (phù hợp UNIQUE lower(email)) */
 export function findByEmail(email) {
-  // Case-insensitive để đồng nhất với UNIQUE (lower(email)) nếu có
   return db('users').whereRaw('lower(email) = lower(?)', [email]).first();
+}
+
+/** (Compat) Trả hash theo name – chỉ dùng nếu nơi khác đang gọi */
+export function getpasswordHash(name) {
+  return db('users').where('name', name).select('password_hash').first();
 }
 
 export function listAll() {
@@ -18,30 +24,29 @@ export function listByRole(role) {
   return db('users').where('role', role).orderBy('id', 'asc');
 }
 
-// ------- CRUD -------
+/* ========================= CRUD ========================= */
 export function add(user) {
-  // Trả về [{ id }] trên Postgres
+  // Postgres trả về [{ id }]
   return db('users').insert(user).returning('id');
 }
 
 export function patch(id, user) {
-  // Lưu ý: Ở route nên WHITELIST field cho phép sửa (name, avatar...), tránh sửa role/password ngoài ý muốn
+  // LƯU Ý: Ở route nên whitelist field (name, avatar_url, email...) để tránh sửa role/password ngoài ý muốn
   return db('users').where('id', id).update(user);
 }
 
 export function remove(id) {
-  // Cực kỳ mạnh tay vì schema đang ON DELETE CASCADE tới nhiều bảng (instructors, enrollments, reviews, watchlist, progress)
+  // Cẩn thận: schema có nhiều ON DELETE CASCADE (instructors, enrollments, reviews, watchlist, progress)
   return db('users').where('id', id).del();
 }
 
-// ------- Admin: search + paging (tùy chọn, nhưng nên có) -------
+/* ================== SEARCH + PAGINATION ================== */
 export function findPage(offset, limit, q = '', role = null) {
   const query = db('users').orderBy('id', 'asc').offset(offset).limit(limit);
   if (role) query.where('role', role);
   if (q) {
     query.andWhere(function () {
-      this.whereILike('name', `%${q}%`)
-          .orWhereILike('email', `%${q}%`);
+      this.whereILike('name', `%${q}%`).orWhereILike('email', `%${q}%`);
     });
   }
   return query;
@@ -52,36 +57,57 @@ export function countAll(q = '', role = null) {
   if (role) query.where('role', role);
   if (q) {
     query.andWhere(function () {
-      this.whereILike('name', `%${q}%`)
-          .orWhereILike('email', `%${q}%`);
+      this.whereILike('name', `%${q}%`).orWhereILike('email', `%${q}%`);
     });
   }
   return query;
 }
 
-// ------- Delete an toàn (khuyến nghị dùng thay cho remove ở route Admin) -------
+/* ===================== SAFE REMOVE ====================== */
+/**
+ * Xoá an toàn:
+ * - Không xoá admin cuối cùng.
+ * - Nếu là instructor còn đang phụ trách khoá học → chặn xoá.
+ */
 export async function safeRemove(id) {
   const me = await findById(id);
   if (!me) return { ok: false, reason: 'NOT_FOUND' };
 
-  // Không cho xóa admin cuối cùng
   if (me.role === 'admin') {
     const { amount } = await db('users').where('role', 'admin').count('* as amount').first();
     if (Number(amount) <= 1) return { ok: false, reason: 'LAST_ADMIN' };
   }
 
-  // Nếu user là instructor có course đang phụ trách -> xóa sẽ lỗi (courses.instructor_id RESTRICT) qua bảng instructors
-  // => Tùy nghiệp vụ: chặn xóa, hoặc buộc chuyển giao course trước
   if (me.role === 'instructor') {
     const row = await db('instructors as i')
       .leftJoin('courses as c', 'c.instructor_id', 'i.id')
       .where('i.user_id', id)
       .count('c.id as cnt')
       .first();
-    // Nếu có khoá học đang phụ trách, chặn xóa
     if (row && Number(row.cnt) > 0) return { ok: false, reason: 'INSTRUCTOR_HAS_COURSES' };
   }
 
   const affected = await remove(id);
   return { ok: affected > 0, affected };
 }
+
+/* ================== COMPAT DEFAULT EXPORT ================== */
+/** Giữ default export cho những nơi import kiểu `import userModel from ...` */
+const userModel = {
+  // API cũ
+  findByEmail,                 // dùng bản không phân biệt hoa/thường
+  add,                         // trả [{ id }]
+  getAllUsers: listAll,        // alias
+  findById,
+  getpasswordHash,
+  patch,
+  // API mới hữu ích cho admin
+  listAll,
+  listByRole,
+  findPage,
+  countAll,
+  remove,
+  safeRemove,
+};
+
+export default userModel;

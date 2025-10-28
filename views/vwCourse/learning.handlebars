@@ -1,0 +1,152 @@
+<main class="container-fluid py-0">
+  <div class="row g-0">
+    <!-- ======= VIDEO PLAYER BÊN TRÁI ======= -->
+    <div class="col-12 col-lg-8">
+      <div class="player-wrapper">
+        <!-- 🎬 Plyr video player -->
+        <video id="player" playsinline controls></video>
+
+        <!-- Placeholder khi chưa chọn bài -->
+        <div id="placeholder" class="player-placeholder">
+          <img src="https://cdn-icons-png.flaticon.com/512/2920/2920244.png" alt="No video selected" width="120" />
+          <p class="text-muted mt-2">Select a lesson to start watching the video</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= DANH SÁCH BÀI HỌC ======= -->
+    <div class="col-12 col-lg-4 px-4 py-3">
+      <div class="learning-sidebar card shadow-sm border-0 sticky-top" style="top: 20px;">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3 text-primary">
+            <i class="bi bi-collection-play"></i> Lecture List
+          </h5>
+
+          {{#each sections}}
+            <div class="mb-3">
+              <h6 class="fw-semibold text-secondary">{{title}}</h6>
+              <ul class="list-group list-group-flush">
+                {{#each lessons}}
+                  <li class="list-group-item p-2">
+                    <button
+                      id="lesson-{{id}}"
+                      class="btn btn-link text-decoration-none w-100 text-start lesson-item"
+                      onclick="loadVideo('{{video_url}}','{{id}}')"
+                    >
+                      ▶ {{title}}
+                    </button>
+                  </li>
+                {{/each}}
+              </ul>
+            </div>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ✅ Plyr CDN -->
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+
+<script>
+  let player;
+  let lastSent = 0;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // ✅ Khởi tạo Plyr (YouTube mode)
+    player = new Plyr("#player", {
+      ratio: "16:9",
+      youtube: { noCookie: true, rel: 0 },
+    });
+
+    // 📍 Theo dõi tiến độ mỗi 10 giây
+    player.on("timeupdate", () => {
+      const lessonId = window.currentLessonId;
+      if (!lessonId || !player.duration) return;
+
+      const current = Math.floor(player.currentTime);
+      const duration = Math.floor(player.duration);
+
+      // Mỗi 10 giây gửi 1 lần
+      if (current - lastSent >= 10) {
+        lastSent = current;
+        const isDone = current / duration >= 0.5;
+        sendProgress(lessonId, current, isDone);
+      }
+    });
+
+    // 📍 Khi xem xong video → gửi hoàn thành
+    player.on("ended", () => {
+      const lessonId = window.currentLessonId;
+      if (!lessonId) return;
+
+      const duration = Math.floor(player.duration);
+      sendProgress(lessonId, duration, true);
+      console.log(`✅ Hoàn thành bài học: ${lessonId}`);
+    });
+  });
+
+  // ✅ Hàm load video
+  function loadVideo(url, lessonId) {
+    const videoId = extractYouTubeId(url);
+    window.currentLessonId = lessonId; // Gán ID cho bài hiện tại
+    lastSent = 0;
+
+    if (!videoId) {
+      alert("❌ URL video không hợp lệ!");
+      return;
+    }
+
+    // Ẩn placeholder, hiện video
+    const placeholder = document.getElementById("placeholder");
+    if (placeholder) placeholder.style.display = "none";
+
+    // Nạp video mới vào player
+    player.source = {
+      type: "video",
+      sources: [{ src: videoId, provider: "youtube" }],
+    };
+
+    // Highlight bài học đang học
+    document.querySelectorAll(".lesson-item").forEach(btn => {
+      btn.classList.remove("active-lesson");
+    });
+    const activeBtn = document.getElementById(`lesson-${lessonId}`);
+    if (activeBtn) activeBtn.classList.add("active-lesson");
+  }
+
+  // ✅ Gửi tiến độ xem về server
+  async function sendProgress(lessonId, watchedSec, isDone) {
+    try {
+      const res = await fetch(`/student/progress/${lessonId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          watched_sec: watchedSec,
+          is_done: isDone,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error(`⚠️ Lưu tiến độ thất bại: ${lessonId}`, res.status);
+      } else {
+        console.log(`📩 Đã lưu tiến độ bài ${lessonId}: ${watchedSec}s, done=${isDone}`);
+      }
+    } catch (err) {
+      console.error("❌ Lỗi khi gửi tiến độ:", err);
+    }
+  }
+
+  function extractYouTubeId(url) {
+    const regex =
+      /(?:youtube\.com\/(?:.*v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const match = url?.match(regex);
+    return match ? match[1] : null;
+  }
+</script>
+
+
+
+
