@@ -1,0 +1,62 @@
+<div class="row">
+  <div class="col-3">
+    {{> sidebar}}
+  </div>
+
+  <div class="col-9">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="mb-0">Students</h3>
+      <form class="d-flex" method="get" action="/admin/students">
+        <input name="q" class="form-control me-2" value="{{q}}" placeholder="Search name or email...">
+        <button class="btn btn-outline-primary">Search</button>
+      </form>
+    </div>
+
+    {{> flash}}
+
+    {{#if students.length}}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width:72px">#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Joined</th>
+              <th class="text-end" style="width:160px">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each students}}
+              <tr>
+                <td>{{inc (add ../offset @index)}}</td>
+                <td>{{this.name}}</td>
+                <td>{{this.email}}</td>
+                <td>{{formatDate this.created_at}}</td>
+                <td class="text-end">
+                  <a href="/admin/students/{{this.id}}" class="btn btn-sm btn-outline-primary">View</a>
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+
+      {{#with (buildPagination page totalPages "/admin/students") as |p|}}
+        <nav>
+          <ul class="pagination">
+            {{#if p.hasPrev}} <li class="page-item"><a class="page-link" href="{{p.prevUrl}}">Prev</a></li> {{/if}}
+            {{#each p.pages}}
+              <li class="page-item {{#if this.active}}active{{/if}}">
+                <a class="page-link" href="{{this.url}}">{{this.page}}</a>
+              </li>
+            {{/each}}
+            {{#if p.hasNext}} <li class="page-item"><a class="page-link" href="{{p.nextUrl}}">Next</a></li> {{/if}}
+          </ul>
+        </nav>
+      {{/with}}
+    {{else}}
+      <div class="alert alert-info">No students found.</div>
+    {{/if}}
+  </div>
+</div>

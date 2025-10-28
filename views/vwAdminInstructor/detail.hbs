@@ -1,0 +1,81 @@
+<div class="row">
+  <div class="col-3">
+    {{> sidebar}}
+  </div>
+
+  <div class="col-9">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="mb-0">Instructor Detail</h3>
+      <a href="/admin/instructors" class="btn btn-outline-secondary">Back</a>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body d-flex gap-3 align-items-center">
+        <img src="{{#if instructor.avatar_url}}{{instructor.avatar_url}}{{else}}https://via.placeholder.com/80x80?text=Avatar{{/if}}"
+             alt="" class="rounded border" style="height:80px;width:80px;object-fit:cover;">
+        <div>
+          <div class="h5 mb-1">{{instructor.name}}</div>
+          <div class="text-muted">{{instructor.email}}</div>
+        </div>
+      </div>
+      {{#if instructor.bio}}
+        <div class="card-footer">
+          <div class="small text-muted mb-1">Bio</div>
+          <div>{{instructor.bio}}</div>
+        </div>
+      {{/if}}
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="mb-0">Recent Courses</h5>
+      <span class="text-muted">Total: {{totalCourses}}</span>
+    </div>
+    {{#if courses.length}}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each courses}}
+              <tr>
+                <td>{{inc @index}}</td>
+                <td>{{this.title}}</td>
+                <td>
+                {{#if this.category}}
+                    {{this.category}}
+                {{else}}
+                    {{this.cat_id}}
+                {{/if}}
+                </td>
+
+                <td>
+                  {{#if this.promo_price}}
+                    <span class="text-decoration-line-through me-1">{{formatCurrency this.price}}</span>
+                    <strong>{{formatCurrency this.promo_price}}</strong>
+                  {{else}}
+                    {{#if this.price}}{{formatCurrency this.price}}{{else}}—{{/if}}
+                  {{/if}}
+                </td>
+                <td>
+                  {{#if this.is_completed}}✅ Completed{{else}}🕓 Draft{{/if}}
+                  {{#if this.is_removed}}<span class="badge bg-secondary ms-1">Hidden</span>{{/if}}
+                </td>
+                <td>{{formatDate this.last_updated_at}}</td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    {{else}}
+      <div class="alert alert-info">This instructor hasn't published any course yet.</div>
+    {{/if}}
+  </div>
+</div>
