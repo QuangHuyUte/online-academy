@@ -801,3 +801,4 @@ SELECT 'watchlist', COUNT(*) FROM watchlist;
 SELECT id, title
 FROM courses
 WHERE fts @@ to_tsquery('web');
+

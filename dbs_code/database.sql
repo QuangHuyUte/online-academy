@@ -242,5 +242,5 @@ ALTER TABLE courses
   ) STORED;
 
 CREATE INDEX IF NOT EXISTS idx_courses_fts ON courses USING GIN (fts);
-
 COMMIT;
+

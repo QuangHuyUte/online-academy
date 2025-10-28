@@ -85,27 +85,16 @@ app.use(async function (req, res, next) {
 // HOME
 app.get('/', async (req, res) => {
   const courses_bestseller = await courseModel.finBestSellerthanAvg();
-  const courses_newest = await courseModel.findNewest7day();
-  // Hàm chunk
-  function chunkArray(arr, chunkSize = 4) {
-    if (!Array.isArray(arr) || arr.length === 0) return [];
-    const result = [];
-    for (let i = 0; i < arr.length; i += chunkSize) {
-      result.push(arr.slice(i, i + chunkSize));
-    }
-    return result;
-  }
+  const courses_newest = await courseModel.findCourses({ limit: 10, offset: 0, sortBy: 'newest' });
+  const Top10ViewedCourses = await courseModel.findTop10ViewedCourses();
+  const topfield = await courseModel.findTopFieldCourses();
 
-  // Tạo slides
-  const slides_bestseller = chunkArray(courses_bestseller, 4);
-  const slides_newest = chunkArray(courses_newest, 4);
-  
-  console.log(slides_newest.length);
-  console.log(slides_bestseller.length);
   // Render
   res.render('vwHome/index', {
-    slides_bestseller,
-    slides_newest,
+    courses_bestseller,
+    courses_newest,
+    Top10ViewedCourses,
+    topfield
   });
 });
 
