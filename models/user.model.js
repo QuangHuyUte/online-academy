@@ -25,10 +25,12 @@ export function listByRole(role) {
 }
 
 /* ========================= CRUD ========================= */
-export function add(user) {
-  // Postgres trả về [{ id }]
-  return db('users').insert(user).returning('id');
+export async function add(user) {
+  const [row] = await db('users').insert(user).returning('id');
+  return typeof row === 'object' ? row.id : row;
 }
+
+
 
 export function patch(id, user) {
   // LƯU Ý: Ở route nên whitelist field (name, avatar_url, email...) để tránh sửa role/password ngoài ý muốn

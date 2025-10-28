@@ -1,3 +1,4 @@
+// models/instructor.model.js
 import db from '../utils/db.js';
 
 // ---- basic finders ----
@@ -47,7 +48,7 @@ export function countAll(keyword = '') {
 
 // ---- CRUD ----
 export function add(instructor) {
-  return db('instructors').insert(instructor).returning('id'); // [{id}]
+  return db('instructors').insert(instructor).returning('id'); // [{ id }]
 }
 
 export function patch(id, instructor) {
@@ -98,3 +99,29 @@ export function isValidVideoUrl(u = '') {
   if (!u) return false;
   return u.startsWith('/uploads/') || isYouTubeUrl(u);
 }
+
+/* ---------- DEFAULT EXPORT (compat) ---------- */
+const instructorModel = {
+  // basic
+  findById,
+  findByUserId,
+  findByEmail,
+  // list/search
+  findAll,
+  findPage,
+  countAll,
+  // crud
+  add,
+  patch,
+  // delete safety
+  countCourses,
+  canDelete,
+  safeRemove,
+  // courses
+  findCourses,
+  findCoursesPage,
+  // helpers
+  isValidVideoUrl,
+};
+
+export default instructorModel;

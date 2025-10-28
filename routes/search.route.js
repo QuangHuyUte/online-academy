@@ -1,48 +1,67 @@
 import express from 'express';
-import courseModel from '../models/course.model.js';
+import * as courseModel from '../models/course.model.js';
+
 const router = express.Router();
 
-router.get('/', async function (req, res) {
+router.get('/', async (req, res, next) => {
+  try {
+    const keyword = String(req.query.keyword || '').trim();
+    const sort = String(req.query.sort || 'rating'); // rating | price | newest | bestseller
+    const limit = Math.max(1, Number(req.query.limit) || 12);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const offset = (page - 1) * limit;
 
-  const keyword = req.query.keyword || '';
-  const sort = req.query.sort || '';
-  const limit = 4;
-  const page = parseInt(req.query.page) || 1;
-  const offset = (page - 1) * limit;
+    let courses = [];
+    let totalCount = 0;
 
-  let courses = [];
-  let totalCount = 0;
+    if (keyword) {
+      // Tìm kiếm theo từ khóa
+      const [rows, cnt] = await Promise.all([
+        courseModel.findByKeyword(keyword, { limit, offset }),
+        courseModel.countByKeyword(keyword),
+      ]);
+      courses = rows;
+      totalCount = Number(cnt?.count || cnt?.amount || 0);
+    } else {
+      // Không có từ khóa -> sắp xếp mặc định
+      const [rows, cnt] = await Promise.all([
+        courseModel.findCourses({ limit, offset, sortBy: sort }),
+        courseModel.countCourses(),
+      ]);
+      courses = rows;
+      totalCount = Number(cnt?.count || 0);
+    }
 
-  if (keyword !== '') {
-    // có search
-    courses = await courseModel.findByKeyword(keyword, { limit, offset });
-    const countResult = await courseModel.countByKeyword(keyword);
-    totalCount = parseInt(countResult.count);
-  } else {
-    // không search, dùng lọc mặc định
-    courses = await courseModel.findCourses({ limit, offset, sortBy: sort });
-    const total = await courseModel.countCourses();
-    totalCount = parseInt(total.count);
-  }
-  console.log(courses)
-  // tính page_numbers 
-  const nPages = Math.ceil(totalCount / limit);
-  const page_numbers = [];
-  for (let i = 1; i <= nPages; i++) {
-    page_numbers.push({
-      value: i,
-      isCurrent: i === page
+    // Tính phân trang
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    const baseUrl = `/search?keyword=${encodeURIComponent(keyword)}&sort=${encodeURIComponent(sort)}&limit=${limit}`;
+
+    const pagination = {
+      page,
+      totalPages,
+      hasPrev: page > 1,
+      hasNext: page < totalPages,
+      prevUrl: `${baseUrl}&page=${Math.max(1, page - 1)}`,
+      nextUrl: `${baseUrl}&page=${Math.min(totalPages, page + 1)}`,
+      pages: Array.from({ length: totalPages }, (_, i) => {
+        const p = i + 1;
+        return { page: p, active: p === page, url: `${baseUrl}&page=${p}` };
+      }),
+    };
+
+    res.render('search/results', {
+      title: keyword ? `Search results for "${keyword}"` : 'Search Courses',
+      courses,
+      keyword,
+      sort,
+      limit,
+      totalCount,
+      pagination,
     });
+  } catch (err) {
+    console.error('❌ Search route error:', err);
+    next(err);
   }
-console.log(courses)
-  res.render('search/results', {
-    courses,
-    page_numbers,
-    sort,
-    keyword,
-    page,
-    totalPages: nPages
-  });
 });
 
 export default router;

@@ -5,7 +5,7 @@
       <div class="text-muted">#{{course.id}} — {{course.title}}</div>
     </div>
     <div class="d-flex gap-2">
-      <a href="/instructor/my-courses" class="btn btn-outline-secondary">Back</a>
+      <a href="/instructor/my-course" class="btn btn-outline-secondary">Back</a>
       {{#unless course.is_completed}}
         <form action="/instructor/courses/{{course.id}}/complete" method="post"
               onsubmit="return confirm('Mark this course as completed?');">

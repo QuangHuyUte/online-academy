@@ -33,12 +33,40 @@ export default {
   },
 
   // formatting
-  formatCurrency: (n, currency = 'VND', locale = 'vi-VN') => {
-    const num = (typeof n === 'number' ? n : Number(n || 0));
-    return Number.isFinite(num)
-      ? num.toLocaleString(locale, { style: 'currency', currency })
-      : '';
+    formatCurrency: (n, currency = 'VND', locale = 'vi-VN', opts) => {
+    // Handlebars luôn truyền đối tượng options ở THAM SỐ CUỐI
+    // Trường hợp gọi: {{formatCurrency price}}  -> currency thực chất là options
+    if (currency && typeof currency === 'object') {
+      opts = currency;           // dịch options sang opts
+      currency = 'USD';          // mặc định
+      locale = 'en-US';
+    } else if (locale && typeof locale === 'object') {
+      // Trường hợp: {{formatCurrency price 'USD'}}
+      opts = locale;
+      locale = 'en-US';          // hợp lý với USD
+    }
+
+    // Hỗ trợ gọi kiểu đặt tên: {{formatCurrency price currency='USD' locale='en-US'}}
+    const hash = opts?.hash || {};
+    const cur = String(hash.currency || currency || 'USD');
+    const loc = String(hash.locale   || locale   || 'en-US');
+
+    const num = Number(n);
+    if (!Number.isFinite(num)) return '';
+
+    try {
+      return new Intl.NumberFormat(loc, {
+        style: 'currency',
+        currency: cur,
+        // Cho phép override các option khác nếu muốn
+        ...hash
+      }).format(num);
+    } catch {
+      // fallback an toàn nếu currency code sai
+      return num.toLocaleString(loc);
+    }
   },
+
   formatDate: (d, locale = 'vi-VN', tz = 'Asia/Ho_Chi_Minh') => {
     if (!d) return '';
     const date = (d instanceof Date) ? d : new Date(d);
@@ -49,6 +77,32 @@ export default {
       hour: '2-digit', minute: '2-digit'
     });
   },
+
+    dateVN: (d) => {
+    if (!d) return '';
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return '';
+    const pad = n => String(n).padStart(2,'0');
+    const dd = pad(dt.getDate());
+    const mm = pad(dt.getMonth()+1);
+    const yyyy = dt.getFullYear();
+    const hh = pad(dt.getHours());
+    const mi = pad(dt.getMinutes());
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  },
+  lower: (s='') => String(s).toLowerCase(),
+    // --- string containment ---
+  contains: (container, value) => {
+    if (container == null) return false;
+    const s = String(container);
+    return s.includes(String(value));
+  },
+  iContains: (container, value) => {
+    if (container == null) return false;
+    return String(container).toLowerCase().includes(String(value).toLowerCase());
+  },
+  startsWith: (str, prefix) => typeof str === 'string' && str.startsWith(String(prefix)),
+  endsWith: (str, suffix) => typeof str === 'string' && str.endsWith(String(suffix)),
 
   // form helpers
   isSelected: (a, b) => (String(a) === String(b) ? 'selected' : ''),
@@ -89,6 +143,8 @@ export default {
       nextUrl: makeUrl(Math.min(totalPages, page + 1)),
       pages
     };
+    
+    
     
   },
 };

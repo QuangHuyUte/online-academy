@@ -1,3 +1,4 @@
+// app.js (ESM)
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,15 +18,15 @@ import flash from './middlewares/flash.js';
 
 // Models
 import * as categoryModel from './models/category.model.js';
-import * as courseModelNamed from './models/course.model.js';
-import userModelDefault, * as userModelNamed from './models/user.model.js';
+import userModel from './models/user.model.js';
+import courseModel from './models/course.model.js';
 
 // Routes
 import accountRouter from './routes/account.route.js';
 import courseRouter from './routes/course.route.js';
 import searchRouter from './routes/search.route.js';
 import studentRoute from './routes/student.route.js';
-import instructorRoutes from './routes/instructor.route.js';
+import instructorRoute from './routes/instructor.route.js';
 import adminRoutes from './routes/admin.route.js';
 import previewRoute from './routes/preview.route.js';
 
@@ -47,20 +48,30 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(morgan('dev'));
 
 // ----------------------------------------------------------------------------
-// View engine: express-handlebars bs)
+// View engine: Handlebars (.handlebars)
 // ----------------------------------------------------------------------------
 app.engine(
-  'handlbars',
+  'handlebars',
   engine({
     extname: '.handlebars',
     defaultLayout: 'main',
     layoutsDir: path.join(__dirname, 'views', 'layouts'),
     partialsDir: [path.join(__dirname, 'views', 'partials')],
     helpers: {
+      // sections for per-view CSS/JS blocks
       section: hbsSections(),
-      // base helpers (eq, inc, add, buildPagination, formatCurrency, formatDate, stripHtml, isYouTube, toYouTubeEmbed, ...)
+
+      // ✅ Alias tương thích với view cũ dùng {{#fill_Content "css"}}...{{/fill_Content}}
+      fill_Content(name, options) {
+        if (!this._sections) this._sections = {};
+        this._sections[name] = options.fn(this);
+        return null;
+      },
+
+      // base helpers bạn đã dùng khắp nơi
       ...hbsHelpers,
-      // extra small helpers often used around the codebase
+
+      // small extras
       subtract: (a, b) => Number(a) - Number(b),
       add: (a, b) => Number(a) + Number(b),
       formatDate: (date) => {
@@ -69,13 +80,13 @@ app.engine(
         return d.isValid() ? d.format('DD/MM/YYYY') : String(date);
       },
       range: (start, end) => Array.from({ length: end - start }, (_, i) => start + i),
-      ifCond: function (v1, operator, v2, options) {
+      ifCond(v1, operator, v2, options) {
         switch (operator) {
           case '<': return v1 < v2 ? options.fn(this) : options.inverse(this);
           case '<=': return v1 <= v2 ? options.fn(this) : options.inverse(this);
           case '>': return v1 > v2 ? options.fn(this) : options.inverse(this);
           case '>=': return v1 >= v2 ? options.fn(this) : options.inverse(this);
-          case '==': return /* eslint eqeqeq: off */ v1 == v2 ? options.fn(this) : options.inverse(this);
+          case '==': return v1 == v2 ? options.fn(this) : options.inverse(this); // eslint-disable-line eqeqeq
           case '===': return v1 === v2 ? options.fn(this) : options.inverse(this);
           default: return options.inverse(this);
         }
@@ -83,14 +94,12 @@ app.engine(
     },
   })
 );
-app.set('view engine', 'handlbars');
+app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
 
 // ----------------------------------------------------------------------------
-/** Session + Flash
- *  - Flash middleware của bạn đã cung cấp res.flash(...) và set vào session.
- *  - Đoạn adapter dưới giúp layout đọc {{flash.message}} nếu bạn dùng banner flash ở layout.
- */
+// Session + Flash
+// ----------------------------------------------------------------------------
 app.set('trust proxy', 1);
 app.use(
   session({
@@ -100,7 +109,11 @@ app.use(
     cookie: { secure: false },
   })
 );
+
+// flash(): cung cấp res.flash(type, message)
 app.use(flash);
+
+// adapter để layout đọc {{flash.message}}
 app.use((req, res, next) => {
   res.locals.flash = req.session.flash;
   delete req.session.flash;
@@ -110,8 +123,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------------------------------
 // Passport Google OAuth (tuỳ chọn, bật nếu có ENV)
 // ----------------------------------------------------------------------------
-const userModel = userModelDefault && userModelDefault.findByEmail ? userModelDefault : userModelNamed;
-
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
@@ -125,7 +136,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           const email = profile.emails?.[0]?.value;
           if (!email) return done(null, false);
 
-          let user = await (userModel.findByEmail?.(email));
+          let user = await userModel.findByEmail(email);
           if (!user) {
             const placeholder = bcrypt.hashSync(profile.id + Date.now(), 10);
             const newUser = {
@@ -135,8 +146,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               role: 'student',
               created_at: new Date(),
             };
-            await (userModel.add?.(newUser));
-            user = await (userModel.findByEmail?.(email));
+            await userModel.add(newUser);
+            user = await userModel.findByEmail(email);
           }
           return done(null, user);
         } catch (err) {
@@ -145,12 +156,14 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       }
     )
   );
+
   app.use(passport.initialize());
   app.use(passport.session());
+
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id, done) => {
     try {
-      const u = await (userModel.findById?.(id));
+      const u = await userModel.findById(id);
       done(null, u);
     } catch (err) {
       done(err);
@@ -163,23 +176,26 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 // ----------------------------------------------------------------------------
 app.use(async (req, res, next) => {
   try {
-    // Tạo lcCategories: cấp 1 + con
-    const parents = await categoryModel.findByParent?.(null);
-    const children = await categoryModel.findAll?.(); // đã bao gồm cả cha & con
-    // Nếu bạn có sẵn findByParent(null) và findByParent(id), dùng logic dưới cho chắc:
-    const top = await categoryModel.findByParent?.(null);
-    const subs = await categoryModel.findAll?.();
+    // Nếu model của bạn có các hàm này:
+    // - findCategoriesParent(): danh mục cha
+    // - findCategoryNotParent(): danh mục con
+    // - findAllCourse(): toàn bộ courses (để gắn nhanh vào con)
+    const parents = await categoryModel.findCategoriesParent?.();
+    const subs = await categoryModel.findCategoryNotParent?.();
+    const allCourses = await categoryModel.findAllCourse?.();
 
-    const parentList = top ?? parents ?? [];
-    const allCats = subs ?? children ?? [];
+    const parentList = parents ?? [];
+    const childList = subs ?? [];
 
-    const parentMap = new Map(parentList.map((p) => [p.id, { ...p, children: [] }]));
-    for (const c of allCats) {
-      if (c.parent_id && parentMap.has(c.parent_id)) {
-        parentMap.get(c.parent_id).children.push(c);
+    for (const p of parentList) {
+      p.children = childList.filter((c) => c.parent_id === p.id);
+    }
+    if (Array.isArray(allCourses)) {
+      for (const c of childList) {
+        c.courses = allCourses.filter((co) => co.cat_id === c.id);
       }
     }
-    res.locals.lcCategories = Array.from(parentMap.values());
+    res.locals.lcCategories = parentList;
   } catch {
     res.locals.lcCategories = [];
   }
@@ -187,12 +203,11 @@ app.use(async (req, res, next) => {
 });
 
 app.use((req, res, next) => {
-  // Gắn flags auth cho layout (tùy ứng dụng của bạn quản lý session như thế nào)
-  if (req.session?.auth && req.session.user) {
+  // flags auth cho layout (tuỳ theo bạn quản lý session auth thế nào)
+  if (req.session?.isAuthenticated && req.session.authUser) {
     res.locals.isAuthenticated = true;
-    res.locals.authUser = req.session.user;
+    res.locals.authUser = req.session.authUser;
   } else if (req.isAuthenticated?.() && req.user) {
-    // trường hợp dùng passport
     res.locals.isAuthenticated = true;
     res.locals.authUser = req.user;
   } else {
@@ -202,21 +217,21 @@ app.use((req, res, next) => {
 
   // Ẩn categories nav ở vài trang
   const p = req.path;
-  res.locals.hideCategoriesNav = p === '/account/signup' || p === '/account/signin' || p.startsWith('/admin');
+  res.locals.hideCategoriesNav =
+    p === '/account/signup' || p === '/account/signin' || p.startsWith('/admin') || p.startsWith('/instructor');
   next();
 });
 
 // ----------------------------------------------------------------------------
-// Home (nếu đã có route riêng cho home thì bỏ đoạn này)
+// Home
 // ----------------------------------------------------------------------------
 app.get('/', async (req, res, next) => {
   try {
-    // các hàm dưới thuộc default export của course.model (nhánh main),
-    // trong file model đã gộp nên vẫn có:
-    const courses_bestseller = await courseModelNamed.default?.finBestSellerthanAvg?.() ?? [];
-    const courses_newest = await courseModelNamed.default?.findCourses?.({ limit: 10, offset: 0, sortBy: 'newest' }) ?? [];
-    const Top10ViewedCourses = await courseModelNamed.default?.findTop10ViewedCourses?.() ?? [];
-    const topfield = await courseModelNamed.default?.findTopFieldCourses?.() ?? [];
+    // Các hàm dưới đây phải tồn tại trong course.model.js
+    const courses_bestseller = await (courseModel.finBestSellerthanAvg?.() ?? []);
+    const courses_newest = await (courseModel.findCourses?.({ limit: 10, offset: 0, sortBy: 'newest' }) ?? []);
+    const Top10ViewedCourses = await (courseModel.findTop10ViewedCourses?.() ?? []);
+    const topfield = await (courseModel.findTopFieldCourses?.() ?? []);
 
     res.render('vwHome/index', {
       title: 'Home',
@@ -237,7 +252,7 @@ app.use('/account', accountRouter);
 app.use('/courses', courseRouter);
 app.use('/search', searchRouter);
 app.use('/student', studentRoute);
-app.use('/instructor', instructorRoutes);
+app.use('/instructor', instructorRoute);
 app.use('/admin', adminRoutes);
 
 // Public preview (không khoá instructor)

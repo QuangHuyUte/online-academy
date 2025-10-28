@@ -1,5 +1,6 @@
 // models/course.model.js
 import db from '../utils/db.js';
+import * as categoryModel from './category.model.js'; // để bọc các hàm compat gọi sang category
 
 /* =========================================
  * COMMON (CRUD cơ bản cho courses)
@@ -206,7 +207,9 @@ export async function findOutlinePreview(courseId) {
 export function findTopByCategory(catId, excludeId, limit = 5) {
   return db('courses')
     .where('cat_id', catId)
-    .andWhere('is_removed', false)
+    .andWhere(builder =>
+      builder.whereNull('is_removed').orWhere('is_removed', false)
+    )
     .andWhereNot('id', excludeId)
     .orderBy('students_count', 'desc')
     .limit(limit);
@@ -336,6 +339,9 @@ export async function getCoursesByCategory(catId, limit = 6, offset = 0) {
         db.raw('coalesce(c.price, 0) as price'),
         db.raw('coalesce(c.promo_price, 0) as promo_price')
       )
+      .andWhere(builder =>
+        builder.whereNull('c.is_removed').orWhere('c.is_removed', false)
+      )
       .orderBy('c.created_at', 'desc')
       .limit(limit)
       .offset(offset);
@@ -347,6 +353,9 @@ export async function getCoursesByCategory(catId, limit = 6, offset = 0) {
     }
     return q;
   });
+}
+export function finBestSellerthanAvg(limit = 8) {
+  return findBestSellerAboveAvg(limit);
 }
 
 // Best-seller trên trung bình
@@ -412,6 +421,41 @@ export function countCourses() {
 }
 
 /* =========================================
+ * COMPAT WRAPPERS (giữ tên cũ để không vỡ route cũ)
+ * ========================================= */
+
+// 1) Giữ lại tên cũ cho đếm khoá theo category (route cũ dùng)
+export function countCoursesByCategory(categoryId) {
+  return countByCat(categoryId);
+}
+
+// 2) Nếu code cũ từng gọi getTopCategories từ courseModel,
+//    ta bọc lại và gọi sang categoryModel (tránh duplicate logic).
+export function getTopCategories(limit = 5) {
+  return categoryModel.getTopCategories(limit);
+}
+
+// 3) Khôi phục tạm findTopFieldCourses nếu còn nơi dùng (giữ nguyên logic cũ)
+export function findTopFieldCourses(limit = 5) {
+  return db('categories as c')
+    .join('courses as co', 'c.id', 'co.cat_id')
+    .join('enrollments as e', 'co.id', 'e.course_id')
+    .select('c.id', 'c.name')
+    .count({ enroll_count: 'e.course_id' })
+    .whereBetween('c.id', [6, 30])
+    .groupBy('c.id', 'c.name')
+    .orderBy('enroll_count', 'desc')
+    .limit(limit)
+    .then(rows => 
+      rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        enroll_count: Number(r.enroll_count)
+      }))
+    );
+}
+
+/* =========================================
  * DEFAULT EXPORT 
  * ========================================= */
 export default {
@@ -429,6 +473,8 @@ export default {
   getFeaturedCourses, getMostViewedCourses, getNewestCourses, countNewestCourses,
   getCoursesByCategory, findBestSellerAboveAvg, findNewest7day,
   findByKeyword, countByKeyword, findTop10ViewedCourses,
-  // misc/compat
+  // compat & misc
   all, findAllCourses, findCourses, countCourses,
+  finBestSellerthanAvg, 
+  countCoursesByCategory, getTopCategories, findTopFieldCourses,
 };

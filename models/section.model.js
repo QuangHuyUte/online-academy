@@ -10,7 +10,7 @@ export function findById(id) {
  * Danh sách section theo course, sắp xếp order_no rồi id.
  * Trả về đủ cột (id, course_id, title, order_no) để dùng trong UI quản trị nội dung.
  */
-export function findByCourse(courseId) {
+export function findByCourseLite(courseId) {
   return db('sections')
     .where({ course_id: courseId })
     .orderBy([
@@ -23,7 +23,7 @@ export function findByCourse(courseId) {
  * (Tùy chọn) Bản rút gọn – tương thích code cũ ở nhánh main,
  * chỉ lấy vài trường cơ bản khi render outline đơn giản.
  */
-export function findByCourseLite(course_id) {
+export function findByCourse(course_id) {
   return db('sections')
     .where({ course_id })
     .select('id', 'title')

@@ -27,6 +27,7 @@ export function findById(id) {
   return db('categories').where('id', id).first();
 }
 
+/** Nếu parentId === null ⇒ whereNull('parent_id') */
 export function findByParent(parentId) {
   if (parentId === null) return db('categories').whereNull('parent_id');
   return db('categories').where('parent_id', parentId);
@@ -51,8 +52,15 @@ export function remove(id) {
  *  Counters & Safe Delete
  * ========================= */
 
+/** Đếm số course còn hiệu lực (loại is_removed = true) trong 1 category */
 export function countCourses(id) {
-  return db('courses').where('cat_id', id).count('cat_id as amount').first();
+  return db('courses')
+    .where({ cat_id: id })
+    .andWhere(builder =>
+      builder.whereNull('is_removed').orWhere('is_removed', false)
+    )
+    .count('cat_id as amount')
+    .first();
 }
 
 export function countChildren(id) {
@@ -81,7 +89,7 @@ export async function safeRemove(id) {
 }
 
 /* =========================
- *  Helpers từ nhánh main
+ *  Helpers (compat với nhánh main)
  * ========================= */
 
 export function findCategoriesParent() {
@@ -107,6 +115,7 @@ export function findAllCourse() {
 /**
  * Top categories theo số enroll trong tuần hiện tại
  * Trả về: [{ id, name, enroll_count }]
+ * (giữ nguyên hành vi cũ: count theo số dòng enrollments)
  */
 export function getTopCategories(limit = 5) {
   return db('categories as c')
@@ -159,11 +168,12 @@ export default {
   add,
   patch,
   remove,
+  // safe delete
   countCourses,
   countChildren,
   canDelete,
   safeRemove,
-  // extras
+  // extras/compat
   findCategoriesParent,
   findCategoriesByParentId,
   findCoursesByCategoryId,

@@ -6,7 +6,7 @@ import { checkAuthenticated } from '../middlewares/auth.mdw.js';
 import otpModel, { generateOTP } from '../models/otp.model.js';
 import watchlistModel from '../models/watchlist.model.js';
 import myCourseModel from "../models/myCourse.model.js";
-
+import instructorModel from '../models/instructor.model.js';
 
 const router = express.Router();
 
@@ -83,64 +83,125 @@ router.get('/is-password-correct', async function(req, res) {
 
 
 router.post('/signup', async function (req, res) {
+  try {
     const isEmailVerified = req.session.verifiedEmail === req.body.email;
-    
     if (!isEmailVerified) {
-        return res.render('vwAccounts/signup', { 
-            error: true, 
-            message: 'Vui lòng xác thực OTP trước khi đăng ký.' 
-        });
+      return res.render('vwAccounts/signup', {
+        error: true,
+        message: 'Vui lòng xác thực OTP trước khi đăng ký.'
+      });
     }
 
+    // 🔹 Check email trùng trước khi insert
     const existingUser = await userModel.findByEmail(req.body.email);
     if (existingUser) {
-        delete req.session.verifiedEmail; 
-        return res.render('vwAccounts/signup', { 
-            error: true, 
-            message: 'Email đã tồn tại.' 
-        });
+      delete req.session.verifiedEmail;
+      return res.render('vwAccounts/signup', {
+        error: true,
+        message: 'Email đã tồn tại.'
+      });
     }
 
-    const hash  = bcrypt.hashSync(req.body.password, 10);
+    // 🔹 Hash password & tạo user object
+    const hash = bcrypt.hashSync(req.body.password, 10);
     const user = {
-        name: req.body.name,
-        password_hash: hash,
-        role: req.body.role,
-        email: req.body.email,
-        created_at: new Date(),
+      name: req.body.name,
+      email: req.body.email,
+      password_hash: hash,
+      role: req.body.role,
+      created_at: new Date(),
     };
 
-    await userModel.add(user);
-    
-    delete req.session.verifiedEmail; 
-    
-    res.render('vwAccounts/signin');
+    // 🔹 Thêm user và lấy ID
+    const newUserId = await userModel.add(user);
+    const id = Array.isArray(newUserId)
+      ? newUserId[0]?.id ?? newUserId[0]
+      : newUserId?.id ?? newUserId;
+
+    // 🔹 Nếu là instructor → thêm bản ghi instructor
+    if (user.role === 'instructor') {
+      try {
+        const { findByUserId, add } = await import('../models/instructor.model.js');
+        const existed = await findByUserId(id);
+        if (!existed) {
+          await add({ user_id: id });
+          console.log(`✅ Added instructor record for user_id=${id}`);
+        }
+      } catch (err) {
+        console.error('❌ Lỗi khi thêm instructor record:', err);
+      }
+    }
+
+    delete req.session.verifiedEmail;
+    res.render('vwAccounts/signin', { success: true });
+  } catch (err) {
+    console.error('Signup error:', err);
+    // 🔹 Nếu trùng email (lỗi UNIQUE constraint)
+    if (err.code === '23505') {
+      return res.render('vwAccounts/signup', {
+        error: true,
+        message: 'Email đã được sử dụng. Vui lòng chọn email khác.'
+      });
+    }
+
+    return res.render('vwAccounts/signup', {
+      error: true,
+      message: 'Đã xảy ra lỗi trong quá trình đăng ký.'
+    });
+  }
 });
+
 
 router.get('/signin', async function (req, res) {
     res.render('vwAccounts/signin');
 });
 
+// routes/account.route.js  (POST /account/signin)
 router.post('/signin', async function (req, res) {
-    const user = await userModel.findByEmail(req.body.email);
-    if (!user) {
-        return res.render('vwAccounts/signin', { error: true });
-    }   
-    if (!user) {
-        return res.render('vwAccounts/signin', { error: true });
+  const { email, password } = req.body;
+  const user = await userModel.findByEmail(email);
+  if (!user) return res.render('vwAccounts/signin', { error: true });
+
+  const ok = bcrypt.compareSync(password, user.password_hash);
+  if (!ok) return res.render('vwAccounts/signin', { error: true });
+
+  // chuẩn hoá role để middleware so sánh chắc chắn
+  const normalized = {
+    ...user,
+    role: String(user.role || '').toLowerCase().trim(),
+  };
+
+  req.session.isAuthenticated = true;
+  req.session.authUser = normalized;
+  req.session.userId = normalized.id;
+
+  // fallback theo role (đÃ SỬA dynamic import)
+  async function getFallbackByRole(u) {
+    if (u.role === 'admin') return '/admin/courses';
+    if (u.role === 'instructor') {
+      try {
+        const im = await import('../models/instructor.model.js');
+        const me = await im.findByUserId(u.id);            // users.id -> instructors.user_id
+        if (me) {
+          const rows = await im.findCoursesPage(me.id, 0, 1, { excludeRemoved: true });
+          if (rows && rows.length) return `/instructor/courses/${rows[0].id}/content`;
+        }
+      } catch (e) {
+        console.error('Compute instructor fallback error:', e);
+      }
+      return '/instructor/my-course';
     }
-    const isValidPassword = bcrypt.compareSync(req.body.password, user.password_hash);
-    if (isValidPassword===false) {
-        return res.render('vwAccounts/signin', { error: true });
-    }
-    req.session.isAuthenticated = true;
-    req.session.authUser = user
-    req.session.userId = user.id;//Cuong add de luu id nguoi dung dang nhap
-    
-    const url = req.session.url || '/';
-    delete req.session.url;
-    res.redirect(url);
+    return '/';
+  }
+
+  const fallback = await getFallbackByRole(normalized);
+  const returnUrl = req.session.returnUrl || req.session.url;
+  delete req.session.returnUrl;
+  delete req.session.url;
+
+  req.session.save(() => res.redirect(returnUrl || fallback));
 });
+
 
 router.post('/signout', function (req, res) {
     req.session.isAuthenticated = false;
@@ -253,18 +314,30 @@ router.get('/auth/google',
     passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/account/signin' }),
-    async function(req, res) {
-        try {
-            if (req.user) {
-                req.session.isAuthenticated = true;
-                req.session.authUser = req.user;
-            }
-        } catch (e) {
-            console.error('Error saving auth session after Google callback', e);
-        }
-        const url = req.session.url || '/';
-        delete req.session.url;
-        res.redirect(url);
-    });
+  passport.authenticate('google', { failureRedirect: '/account/signin' }),
+  async function(req, res) {
+    try {
+      if (req.user) {
+        req.session.isAuthenticated = true;
+        req.session.authUser = req.user;
+      }
+    } catch (e) {
+      console.error('Error saving auth session after Google callback', e);
+    }
+
+    // ✅ Lấy user để suy ra fallback theo role
+    const u = req.user || req.session.authUser;
+    let fallback = '/';
+    if (u?.role === 'admin')        fallback = '/admin/courses';
+    else if (u?.role === 'instructor') fallback = '/instructor/my-course';
+    else if (u?.role === 'student')    fallback = '/';
+
+    // ✅ Ưu tiên returnUrl nếu có
+    const returnUrl = req.session.returnUrl;
+    delete req.session.returnUrl;
+
+    res.redirect(returnUrl || fallback);
+  }
+);
+
 export default router;
