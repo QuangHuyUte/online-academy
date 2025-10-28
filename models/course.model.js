@@ -185,20 +185,12 @@ export default {
   countCourses() {
     return db('courses').count('id as count').first();
   },
-  findNewest7day() {
-    return db('courses')
-      .select('*')
-      .where('created_at', '>=', db.raw('CURRENT_DATE - INTERVAL \'7 days\''))
-      .orderBy('created_at', 'desc')
-      .limit(8)
-      .offset(0);
-  },
   finBestSellerthanAvg() {
     return db('courses')
       .select('*')
       .where('students_count', '>', db.raw('(SELECT AVG(students_count) FROM courses)'))
       .orderBy('students_count', 'desc')
-      .limit(8)
+      .limit(6)
       .offset(0);
   },
   findByKeyword(keyword, { limit = 10, offset = 0 } = {}) {
@@ -220,12 +212,25 @@ export default {
         "fts @@ plainto_tsquery('english', ?)",
         [keyword]
       )
-      .first();
+      .first()
+  },
+  findTop10ViewedCourses() {
+    return db('courses')
+      .select('*')
+      .orderBy('view_count', 'desc')
+      .limit(10);
+  },
+  findTopFieldCourses(limit = 5) {
+    return db('categories as c')
+      .join('courses as co', 'c.id', 'co.cat_id')
+      .join('enrollments as e', 'co.id', 'e.course_id')
+      .select('c.id', 'c.name')
+      .count({ enroll_count: 'e.course_id' })
+      .whereBetween('c.id', [6, 30])
+      .groupBy('c.id', 'c.name')
+      .orderBy('enroll_count', 'desc')
+      .limit(limit)
+      .then(rows => rows.map(r => ({ id: r.id, name: r.name, enroll_count: Number(r.enroll_count) })));
   }
   // vũ finish
-};
-
-
-
-
-
+}
