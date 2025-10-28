@@ -4,7 +4,7 @@ import * as courseModel from '../models/course.model.js';
 import { authRequired, requireAdmin } from '../middlewares/auth.mdw.js'; 
 
 const router = express.Router();
-//router.use(authRequired, requireAdmin);
+router.use(authRequired, requireAdmin);
 
 /* =============================== CATEGORY CRUD =============================== */
 
@@ -79,6 +79,7 @@ router.get('/categories/:id/edit', async (req, res, next) => {
 router.post('/categories/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const name = req.body.name?.trim();
     if (!name) { res.flash('error','Name không được trống.'); return res.redirect('back'); }
     let slug = (req.body.slug?.trim() || '')
       .toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
@@ -165,12 +166,16 @@ router.post('/courses/:id/remove', async (req, res, next) => {
     const course = await courseModel.findById(id);
     if (!course) return res.sendStatus(404);
 
-    const removed = !course.is_removed; // đảo trạng thái
-    await courseModel.setRemoved(id, removed); // cập nhật kèm last_updated_at
+    const removed = !course.is_removed;
+    await courseModel.setRemoved(id, removed);
 
     res.flash('success', removed ? 'Course removed (soft-delete).' : 'Course restored.');
-    res.redirect('/admin/courses');
+
+    const q = req.body.q?.trim() || '';
+    const page = Math.max(1, Number(req.body.page) || 1);
+    return res.redirect(`/admin/courses?q=${encodeURIComponent(q)}&page=${page}`);
   } catch (err) { next(err); }
 });
+
 
 export default router;

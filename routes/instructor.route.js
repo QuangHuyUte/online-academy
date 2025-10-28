@@ -178,7 +178,7 @@ router.post('/courses', async (req, res, next) => {
       res.flash('error', 'Category không tồn tại.');
       return res.redirect('back');
     }
-    const childrenCount = await categoryModel.countChildren?.(cat.id);
+    const childrenCount = await categoryModel.countChildren?.(payload.cat_id);
     if (typeof childrenCount === 'number' && childrenCount > 0) {
       res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
       return res.redirect('back');
@@ -264,7 +264,7 @@ router.post('/courses/:id', async (req, res, next) => {
       res.flash('error', 'Category không tồn tại.');
       return res.redirect('back');
     }
-    const childrenCount = await categoryModel.countChildren?.(cat.id);
+    const childrenCount = await categoryModel.countChildren?.(payload.cat_id);
     if (typeof childrenCount === 'number' && childrenCount > 0) {
       res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
       return res.redirect('back');

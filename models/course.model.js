@@ -90,6 +90,7 @@ export function findPageAdmin(offset, limit, keyword = '', { showRemoved = true 
     .select(
       'c.id', 'c.title', 'c.price', 'c.promo_price',
       'c.is_completed', 'c.is_removed',
+      'c.view_count', 
       'c.last_updated_at', 'cat.name as category', 'u.name as instructor'
     )
     .orderBy('c.last_updated_at', 'desc')
