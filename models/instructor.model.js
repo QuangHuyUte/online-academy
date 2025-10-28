@@ -1,4 +1,3 @@
-
 import db from '../utils/db.js';
 
 // ---- basic finders ----
@@ -11,7 +10,6 @@ export function findByUserId(userId) {
 }
 
 export function findByEmail(email) {
-  // so khớp không phân biệt hoa/thường
   return db('instructors as i')
     .join('users as u', 'u.id', 'i.user_id')
     .select('i.*', 'u.name', 'u.email')
@@ -66,7 +64,6 @@ export async function canDelete(id) {
   return Number(amount) === 0;
 }
 
-// dùng cái này ở route thay vì remove() trực tiếp
 export async function safeRemove(id) {
   const ok = await canDelete(id);
   if (!ok) return { ok: false, reason: 'HAS_COURSE' };
@@ -93,17 +90,11 @@ export function findCoursesPage(instructorId, offset, limit, { excludeRemoved = 
   return q;
 }
 
-const isYouTubeUrl = (u='') =>
+// ---- helpers (thuần) ----
+const isYouTubeUrl = (u = '') =>
   /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)/i.test(u);
 
-function isValidVideoUrl(u='') {
+export function isValidVideoUrl(u = '') {
   if (!u) return false;
-  // cho phép link local upload /uploads/... hoặc link youtube
   return u.startsWith('/uploads/') || isYouTubeUrl(u);
-}
-
-// ... trong POST /lessons và POST /lessons/:id
-if (!isValidVideoUrl(video_url?.trim())) {
-  res.flash('error', 'Video URL phải là /uploads/... hoặc link YouTube hợp lệ.');
-  return res.redirect('back');
 }

@@ -1,4 +1,3 @@
-// app.js — Unified ESM app using express-handlebars (.hbs)
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -48,7 +47,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(morgan('dev'));
 
 // ----------------------------------------------------------------------------
-// View engine: express-handlebars (.hbs)
+// View engine: express-handlebars bs)
 // ----------------------------------------------------------------------------
 app.engine(
   'handlbars',
@@ -84,7 +83,7 @@ app.engine(
     },
   })
 );
-app.set('view engine', 'hbs');
+app.set('view engine', 'handlbars');
 app.set('views', path.join(__dirname, 'views'));
 
 // ----------------------------------------------------------------------------
