@@ -92,3 +92,18 @@ export function findCoursesPage(instructorId, offset, limit, { excludeRemoved = 
   if (excludeRemoved) q.andWhere('is_removed', false);
   return q;
 }
+
+const isYouTubeUrl = (u='') =>
+  /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)/i.test(u);
+
+function isValidVideoUrl(u='') {
+  if (!u) return false;
+  // cho phép link local upload /uploads/... hoặc link youtube
+  return u.startsWith('/uploads/') || isYouTubeUrl(u);
+}
+
+// ... trong POST /lessons và POST /lessons/:id
+if (!isValidVideoUrl(video_url?.trim())) {
+  res.flash('error', 'Video URL phải là /uploads/... hoặc link YouTube hợp lệ.');
+  return res.redirect('back');
+}

@@ -8,10 +8,12 @@ import session from 'express-session';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 
+
 import hbsHelpers from './helpers/helpers.js';
 import flash from './middlewares/flash.js';
 import instructorRoutes from './routes/instructor.route.js';
 import adminRoutes from './routes/admin.route.js';
+import previewRoute from './routes/preview.route.js';
 
 dotenv.config();
 const app = express();
@@ -59,6 +61,7 @@ app.use(flash);
 app.get('/', (req, res) => res.render('vwHome/index', { title: 'Home' }));
 app.use('/instructor', instructorRoutes);
 app.use('/admin', adminRoutes);
+app.use(previewRoute); 
 
 // ===== 404 =====
 app.use((req, res) => {

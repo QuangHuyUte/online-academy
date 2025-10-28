@@ -10,6 +10,7 @@ import * as categoryModel from '../models/category.model.js';
 import * as instructorModel from '../models/instructor.model.js';
 import * as sectionModel from '../models/section.model.js';
 import * as lessonModel from '../models/lesson.model.js';
+import db from '../utils/db.js';
 import { authRequired, requireInstructor } from '../middlewares/auth.mdw.js';
 
 const router = express.Router();
@@ -511,5 +512,6 @@ router.post('/lessons/:id/delete', async (req, res, next) => {
     res.redirect(`/instructor/courses/${sec.course_id}/content`);
   } catch (err) { next(err); }
 });
+
 
 export default router;

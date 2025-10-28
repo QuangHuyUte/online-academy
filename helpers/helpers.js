@@ -89,5 +89,19 @@ export default {
       nextUrl: makeUrl(Math.min(totalPages, page + 1)),
       pages
     };
+    
   },
 };
+
+export function isYouTube(url = '') {
+  return /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)/i.test(url);
+}
+
+export function toYouTubeEmbed(url = '') {
+  // bắt id từ cả dạng watch?v=... và youtu.be/...
+  const m1 = url.match(/[?&]v=([^&#]+)/);
+  const m2 = url.match(/youtu\.be\/([^?&#]+)/);
+  const id = (m1 && m1[1]) || (m2 && m2[1]) || '';
+  return id ? `https://www.youtube.com/embed/${id}` : '';
+}
+

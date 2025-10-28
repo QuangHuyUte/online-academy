@@ -1,0 +1,58 @@
+<div class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <h4 class="mb-2">{{lesson.title}}</h4>
+      <div class="text-muted mb-3">Course: {{lesson.course_title}}</div>
+
+      {{!-- YouTube or local --}}
+      {{#if (isYouTube lesson.video_url)}}
+        <div class="ratio ratio-16x9 mb-3">
+          <iframe
+            src="{{toYouTubeEmbed lesson.video_url}}"
+            title="{{lesson.title}}"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin">
+          </iframe>
+        </div>
+      {{else}}
+        <video controls class="w-100 mb-3" preload="metadata">
+          <source src="{{lesson.video_url}}">
+          Your browser does not support the video tag.
+        </video>
+      {{/if}}
+
+      {{#if lesson.duration_sec}}
+        <div class="text-muted small">Duration: {{lesson.duration_sec}}s</div>
+      {{/if}}
+      {{#if lesson.is_preview}}
+        <span class="badge bg-success mt-2">Preview</span>
+      {{/if}}
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header fw-semibold">Lessons</div>
+
+        {{#if lessons.length}}
+          <div class="list-group list-group-flush">
+            {{#each lessons}}
+              <a
+                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+                       {{#if (eq this.id ../lesson.id)}}active{{/if}}"
+                href="/preview/lesson/{{this.id}}"
+                aria-label="Open lesson {{this.order_no}}: {{this.title}}">
+                <span class="text-truncate" style="max-width: 260px">{{this.order_no}}. {{this.title}}</span>
+                <i class="bi bi-play-circle"></i>
+              </a>
+            {{/each}}
+          </div>
+        {{else}}
+          <div class="list-group list-group-flush">
+            <div class="list-group-item text-muted">No lessons yet.</div>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
