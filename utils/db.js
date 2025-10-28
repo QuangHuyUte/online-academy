@@ -4,10 +4,10 @@ import knex from 'knex';
 const db = knex({
   client: 'pg',
   connection: {
-    host: 'db.eaiaaadpuhpimnefmgac.supabase.co',
-    port: 5432,
-    user: 'postgres',
-    password: 'truongvu123@#*',
+    host: 'aws-1-ap-southeast-1.pooler.supabase.com',
+    port: 6543,
+    user: 'postgres.jmgcjrytotuqoxqgadek',
+    password: 'cuong13052005',
     database: 'postgres',
     ssl: { rejectUnauthorized: false } 
   },

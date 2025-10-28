@@ -43,6 +43,42 @@ app.engine('handlebars', engine({
     subtract: (a, b) => a - b,//vũ
     add: (a, b) => a + b,//vũ
     formatDate: (date, format) => dayjs(date).format(format || 'DD/MM/YYYY'),//vũ
+    // cuong
+      range: function (start, end) {
+        let array = [];
+        for (let i = start; i < end; i++) {
+          array.push(i);
+        }
+        return array;
+      },
+
+      // cuong
+      ifCond: function (v1, operator, v2, options) {
+        switch (operator) {
+          case '<':
+            return v1 < v2 ? options.fn(this) : options.inverse(this);
+          case '<=':
+            return v1 <= v2 ? options.fn(this) : options.inverse(this);
+          case '>':
+            return v1 > v2 ? options.fn(this) : options.inverse(this);
+          case '>=':
+            return v1 >= v2 ? options.fn(this) : options.inverse(this);
+          case '==':
+            return v1 == v2 ? options.fn(this) : options.inverse(this);
+          case '===':
+            return v1 === v2 ? options.fn(this) : options.inverse(this);
+          default:
+            return options.inverse(this);
+        }
+      },
+    eq: (a, b) => a === b, // dòng này của vũ
+    subtract: (a, b) => a - b,//vũ
+    add: (a, b) => a + b,//vũ
+    formatDate: (date) => {
+  if (!date) return '';
+  const parsed = dayjs(date);
+  return parsed.isValid() ? parsed.format('DD/MM/YYYY') : String(date);
+},//cuong
   },
 
   partialsDir: path.join(__dirname, 'views', 'partials')// vũ too

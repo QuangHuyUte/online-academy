@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import userModel from '../models/user.model.js';
 import { checkAuthenticated } from '../middlewares/auth.mdw.js';
 import otpModel, { generateOTP } from '../models/otp.model.js';
+import watchlistModel from '../models/watchlist.model.js';
+
 
 const router = express.Router();
 
@@ -131,6 +133,7 @@ router.post('/signin', async function (req, res) {
     }
     req.session.isAuthenticated = true;
     req.session.authUser = user
+    req.session.userId = user.id;//Cuong add de luu id nguoi dung dang nhap
     
     const url = req.session.url || '/';
     delete req.session.url;
@@ -194,4 +197,30 @@ router.post('/changePassword', checkAuthenticated, async function (req, res) {
         user: req.session.authUser,
     });
 });
+
+// ========== 🧡 WATCHLIST (bạn thêm) ==========
+router.get('/watchlist', async (req, res) => {
+  // Nếu chưa đăng nhập → reset và ẩn watchlist
+  if (!req.session.isAuthenticated || !req.session.authUser) {
+    return res.render('vwAccount/watchlist', {
+      watchlist: [],
+      hasCourses: false,
+      message: 'Bạn cần đăng nhập để xem danh sách yêu thích ❤️'
+    });
+  }
+
+  const user_id = req.session.authUser.id; // ✅ lấy đúng ID người đăng nhập
+  try {
+    const list = await watchlistModel.findAllByUser(user_id);
+    res.render('vwAccount/watchlist', {
+      watchlist: list,
+      hasCourses: list.length > 0,
+    });
+  } catch (err) {
+    console.error('❌ Error loading watchlist:', err);
+    res.status(500).send('Không thể tải danh sách yêu thích.');
+  }
+});
+
+
 export default router;

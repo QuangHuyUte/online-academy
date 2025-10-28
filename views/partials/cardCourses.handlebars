@@ -1,35 +1,58 @@
 <div class="card course-card shadow-sm border-0 h-100">
-    <div class="course-img">
-        <img src="{{this.cover_url}}" class="card-img-top" alt="{{this.title}}">
-    </div>
+  <div class="course-img">
+    <!-- ✅ Bấm vào ảnh sẽ đến trang chi tiết -->
+    <a href="/courses/details?id={{this.id}}">
+      <img src="{{this.cover_url}}" class="card-img-top" alt="{{this.title}}">
+    </a>
+  </div>
 
-    <div class="card-body d-flex flex-column">
-        <h6 class="card-title fw-semibold text-truncate">{{this.title}}</h6>
+  <div class="card-body d-flex flex-column">
+    <!-- ✅ Bấm vào tiêu đề cũng đến trang chi tiết -->
+    <h6 class="card-title fw-semibold text-truncate">
+      <a href="/courses/details?id={{this.id}}" class="text-dark text-decoration-none">
+        {{this.title}}
+      </a>
+    </h6>
 
-        <p class="text-muted small mb-1">
-            <i class="bi bi-people"></i> {{this.students_count}} học viên
-        </p>
+    <p class="text-muted small mb-1">
+      <i class="bi bi-people"></i> {{this.students_count}} học viên
+    </p>
 
-        <p class="text-muted small mb-1">
-            <i class="bi bi-eye"></i> {{this.view_count}} lượt xem
-        </p>
+    <p class="text-muted small mb-1">
+      <i class="bi bi-eye"></i> {{this.view_count}} lượt xem
+    </p>
 
-        <p class="fw-bold mb-1">
-            <i class="bi bi-currency-dollar"></i>
-            {{#if this.promo_price}}
-            <span class="text-danger">{{this.promo_price}} $</span>
-            <del class="text-muted ms-2 small">{{this.price}} $</del>
-            {{else}}
-            <span class="text-primary">{{this.price}} $</span>
-            {{/if}}
-        </p>
+    <p class="fw-bold mb-1">
+      <i class="bi bi-currency-dollar"></i>
+      {{#if this.promo_price}}
+      <span class="text-danger">{{this.promo_price}} $</span>
+      <del class="text-muted ms-2 small">{{this.price}} $</del>
+      {{else}}
+      <span class="text-primary">{{this.price}} $</span>
+      {{/if}}
+    </p>
 
-        <p class="text-warning fw-semibold mb-1">
-            <i class="bi bi-star-fill"></i> {{this.rating_avg}}
-        </p>
+    <p class="text-warning fw-semibold mb-1">
+      <i class="bi bi-star-fill"></i> {{this.rating_avg}}
+    </p>
 
-        <p class="text-muted small mt-auto mb-0">
-            <i class="bi bi-calendar"></i> {{formatDate this.create_at "DD/MM/YYYY HH:mm"}}
-        </p>
-    </div>
+    <p class="text-muted small mt-auto mb-0">
+      <i class="bi bi-calendar"></i> {{formatDate this.create_at "DD/MM/YYYY HH:mm"}}
+    </p>
+  </div>
 </div>
+
+<style>
+  .course-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .course-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .card-title a:hover {
+    color: #0d6efd;
+  }
+</style>
