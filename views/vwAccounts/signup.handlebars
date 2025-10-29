@@ -14,9 +14,25 @@
     const emailHelp = document.querySelector('#emailHelp'); 
 
     function showMessage(msg, isError = false) {
-        emailHelp.innerHTML = isError 
-            ? `<span class="text-danger">${msg}</span>` 
-            : `<span class="text-success">${msg}</span>`;
+        // Render a prominent Bootstrap alert above the form for visibility
+        const alertBox = document.querySelector('#alertBox');
+        if (!alertBox) return; // fallback
+
+        if (!msg) {
+            alertBox.innerHTML = '';
+            return;
+        }
+
+        const type = isError ? 'danger' : 'success';
+        alertBox.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${msg}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+
+        // also keep the small helper text under email (for subtle hints)
+        emailHelp.innerHTML = isError ? `<span class="text-danger">${msg}</span>` : `<span class="text-success">${msg}</span>`;
     }
 
     async function handleSignup(e) {
@@ -53,9 +69,14 @@
         let otpData = await otpRes.json();
         
         if (otpData.success) {
-            showMessage(`The simulated OTP (${otpData.mock_code}) has been sent. Please check your email and enter the code.`, false);
-            
-            btnSubmit.innerHTML = '<i class="bi bi-check2-square"></i> Accept OTP';
+            let msg = 'The OTP code has been sent to your email. Please check and enter the code.';
+            // Chỉ hiện mock_code trong dev, KHÔNG BAO GIỜ TRONG PROD!
+            if (otpData.mock_code) {
+                msg = `The OTP code has been sent to your email (${otpData.mock_code}). Please check and enter the code.`;
+            }
+            showMessage(msg, false);
+
+            btnSubmit.innerHTML = '<i class="bi bi-check2-square"></i> Verify OTP';
             otpContainer.style.display = 'block';
             
             txtEmail.readOnly = true;
@@ -63,9 +84,9 @@
             txtConfirm.readOnly = true;
 
             frmRegister.removeEventListener('submit', handleSignup);
-            frmRegister.addEventListener('submit', handleVerifyAndSubmit); 
+            frmRegister.addEventListener('submit', handleVerifyAndSubmit);
         } else {
-            showMessage('Error sending OTP. Please try again.', true);
+            showMessage(otpData.message || 'Error sending OTP. Please try again with a valid email address.', true);
         }
     }
 
@@ -114,6 +135,8 @@
             <div class="register_form ">
                 <h3 class="card-header">Acount Registration</h3>
                 <div class="card-body">
+                    <!-- Alert area for server/client messages -->
+                    <div id="alertBox" class="mb-3"></div>
                     <form method="post" action="/account/signup" id="frmRegister">
                         <div class="mb-3">
                             <label for="txtName" class="form-label">Name</label>
@@ -146,7 +169,7 @@
                             <input type="text" class="form-control" id="txtOTP" name="otp" maxlength="6">
                         </div>
                         <button type="submit" class="btn btn-primary" id="btnSubmit"><i
-                                class="bi bi-check2-square"></i> Submit</button>
+                                class="bi bi-check2-square"></i> Sign up</button>
                         </form>
                 </div>
             </div>

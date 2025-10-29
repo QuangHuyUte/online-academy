@@ -20,6 +20,7 @@ import flash from './middlewares/flash.js';
 import * as categoryModel from './models/category.model.js';
 import userModel from './models/user.model.js';
 import courseModel from './models/course.model.js';
+import * as instructorModel from './models/instructor.model.js';
 
 // Routes
 import accountRouter from './routes/account.route.js';
@@ -202,18 +203,38 @@ app.use(async (req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  // flags auth cho layout (tuỳ theo bạn quản lý session auth thế nào)
-  if (req.session?.isAuthenticated && req.session.authUser) {
-    res.locals.isAuthenticated = true;
-    res.locals.authUser = req.session.authUser;
-  } else if (req.isAuthenticated?.() && req.user) {
-    res.locals.isAuthenticated = true;
-    res.locals.authUser = req.user;
-  } else {
-    res.locals.isAuthenticated = false;
-    res.locals.authUser = null;
+app.use(async (req, res, next) => { // 💥 Thay đổi thành async để dùng await
+  // Kiểm tra session auth
+  const hasValidSession = req.session?.isAuthenticated && req.session.authUser;
+  // Kiểm tra passport auth (chỉ khi không có session)
+  const hasValidPassport = !hasValidSession && req.isAuthenticated?.() && req.user;
+
+  let authUser = null;
+
+  if (hasValidSession) {
+    authUser = req.session.authUser;
+  } else if (hasValidPassport) {
+    authUser = req.user;
   }
+
+  // 💥 LOGIC TẢI INSTRUCTOR PROFILE 💥
+  if (authUser?.role === 'instructor' && authUser.id) {
+    try {
+      // Tải record từ bảng instructors
+      const instRecord = await instructorModel.findByUserId(authUser.id); 
+      if (instRecord) {
+        // Gán avatar_url và bio vào authUser trong session và res.locals
+        authUser.avatar_url = instRecord.avatar_url;
+        authUser.bio = instRecord.bio;
+        req.session.authUser = authUser; // Cập nhật session
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải instructor profile:', err);
+    }
+  }
+
+  res.locals.isAuthenticated = !!authUser;
+  res.locals.authUser = authUser;
 
   // Ẩn categories nav ở vài trang
   const p = req.path;

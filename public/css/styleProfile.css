@@ -13,17 +13,16 @@
 /* ========================================= */
 .profile-scope .card {
   width: 100%;
-  max-width: 550px; /* Tăng max-width hơn so với form signin (435px) */
+  max-width: 550px; 
   margin: 40px auto;
   background: #fff;
   border-radius: 6px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); /* Shadow đồng bộ */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); 
   border: none;
 }
 
 .profile-scope .card-header {
-  /* Loại bỏ style Bootstrap, tạo style hiện đại */
-  background: #626cd6; /* Màu chủ đạo */
+  background: #626cd6; 
   color: #fff;
   font-size: 20px;
   font-weight: 600;
@@ -31,6 +30,8 @@
   border-bottom: none;
   border-top-left-radius: 6px;
   border-top-right-radius: 6px;
+  /* Đảm bảo căn giữa cho tiêu đề "Your profile" */
+  text-align: center;
 }
 
 /* ========================================= */
@@ -48,25 +49,51 @@
 
 .profile-scope form .form-control {
   width: 100%;
-  height: 57px;
+  height: 57px; /* Chiều cao cố định */
   border: 1px solid #DADAF2;
   border-radius: 5px;
   outline: none;
-  background: #F8F8FB; /* Màu nền input tương tự signin */
+  background: #F8F8FB; 
   font-size: 17px;
   padding: 0 20px;
   transition: 0.2s ease;
+  /* CHỈNH SỬA: Căn giữa dọc văn bản trong Input */
+  line-height: 57px; 
+}
+
+.profile-scope form textarea.form-control {
+    /* CHỈNH SỬA: Dùng padding cho Textarea (Bio) */
+    height: auto;
+    line-height: 1.5;
+    padding: 15px 20px; 
 }
 
 .profile-scope form .form-control:focus {
-  border-color: #626cd6; /* Màu focus tương tự signin */
+  border-color: #626cd6; 
   box-shadow: none; 
   background: #fff;
 }
 
 .profile-scope .card-body .mb-3 {
-    margin-bottom: 25px !important; /* Tạo khoảng cách dọc giữa các trường */
+    margin-bottom: 25px !important; 
 }
+
+/* === CHỈNH SỬA ĐỂ CÂN CHỈNH 2 CỘT === */
+.profile-scope .col-md-5 {
+    /* Cân bằng khoảng cách top/bottom cho cột Avatar để các label thẳng hàng */
+    padding-top: 17px; /* Điều chỉnh để 'Avatar Preview & URL' thẳng hàng với 'Name' */
+    margin-top: 0;
+}
+
+.profile-scope .col-md-5 .form-label:first-child {
+    margin-bottom: 8px; /* Giữ khoảng cách chuẩn cho label đầu tiên */
+}
+
+.profile-scope .col-md-5 .w-100 .form-label {
+    /* Điều chỉnh label "Avatar URL" */
+    margin-top: 0;
+}
+/* ========================================= */
 
 /* ========================================= */
 /* ===== Footer & Button (Tùy chỉnh Bootstrap) ===== */
@@ -75,7 +102,7 @@
     background: #fff;
     border-top: 1px solid #DADAF2;
     padding: 20px 30px;
-    text-align: right; /* Đẩy nút sang phải */
+    text-align: right; 
 }
 
 .profile-scope .card-footer .btn-primary {
@@ -91,6 +118,9 @@
   text-transform: uppercase;
   cursor: pointer;
   transition: 0.3s ease;
+  /* Căn giữa văn bản trong Button */
+  line-height: 48px;
+  padding: 0 25px; 
 }
 
 .profile-scope .card-footer .btn-primary:hover {

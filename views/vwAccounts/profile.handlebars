@@ -1,42 +1,116 @@
-{{#fill_Content 'css'}}
-  <link rel="stylesheet" href="/css/styleProfile.css">
+{{#fill_Content "css"}}
+  <link rel="stylesheet" href="/css/styleProfile.css" />
 {{/fill_Content}}
 
 <div class="profile-scope">
-    <form action="" method="post">
-      <div class="card">
-        <h5 class="card-header d-flex justify-content-center">Your profile</h5>
-        <div class="card-body">
-          <div class="mb-3">
-            <input type="text" class="form-control" id="txtID" name="id" value="{{user.id}}" hidden/>
-          </div>
-          <div class="mb-3">
-            <label for="txtName" class="form-label">Name</label>
-            <input type="text" class="form-control" id="txtName" name="name" value="{{user.name}}" />
-          </div>
-          <div class="mb-3">
-            <label for="txtEmail" class="form-label">Email address</label>
-            <input
-              type="email"
-              class="form-control"
-              id="txtEmail"
-              aria-describedby="emailHelp"
-              name="email"
-              value="{{user.email}}"
-            />
-            <div id="emailHelp" class="form-text">We'll never share your email with
-              anyone 
-              else.
+  <form action="" method="post">
+    <div class="card">
+      <h5 class="card-header d-flex justify-content-center">Your profile</h5>
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <div class="mb-3">
+              <input
+                type="text"
+                class="form-control"
+                id="txtID"
+                name="id"
+                value="{{user.id}}"
+                hidden
+              />
             </div>
+            {{#ifCond user.role "===" "instructor"}}
+              
+              <div class="mb-3 d-flex flex-column align-items-center">
+                <label class="form-label mb-2">Avatar Preview </label>
+
+                <img
+                  src="{{user.avatar_url}}"
+                  alt="Avatar"
+                  class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: cover;"
+                  onerror="this.onerror=null; this.src='/img/placeholder-avatar.jpg';"
+                  id="avatar-preview"
+                />
+              </div>
+            {{/ifCond}}
+            <div class="mb-3">
+              <label for="txtName" class="form-label">Name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="txtName"
+                name="name"
+                value="{{user.name}}"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="txtEmail" class="form-label">Email address</label>
+              <input
+                type="email"
+                class="form-control"
+                id="txtEmail"
+                aria-describedby="emailHelp"
+                name="email"
+                value="{{user.email}}"
+              />
+              <div id="emailHelp" class="form-text">We'll never share your email
+                with anyone else.
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="txtRole" class="form-label">Role</label>
+              <input
+                type="text"
+                class="form-control"
+                id="txtRole"
+                name="role"
+                value="{{user.role}} "
+                disabled
+              />
+            </div>
+
+              <div class="w-100 mb-3">
+                <label for="txtAvatarUrlInput" class="form-label">Avatar URL</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="txtAvatarUrlInput"
+                  value="{{user.avatar_url}}"
+                  placeholder="Dán link ảnh tại đây..."
+                />
+              </div>
+
+              <input
+                type="hidden"
+                name="avatar_url"
+                id="hiddenAvatarUrl"
+                value="{{user.avatar_url}}"
+              />
+
+            {{#ifCond user.role "===" "instructor"}}
+              <div class="mb-3">
+                <label for="txtBio" class="form-label">Bio</label>
+                <textarea
+                  class="form-control"
+                  id="txtBio"
+                  name="bio"
+                  rows="3"
+                >{{user.bio}}</textarea>
+              </div>
+            {{/ifCond}}
+
+
           </div>
-         <div class="mb-3">
-            <label for="txtRole" class="form-label">Role</label>
-            <input type="text" class="form-control" id="txtRole" name="role" value="{{user.role}} " disabled />
           </div>
-        </div>
-        <div class="card-footer text-muted">
-          <button type="submit" formaction="/account/profile" class="btn btn-primary">Update Profile</button>
-        </div>
       </div>
-    </form>
+      <div class="card-footer text-muted">
+        <button
+          type="submit"
+          formaction="/account/profile"
+          class="btn btn-primary"
+        >Update Profile</button>
+
+      </div>
+    </div>
+  </form>
 </div>

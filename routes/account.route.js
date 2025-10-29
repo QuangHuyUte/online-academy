@@ -7,25 +7,56 @@ import otpModel, { generateOTP } from '../models/otp.model.js';
 import watchlistModel from '../models/watchlist.model.js';
 import myCourseModel from "../models/myCourse.model.js";
 import instructorModel from '../models/instructor.model.js';
+import { verifyEmailExists, sendOTPEmail } from '../services/email.service.js';
 
 const router = express.Router();
 
 router.post('/send-otp', async function (req, res) {
     const email = req.body.email;
-    const existingUser = await userModel.findByEmail(email);
     
-    // Đảm bảo email chưa được đăng ký
+    // Kiểm tra email đã được đăng ký chưa
+    const existingUser = await userModel.findByEmail(email);
     if (existingUser) {
-        return res.json({ success: false, message: 'Email đã được sử dụng.' });
+        return res.json({ 
+            success: false, 
+            message: 'Email đã được sử dụng.' 
+        });
     }
 
-    const otp = generateOTP(); 
+    // Kiểm tra email có thật không
+    const isValidEmail = await verifyEmailExists(email);
+    if (!isValidEmail) {
+        return res.json({ 
+            success: false, 
+            message: 'Email không tồn tại hoặc không thể nhận mail.' 
+        });
+    }
+
+    // Tạo mã OTP mới
+    const otp = generateOTP();
     
     try {
+        // Lưu OTP vào database
         await otpModel.add(email, otp);
 
-        console.log(`[DATABASE OTP Đăng ký]: Mã OTP cho ${email} là ${otp}`);
-        
+        // Gửi OTP qua email
+        const emailSent = await sendOTPEmail(email, otp);
+        if (!emailSent) {
+            return res.json({ 
+                success: false, 
+                message: 'Không thể gửi email. Vui lòng thử lại sau.' 
+            });
+        }
+
+        // Lưu email đang verify vào session
+        req.session.emailToVerify = email;
+
+        // Chỉ hiển thị OTP trong console ở môi trường development
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[DEV] OTP for ${email}: ${otp}`);
+        }
+
+       
         req.session.emailToVerify = email; 
 
         return res.json({ success: true, mock_code: otp }); 
@@ -132,8 +163,10 @@ router.post('/signup', async function (req, res) {
       }
     }
 
-    delete req.session.verifiedEmail;
-    res.render('vwAccounts/signin', { success: true });
+  delete req.session.verifiedEmail;
+  // Use flash to show a success message on the signin page, then redirect
+  req.session.flash = { message: 'Sign Up Successfully' };
+  return res.redirect('/account/signin');
   } catch (err) {
     console.error('Signup error:', err);
     // 🔹 Nếu trùng email (lỗi UNIQUE constraint)
@@ -204,9 +237,25 @@ router.post('/signin', async function (req, res) {
 
 
 router.post('/signout', function (req, res) {
-    req.session.isAuthenticated = false;
-    req.session.authUser = null;
-    res.redirect(req.headers.referer);
+    // Xóa toàn bộ session
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Error destroying session:', err);
+        }
+        // Xóa cookie session
+        res.clearCookie('connect.sid');
+        // Đăng xuất passport nếu đang dùng
+        if (req.logout) {
+            req.logout((err) => {
+                if (err) {
+                    console.error('Error logging out passport:', err);
+                }
+                res.redirect('/');
+            });
+        } else {
+            res.redirect('/');
+        }
+    });
 });
 
 router.get('/profile', checkAuthenticated, function (req, res) {
@@ -225,6 +274,24 @@ router.post('/profile', checkAuthenticated, async function (req, res) {
     req.session.authUser.name = user.name;
     req.session.authUser.email = user.email;
 
+    // LOGIC CẬP NHẬT INSTRUCTOR PROFILE
+    if (req.session.authUser.role === 'instructor') {
+        const instUpdate = {
+            avatar_url: req.body.avatar_url || null,
+            bio: req.body.bio || null,
+        };
+        // Tìm bản ghi instructor để lấy instructor.id
+        const inst = await instructorModel.findByUserId(id); 
+        if (inst) {
+            await instructorModel.patch(inst.id, instUpdate);
+            
+            // 💥 BỔ SUNG: CẬP NHẬT SESSION AUTHUSER VỚI URL VÀ BIO MỚI 💥
+            req.session.authUser.avatar_url = instUpdate.avatar_url; 
+            req.session.authUser.bio = instUpdate.bio;
+        }
+    }
+
+    // Sau khi session đã được cập nhật, render lại trang profile
     res.render('vwAccounts/profile', {
         user: req.session.authUser,
         message: 'Profile updated successfully!'
