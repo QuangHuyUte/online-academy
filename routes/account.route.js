@@ -190,6 +190,7 @@ router.get('/signin', async function (req, res) {
 });
 
 // routes/account.route.js  (POST /account/signin)
+// routes/account.route.js
 router.post('/signin', async function (req, res) {
   const { email, password } = req.body;
   const user = await userModel.findByEmail(email);
@@ -198,7 +199,7 @@ router.post('/signin', async function (req, res) {
   const ok = bcrypt.compareSync(password, user.password_hash);
   if (!ok) return res.render('vwAccounts/signin', { error: true });
 
-  // chuẩn hoá role để middleware so sánh chắc chắn
+  // Chuẩn hoá role để middleware so sánh chắc chắn
   const normalized = {
     ...user,
     role: String(user.role || '').toLowerCase().trim(),
@@ -208,32 +209,23 @@ router.post('/signin', async function (req, res) {
   req.session.authUser = normalized;
   req.session.userId = normalized.id;
 
-  // fallback theo role (đÃ SỬA dynamic import)
+  // Fallback theo role: Instructor -> /instructor (dashboard mới)
   async function getFallbackByRole(u) {
     if (u.role === 'admin') return '/admin/courses';
-    if (u.role === 'instructor') {
-      try {
-        const im = await import('../models/instructor.model.js');
-        const me = await im.findByUserId(u.id);            // users.id -> instructors.user_id
-        if (me) {
-          const rows = await im.findCoursesPage(me.id, 0, 1, { excludeRemoved: true });
-          if (rows && rows.length) return `/instructor/courses/${rows[0].id}/content`;
-        }
-      } catch (e) {
-        console.error('Compute instructor fallback error:', e);
-      }
-      return '/instructor/my-course';
-    }
+    if (u.role === 'instructor') return '/instructor';
     return '/';
   }
 
   const fallback = await getFallbackByRole(normalized);
+
+  // Ưu tiên URL người dùng định đi tới trước khi bị chặn
   const returnUrl = req.session.returnUrl || req.session.url;
   delete req.session.returnUrl;
   delete req.session.url;
 
   req.session.save(() => res.redirect(returnUrl || fallback));
 });
+
 
 
 router.post('/signout', function (req, res) {

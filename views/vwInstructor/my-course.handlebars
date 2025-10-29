@@ -1,5 +1,7 @@
+{{!-- views/vwInstructor/my-course.handlebars --}}
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 page-enter">
     <h3 class="fw-bold mb-0">
       <i class="bi bi-collection-play me-2"></i> My Courses
     </h3>
@@ -11,25 +13,25 @@
   {{> flash}}
 
   {{#if courses.length}}
-    <div class="table-responsive shadow-sm rounded-3 border bg-white">
+    <div class="table-responsive softshadow rounded-3 border bg-white page-enter-stagger">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light text-secondary small text-uppercase">
           <tr>
-            <th style="width:50px;">#</th>
+            <th style="width:56px;">#</th>
             <th>Course</th>
-            <th style="width:180px;">Category</th>
-            <th style="width:140px;">Price</th>
-            <th style="width:120px;">Status</th>
-            <th class="text-end" style="width:180px;">Action</th>
+            <th style="width:200px;">Category</th>
+            <th style="width:160px;">Price</th>
+            <th style="width:140px;">Status</th>
+            <th class="text-end" style="width:320px;">Manage</th>
           </tr>
         </thead>
         <tbody>
           {{#each courses}}
-          <tr>
-            <td class="text-muted">{{inc @index}}</td>
+          <tr class="row-lift">
+            <td class="text-muted">{{add (../startIndex) (inc @index)}}</td>
 
-            <!-- Course title + thumbnail -->
-            <td class="text-truncate" style="max-width: 420px;">
+            <!-- Title + thumb + updated -->
+            <td class="text-truncate" style="max-width: 480px;">
               <div class="d-flex align-items-center gap-3">
                 {{#if this.cover_url}}
                   <img src="{{this.cover_url}}" alt="cover" class="rounded border"
@@ -40,9 +42,9 @@
                     <i class="bi bi-image text-muted fs-4"></i>
                   </div>
                 {{/if}}
-
                 <div class="flex-grow-1">
-                  <a href="/instructor/courses/{{this.id}}/edit" class="fw-semibold text-decoration-none text-dark">
+                  <a href="/instructor/courses/{{this.id}}/edit"
+                     class="fw-semibold text-decoration-none text-dark hover-underline">
                     {{this.title}}
                   </a>
                   <div class="small text-muted mt-1">
@@ -88,21 +90,44 @@
               {{/if}}
             </td>
 
-            <!-- Actions -->
+            <!-- Manage actions -->
             <td class="text-end">
-              <a href="/instructor/courses/{{this.id}}/edit" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-pencil-square me-1"></i> Edit
-              </a>
+              <div class="btn-group" role="group" aria-label="Row actions">
+                <!-- Edit content (Sections/Lessons) -->
+                <a class="btn btn-sm btn-primary"
+                   href="/instructor/courses/{{this.id}}/content"
+                   data-bs-toggle="tooltip" data-bs-title="Add sections & lessons">
+                  <i class="bi bi-kanban me-1"></i> Edit content
+                </a>
 
-              {{#unless this.is_completed}}
-                <form action="/instructor/courses/{{this.id}}/complete" method="post" class="d-inline"
-                      onsubmit="return confirm('Mark this course as completed?');">
-                  <button class="btn btn-sm btn-success"
-                          {{#if this._cannotComplete}}disabled title="Cần ít nhất 1 Section và 1 Lesson"{{/if}}>
-                    <i class="bi bi-check2-circle me-1"></i> Complete
+                <!-- Edit preview (Title/Desc/Cover/Pricing) -->
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="/instructor/courses/{{this.id}}/edit"
+                   data-bs-toggle="tooltip" data-bs-title="Edit title, descriptions, cover, pricing">
+                  <i class="bi bi-pencil-square me-1"></i> Edit preview
+                </a>
+
+                <!-- More dropdown -->
+                <div class="btn-group">
+                  <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                          data-bs-toggle="dropdown" aria-expanded="false" aria-label="More">
+                    <span class="visually-hidden">Toggle Dropdown</span>
                   </button>
-                </form>
-              {{/unless}}
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    {{#unless this.is_completed}}
+                      <li>
+                        <button class="dropdown-item d-flex align-items-center gap-2 js-mark-complete"
+                                data-complete-url="/instructor/courses/{{this.id}}/complete"
+                                {{#if this._cannotComplete}}disabled{{/if}}>
+                          <i class="bi bi-check2-circle"></i>
+                          Mark completed
+                        </button>
+                      </li>
+                    {{/unless}}
+                    {{!-- Bạn có thể thêm các mục khác tại đây (Hide/Unhide, Duplicate, Delete...) --}}
+                  </ul>
+                </div>
+              </div>
             </td>
           </tr>
           {{/each}}
@@ -112,20 +137,18 @@
 
     <!-- Pagination -->
     {{#with (buildPagination page totalPages "/instructor/my-course") as |p|}}
-      <nav aria-label="Courses pages" class="mt-4">
+      <nav aria-label="Courses pages" class="mt-4 page-enter">
         <ul class="pagination justify-content-center">
           {{#if p.hasPrev}}
             <li class="page-item">
               <a class="page-link" href="{{p.prevUrl}}">Prev</a>
             </li>
           {{/if}}
-
           {{#each p.pages}}
             <li class="page-item {{#if this.active}}active{{/if}}">
               <a class="page-link" href="{{this.url}}">{{this.page}}</a>
             </li>
           {{/each}}
-
           {{#if p.hasNext}}
             <li class="page-item">
               <a class="page-link" href="{{p.nextUrl}}">Next</a>
@@ -135,7 +158,7 @@
       </nav>
     {{/with}}
   {{else}}
-    <div class="alert alert-info d-flex justify-content-between align-items-center shadow-sm border">
+    <div class="alert alert-info d-flex justify-content-between align-items-center softshadow border page-enter">
       <div>
         <i class="bi bi-info-circle me-2"></i> Bạn chưa có khoá học nào.
       </div>
@@ -145,3 +168,105 @@
     </div>
   {{/if}}
 </div>
+
+<!-- Hidden form for "Mark completed" -->
+<form id="completeForm" method="post" class="d-none"></form>
+
+<!-- Confirm modal -->
+<div class="modal fade" id="confirmCompleteModal" tabindex="-1" aria-labelledby="confirmCompleteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content softshadow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmCompleteLabel">
+          <i class="bi bi-check2-circle me-2 text-success"></i> Mark course as completed?
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Khi đánh dấu <strong>Completed</strong>, khoá học sẽ được hiển thị như đã hoàn thiện nội dung.
+        Vui lòng đảm bảo đã có ít nhất 1 <em>Section</em> và 1 <em>Lesson</em>.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-success" id="btnConfirmComplete">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .softshadow { box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+  .row-lift { transition: transform .18s ease, box-shadow .18s ease, background-color .25s ease; }
+  .row-lift:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.07); background-color: #fcfcfd; }
+  .hover-underline:hover { text-decoration: underline !important; }
+
+  /* Page entrance motion */
+  .page-enter { animation: enter .28s ease both; }
+  .page-enter-stagger tbody tr { opacity: 0; transform: translateY(8px); }
+  .page-enter-stagger.loaded tbody tr { animation: itemIn .34s ease both; }
+  .page-enter-stagger.loaded tbody tr:nth-child(1){ animation-delay: .02s }
+  .page-enter-stagger.loaded tbody tr:nth-child(2){ animation-delay: .05s }
+  .page-enter-stagger.loaded tbody tr:nth-child(3){ animation-delay: .08s }
+  .page-enter-stagger.loaded tbody tr:nth-child(4){ animation-delay: .11s }
+  .page-enter-stagger.loaded tbody tr:nth-child(5){ animation-delay: .14s }
+
+  @keyframes enter { from{opacity:0; transform: translateY(-6px)} to{opacity:1; transform:none} }
+  @keyframes itemIn { to{opacity:1; transform:none} }
+</style>
+
+<script>
+  // Stagger in
+  const tableWrap = document.querySelector('.page-enter-stagger');
+  if (tableWrap) requestAnimationFrame(()=> tableWrap.classList.add('loaded'));
+
+  // Enable Bootstrap tooltips if available
+  if (window.bootstrap) {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+      new bootstrap.Tooltip(el);
+    });
+  }
+
+  // Mark Completed flow (dropdown -> modal -> submit hidden form)
+  let completeUrl = '';
+  const completeForm = document.getElementById('completeForm');
+  const btnConfirm = document.getElementById('btnConfirmComplete');
+  const confirmModalEl = document.getElementById('confirmCompleteModal');
+  let confirmModal;
+
+  function ensureModal() {
+    if (!window.bootstrap) return null;
+    if (!confirmModal) confirmModal = new bootstrap.Modal(confirmModalEl);
+    return confirmModal;
+  }
+
+  document.querySelectorAll('.js-mark-complete').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (btn.disabled) return;
+      completeUrl = btn.getAttribute('data-complete-url');
+      const modal = ensureModal();
+      if (modal) modal.show();
+      else if (confirm('Mark this course as completed?')) {
+        // Fallback nếu không có Bootstrap JS
+        completeForm.setAttribute('action', completeUrl);
+        completeForm.submit();
+      }
+    });
+  });
+
+  btnConfirm?.addEventListener('click', () => {
+    if (!completeUrl) return;
+    completeForm.setAttribute('action', completeUrl);
+    completeForm.submit();
+  });
+
+  // Optional: compute absolute row index if server doesn't pass startIndex
+  // If bạn đã truyền startIndex từ route (offset) thì bỏ đoạn này.
+  (function ensureStartIndex(){
+    if (typeof {{#if startIndex}}{{startIndex}}{{else}}null{{/if}} === 'number') return;
+    // Nếu không có startIndex, ta để 0 (bảng đã dùng helper add(startIndex, inc @index))
+  })();
+</script>

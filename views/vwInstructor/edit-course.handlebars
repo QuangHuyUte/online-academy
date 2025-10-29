@@ -1,95 +1,269 @@
+{{!-- views/vwInstructor/edit-course.handlebars --}}
 <form id="frmCourse" method="post" action="{{#if course.id}}/instructor/courses/{{course.id}}{{else}}/instructor/courses{{/if}}">
-  <div class="row g-4">
-    <!-- LEFT: Course Info -->
-    <div class="col-md-12">
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-        <input name="title" class="form-control" value="{{course.title}}" required>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Short Description</label>
-        <textarea name="short_desc" class="form-control" rows="3">{{course.short_desc}}</textarea>
-      </div>
-
-      <!-- Quill Editor -->
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Full Description</label>
-        <div id="editor" style="height: 500px; background: #fff; border: 1px solid #ccc; border-radius: 8px;">
-          {{{course.long_desc_html}}}
-        </div>
-        <textarea id="long_desc_html" name="long_desc_html" hidden>{{{course.long_desc_html}}}</textarea>
+  <!-- ============ PAGE HEADER ============ -->
+  <div class="page-enter d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="h4 fw-bold mb-1">
+        {{#if course.id}}Edit Course{{else}}Create New Course{{/if}}
+      </h2>
+      <div class="text-muted small">
+        Use the editor to craft a compelling course page. Fields marked <span class="text-danger">*</span> are required.
       </div>
     </div>
 
-    <!-- RIGHT: Metadata -->
-    <div class="col-md-6 col-lg-5">
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
-        <select name="cat_id" class="form-select" required>
-          <option value="">-- Select category --</option>
-          {{#each categories}}
-            <option 
-              value="{{this.id}}" 
-              {{#if (eq this.id ../course.cat_id)}}selected{{/if}}
-              {{#unless this.parent_id}}disabled{{/unless}}>
-              {{#unless this.parent_id}}[Group] {{/unless}}{{this.name}}
-            </option>
-          {{/each}}
-        </select>
-      </div>
+    <div class="d-flex gap-2">
+      <a href="/instructor/my-course" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+      <button id="btnSubmitTop" class="btn btn-primary">
+        <i class="bi bi-save2"></i> {{#if course.id}}Update{{else}}Create{{/if}}
+      </button>
+    </div>
+  </div>
 
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Price</label>
-        <input name="price" type="number" step="0.01" min="0" class="form-control" value="{{course.price}}">
-        <div class="form-text">Để trống nếu miễn phí.</div>
-      </div>
+  {{> flash}}
 
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Promo Price</label>
-        <input name="promo_price" type="number" step="0.01" min="0" class="form-control" value="{{course.promo_price}}">
-        <div class="form-text">Không lớn hơn Price.</div>
-      </div>
+  <!-- ============ GRID ============ -->
+  <div class="row g-4 page-enter-stagger">
+    <!-- LEFT COLUMN -->
+    <div class="col-lg-7">
+      <div class="card softshadow hover-lift">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold"><i class="bi bi-info-circle me-2"></i>Course Information</span>
+          <span class="badge bg-light text-dark">{{#if course.id}}ID: {{course.id}}{{else}}Draft{{/if}}</span>
+        </div>
+        <div class="card-body">
 
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Cover Image</label>
-        <div class="d-flex align-items-center gap-3">
-          <img id="coverPreview" src="{{course.cover_url}}" alt="" class="rounded border" 
-               style="width:120px;height:120px;object-fit:cover;{{#unless course.cover_url}}display:none;{{/unless}}">
-          <div>
-            <input id="coverFile" type="file" accept="image/*" class="form-control form-control-sm" />
-            <input type="hidden" name="cover_url" id="coverUrl" value="{{course.cover_url}}">
-            <div class="form-text">Ảnh sẽ được upload và tự gán vào Cover URL.</div>
+          <!-- Title -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+            <input name="title" class="form-control form-control-lg" value="{{course.title}}" required
+                   maxlength="120" data-counter="#titleCounter" placeholder="e.g., Mastering UI/UX for Web Apps">
+            <div class="d-flex justify-content-between mt-1">
+              <small class="text-muted">Keep it clear and benefit-driven.</small>
+              <small id="titleCounter" class="text-muted">0/120</small>
+            </div>
+          </div>
+
+          <!-- Short Description -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Short Description</label>
+            <textarea name="short_desc" class="form-control" rows="3" maxlength="240" data-counter="#shortCounter"
+                      placeholder="One or two sentences summarizing what students will learn.">{{course.short_desc}}</textarea>
+            <div class="d-flex justify-content-between mt-1">
+              <small class="text-muted">This appears in cards and listings.</small>
+              <small id="shortCounter" class="text-muted">0/240</small>
+            </div>
+          </div>
+
+          <!-- Quill Editor -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold d-flex align-items-center gap-2">
+              Full Description
+              <span class="text-muted small">(supports images/video, headings, lists)</span>
+            </label>
+
+            <div class="rich-toolbar rounded-top px-2 py-1">
+              <span class="small text-muted"><i class="bi bi-type"></i> Rich content editor</span>
+            </div>
+
+            <div id="editor" class="rich-editor" aria-label="Course description editor">
+              {{{course.long_desc_html}}}
+            </div>
+            <textarea id="long_desc_html" name="long_desc_html" hidden>{{{course.long_desc_html}}}</textarea>
+
+            <div class="d-flex justify-content-between mt-2">
+              <div class="form-text">
+                Use the <strong>image</strong> button to upload media (stored via <code>/instructor/upload</code>).
+              </div>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="btnExpandEditor">
+                <i class="bi bi-arrows-fullscreen"></i> Toggle Focus
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="col-lg-5">
+      <div class="card softshadow hover-lift mb-4">
+        <div class="card-header fw-semibold">
+          <i class="bi bi-sliders2-vertical me-2"></i>Course Settings
+        </div>
+        <div class="card-body">
+
+          <!-- Category -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+            <select name="cat_id" class="form-select" required>
+              <option value="">— Select category —</option>
+              {{#each categories}}
+                <option 
+                  value="{{this.id}}" 
+                  {{#if (eq this.id ../course.cat_id)}}selected{{/if}}
+                  {{#unless this.parent_id}}disabled{{/unless}}>
+                  {{#unless this.parent_id}}[Group] {{/unless}}{{this.name}}
+                </option>
+              {{/each}}
+            </select>
+            <div class="form-text">Choose a <strong>sub</strong> category (Groups are disabled).</div>
+          </div>
+
+          <!-- Price -->
+          <div class="row g-2 align-items-end">
+            <div class="col-6">
+              <label class="form-label fw-semibold">Price</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-currency-dollar"></i></span>
+                <input name="price" type="number" step="0.01" min="0" class="form-control" value="{{course.price}}" placeholder="0.00">
+              </div>
+              <div class="form-text">Leave blank if free.</div>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">Promo Price</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-percent"></i></span>
+                <input name="promo_price" type="number" step="0.01" min="0" class="form-control" value="{{course.promo_price}}" placeholder="0.00">
+              </div>
+              <div class="form-text">Must not exceed Price.</div>
+            </div>
+          </div>
+
+          <!-- Cover -->
+          <div class="mt-3">
+            <label class="form-label fw-semibold">Cover Image</label>
+            <div class="d-flex align-items-center gap-3">
+              <div class="cover-wrap">
+                <img id="coverPreview" src="{{course.cover_url}}" alt="Cover preview" class="rounded"
+                     style="{{#unless course.cover_url}}display:none;{{/unless}}">
+                <div class="cover-skeleton {{#if course.cover_url}}d-none{{/if}}"></div>
+              </div>
+              <div>
+                <input id="coverFile" type="file" accept="image/*" class="form-control form-control-sm" />
+                <input type="hidden" name="cover_url" id="coverUrl" value="{{course.cover_url}}">
+                <div class="form-text">
+                  Recommended: <strong>1600×900</strong>. JPG/PNG/WebP.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Tips -->
+          <div class="mt-4 small text-muted">
+            <i class="bi bi-lightbulb"></i>
+            Tip: Clear title, outcome-focused short description, and a high-quality cover boost conversions.
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- LIVE PREVIEW CARD -->
+      <div class="card softshadow hover-lift">
+        <div class="card-header fw-semibold">
+          <i class="bi bi-eye me-2"></i>Live Preview
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-3">
+            <div class="preview-thumb rounded overflow-hidden flex-shrink-0">
+              <img id="liveThumb" src="{{course.cover_url}}" alt="Preview" class="{{#unless course.cover_url}}d-none{{/unless}}">
+              <div class="preview-skeleton {{#if course.cover_url}}d-none{{/if}}"></div>
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-secondary-subtle text-dark border">Course</span>
+                <span class="text-muted small" id="liveCat">—</span>
+              </div>
+              <div class="fw-semibold" id="liveTitle">{{course.title}}</div>
+              <div class="text-muted small" id="liveShort">{{course.short_desc}}</div>
+              <div class="mt-2">
+                <span class="fw-semibold" id="livePrice"></span>
+                <span class="text-decoration-line-through text-muted ms-2 small" id="livePromoStrike"></span>
+                <span class="text-success ms-1" id="livePromo"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- /RIGHT -->
   </div>
 
   <hr class="my-4">
 
-  <div class="d-flex justify-content-between align-items-center">
-    <a href="/instructor/my-course" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left"></i> Cancel
-    </a>
-    <button id="btnSubmit" class="btn btn-primary px-4" type="submit">
-      {{#if course.id}}Update{{else}}Create{{/if}}
-    </button>
+  <!-- ============ ACTION BAR (STICKY) ============ -->
+  <div class="actionbar glassy d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-dot text-success blink"></i>
+      <span class="small" id="dirtyState">All changes saved</span>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary" type="button" id="btnScrollTop" title="Scroll to top">
+        <i class="bi bi-chevron-up"></i>
+      </button>
+      <a href="/instructor/my-course" class="btn btn-outline-secondary">
+        <i class="bi bi-x-circle"></i> Cancel
+      </a>
+      <button id="btnSubmit" class="btn btn-primary px-4" type="submit">
+        <i class="bi bi-save"></i> {{#if course.id}}Update{{else}}Create{{/if}}
+      </button>
+    </div>
   </div>
 </form>
 
-
-<!-- Quill CSS + JS -->
+<!-- Quill -->
 <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 
+<style>
+  /* ===== AESTHETICS ===== */
+  .softshadow { box-shadow: 0 6px 18px rgba(0,0,0,.06); border: none; }
+  .hover-lift { transition: transform .2s ease, box-shadow .2s ease; }
+  .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.08); }
+  .rich-toolbar { background: #f6f7f9; border: 1px solid #e6e7ea; }
+  .rich-editor { height: 460px; background: #fff; border: 1px solid #e6e7ea; border-top: none; border-radius: 0 0 .5rem .5rem; }
+  .ql-toolbar.ql-snow { border: none; border-radius: .5rem .5rem 0 0; }
+  .ql-container.ql-snow { border: none; }
+  .cover-wrap { width: 120px; height: 120px; position: relative; border-radius: .5rem; overflow: hidden; background: #f2f3f5; }
+  .cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cover-skeleton, .preview-skeleton {
+    width: 100%; height: 100%; background: linear-gradient(90deg, #eceff3 0, #f6f7fb 50%, #eceff3 100%);
+    background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: .5rem;
+  }
+  .preview-thumb { width: 96px; height: 64px; background: #f2f3f5; }
+  .preview-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Sticky action bar */
+  .actionbar {
+    position: sticky; bottom: 0; left: 0; right: 0; padding: .75rem 1rem; border-top: 1px solid rgba(0,0,0,.06);
+    backdrop-filter: saturate(1.2) blur(8px);
+  }
+  .glassy { background: color-mix(in srgb, #ffffff 75%, transparent); }
+  .blink { animation: blink 3s linear infinite; }
+  @keyframes blink { 0%,100%{opacity:.6} 50%{opacity:1} }
+  @keyframes shimmer { 0%{background-position: 200% 0} 100%{background-position: -200% 0} }
+
+  /* Page motion (mount) */
+  .page-enter { animation: enter .35s ease both; }
+  .page-enter-stagger > [class*='col'] { opacity: 0; transform: translateY(10px); }
+  .page-enter-stagger.loaded > [class*='col'] { animation: itemIn .45s ease both; }
+  .page-enter-stagger.loaded > [class*='col']:nth-child(1){ animation-delay:.05s }
+  .page-enter-stagger.loaded > [class*='col']:nth-child(2){ animation-delay:.12s }
+  @keyframes enter { from{opacity:0; transform: translateY(-6px)} to{opacity:1; transform:none} }
+  @keyframes itemIn { to{opacity:1; transform:none} }
+
+  /* Buttons micro-interactions */
+  .btn { transition: transform .15s ease, box-shadow .2s ease; }
+  .btn:hover { transform: translateY(-1px); }
+</style>
+
 <script>
 /* ==========================================================
-   🔹 Quill Editor Setup (MIT License, Free)
+   Quill Setup + Image Upload
 ========================================================== */
 const quill = new Quill('#editor', {
   theme: 'snow',
-  placeholder: 'Nhập mô tả chi tiết khóa học...',
+  placeholder: 'Write a compelling full description…',
   modules: {
     toolbar: [
       [{ header: [1, 2, 3, false] }],
@@ -103,20 +277,14 @@ const quill = new Quill('#editor', {
   }
 });
 
-// --- Sync content to hidden textarea before submit ---
-document.querySelector('#frmCourse')?.addEventListener('submit', (e) => {
-  document.querySelector('#long_desc_html').value = quill.root.innerHTML;
-});
-
-// --- Custom image upload handler ---
+// custom image upload
 function selectLocalImage() {
   const input = document.createElement('input');
-  input.setAttribute('type', 'file');
-  input.setAttribute('accept', 'image/*');
+  input.type = 'file';
+  input.accept = 'image/*';
   input.click();
-
   input.onchange = async () => {
-    const file = input.files[0];
+    const file = input.files?.[0];
     if (!file) return;
     const form = new FormData();
     form.append('file', file, file.name);
@@ -125,8 +293,10 @@ function selectLocalImage() {
       if (!res.ok) throw new Error('Upload failed: ' + res.status);
       const data = await res.json();
       if (!data?.url) throw new Error('Invalid upload response');
-      const range = quill.getSelection();
-      quill.insertEmbed(range.index, 'image', data.url);
+      const range = quill.getSelection(true) || { index: quill.getLength() };
+      quill.insertEmbed(range.index, 'image', data.url, 'user');
+      quill.setSelection(range.index + 1, 0, 'user');
+      markDirty();
     } catch (err) {
       alert(err.message || 'Upload error');
     }
@@ -134,13 +304,64 @@ function selectLocalImage() {
 }
 quill.getModule('toolbar').addHandler('image', selectLocalImage);
 
+/* ==========================================================
+   Counters + Live Preview
+========================================================== */
+const $title = document.querySelector('[name="title"]');
+const $short = document.querySelector('[name="short_desc"]');
+const $price = document.querySelector('[name="price"]');
+const $promo = document.querySelector('[name="promo_price"]');
+const $cat   = document.querySelector('[name="cat_id"]');
+
+const $liveTitle = document.getElementById('liveTitle');
+const $liveShort = document.getElementById('liveShort');
+const $livePrice = document.getElementById('livePrice');
+const $livePromo = document.getElementById('livePromo');
+const $liveStrike = document.getElementById('livePromoStrike');
+const $liveCat = document.getElementById('liveCat');
+
+function setCounter(el, target) {
+  const max = Number(el.getAttribute('maxlength') || 0);
+  const cur = el.value?.length || 0;
+  const t = document.querySelector(target);
+  if (t) t.textContent = `${cur}/${max}`;
+}
+$title && setCounter($title, '#titleCounter');
+$short && setCounter($short, '#shortCounter');
+
+$title?.addEventListener('input', e => { setCounter($title, '#titleCounter'); $liveTitle.textContent = e.target.value; markDirty(); });
+$short?.addEventListener('input', e => { setCounter($short, '#shortCounter'); $liveShort.textContent = e.target.value; markDirty(); });
+$cat?.addEventListener('change', e => {
+  const sel = e.target.selectedOptions?.[0];
+  $liveCat.textContent = sel ? sel.textContent : '—';
+  markDirty();
+});
+
+function fmt(n){ try { return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0); } catch { return Number(n||0).toFixed(2); } }
+function refreshPriceView(){
+  const p = parseFloat($price?.value || '');
+  const d = parseFloat($promo?.value || '');
+  if (!isNaN(p)) $livePrice.textContent = fmt(isNaN(d) ? p : d);
+  else $livePrice.textContent = '';
+  if (!isNaN(p) && !isNaN(d) && d < p) {
+    $liveStrike.textContent = fmt(p);
+    $livePromo.textContent = `-${Math.round((1 - d/p)*100)}%`;
+  } else {
+    $liveStrike.textContent = '';
+    $livePromo.textContent = '';
+  }
+}
+$price?.addEventListener('input', () => { refreshPriceView(); markDirty(); });
+$promo?.addEventListener('input', () => { refreshPriceView(); markDirty(); });
+refreshPriceView();
 
 /* ==========================================================
-   🔹 Cover Upload (Preview)
+   Cover Upload + Preview
 ========================================================== */
 const $file = document.getElementById('coverFile');
 const $url  = document.getElementById('coverUrl');
 const $img  = document.getElementById('coverPreview');
+const $thumb= document.getElementById('liveThumb');
 
 $file?.addEventListener('change', async (e) => {
   const f = e.target.files?.[0];
@@ -153,8 +374,10 @@ $file?.addEventListener('change', async (e) => {
     const data = await res.json();
     if (!data?.url) throw new Error('Invalid upload response');
     $url.value = data.url;
-    $img.src = data.url;
-    $img.style.display = '';
+    [$img, $thumb].forEach(el => { if (el){ el.src = data.url; el.classList.remove('d-none'); el.style.display=''; }});
+    document.querySelector('.cover-skeleton')?.classList.add('d-none');
+    document.querySelector('.preview-skeleton')?.classList.add('d-none');
+    markDirty();
   } catch (err) {
     alert(err.message || 'Upload error');
   } finally {
@@ -162,32 +385,102 @@ $file?.addEventListener('change', async (e) => {
   }
 });
 
-
 /* ==========================================================
-   🔹 Validate + chống double submit
+   Validation + Submit + Dirty Guard
 ========================================================== */
-document.getElementById('frmCourse')?.addEventListener('submit', (e) => {
-  const price = parseFloat(document.querySelector('[name="price"]')?.value || '');
-  const promo = parseFloat(document.querySelector('[name="promo_price"]')?.value || '');
-  const catId = document.querySelector('[name="cat_id"]')?.value;
+const $form = document.getElementById('frmCourse');
+const $btnSubmit = document.getElementById('btnSubmit');
+const $btnSubmitTop = document.getElementById('btnSubmitTop');
+const $dirty = document.getElementById('dirtyState');
+let isDirty = false;
 
-  if (!catId) {
-    e.preventDefault();
-    return alert('Vui lòng chọn Category.');
-  }
+function markDirty() {
+  isDirty = true;
+  $dirty && ($dirty.textContent = 'Unsaved changes');
+}
+['input','change'].forEach(evt=>{
+  $form?.addEventListener(evt, (e)=>{
+    const n = e.target?.name;
+    if (n) markDirty();
+  }, true);
+});
+quill.on('text-change', markDirty);
+
+function syncQuill(){ document.getElementById('long_desc_html').value = quill.root.innerHTML; }
+
+function validatePricing(){
+  const price = parseFloat($price?.value || '');
+  const promo = parseFloat($promo?.value || '');
   if (!isNaN(promo) && !isNaN(price) && promo > price) {
-    e.preventDefault();
-    return alert('Promo Price không được lớn hơn Price.');
+    alert('Promo Price must not be greater than Price.');
+    return false;
   }
+  return true;
+}
 
-  // Đồng bộ lại nội dung Quill
-  document.querySelector('#long_desc_html').value = quill.root.innerHTML;
+function validateCategory(){
+  const catId = $cat?.value;
+  if (!catId) {
+    alert('Please select a Category (sub category).');
+    return false;
+  }
+  return true;
+}
 
-  // Chống double-submit
-  const btn = document.getElementById('btnSubmit');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+function disableBtns() {
+  [$btnSubmit, $btnSubmitTop].forEach(b=>{
+    if (!b) return;
+    b.disabled = true;
+    b.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...';
+  });
+}
+
+$btnSubmitTop?.addEventListener('click', (e)=>{ e.preventDefault(); $btnSubmit?.click(); });
+
+$form?.addEventListener('submit', (e) => {
+  if (!validateCategory() || !validatePricing()) {
+    e.preventDefault();
+    return;
+  }
+  syncQuill();
+  disableBtns();
+  isDirty = false;
+  $dirty && ($dirty.textContent = 'All changes saved');
+});
+
+// warn on leave
+window.addEventListener('beforeunload', (e) => {
+  if (isDirty) {
+    e.preventDefault();
+    e.returnValue = '';
   }
 });
+
+/* ==========================================================
+   UX Enhancements
+========================================================== */
+document.getElementById('btnExpandEditor')?.addEventListener('click', ()=>{
+  document.getElementById('editor').classList.toggle('rich-editor--focus');
+});
+document.getElementById('btnScrollTop')?.addEventListener('click', ()=> window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+// stagger entrance when mounted
+const grid = document.querySelector('.page-enter-stagger');
+if (grid) requestAnimationFrame(()=> grid.classList.add('loaded'));
+
+// initialize live cat on load
+(function initLiveCat(){
+  const sel = $cat?.selectedOptions?.[0];
+  $liveCat.textContent = sel ? sel.textContent : '—';
+})();
+
+// Focus style for editor
+const editor = document.getElementById('editor');
+editor.addEventListener('focusin', ()=> editor.style.boxShadow = '0 0 0 3px rgba(25,135,84,.15)');
+editor.addEventListener('focusout', ()=> editor.style.boxShadow = 'none');
 </script>
+
+<style>
+  /* Focus mode for editor */
+  .rich-editor--focus { height: 640px; outline: 2px solid rgba(13,110,253,.2); }
+</style>

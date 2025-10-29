@@ -39,17 +39,89 @@ export function findByInstructor(instructorId, { excludeRemoved = false } = {}) 
   return q;
 }
 
-export function findPageByInstructor(instructorId, offset, limit, { excludeRemoved = false } = {}) {
-  const q = db('courses')
-    .where('instructor_id', instructorId)
-    .orderBy('last_updated_at', 'desc')
+export function findOverviewByInstructorFlex(instructorId, userId, limit = 10, offset = 0) {
+  const ids = [instructorId, userId].filter(Boolean);
+  return db('courses as c')
+    .leftJoin('categories as cat', 'cat.id', 'c.cat_id')
+    .leftJoin(
+      db('enrollments').select('course_id').count('* as students_count').groupBy('course_id').as('enr'),
+      'enr.course_id', 'c.id'
+    )
+    .leftJoin(
+      db('reviews').select('course_id').avg('rating as rating_avg').count('* as rating_count').groupBy('course_id').as('rev'),
+      'rev.course_id', 'c.id'
+    )
+    .whereIn('c.instructor_id', ids)
+    .select(
+      'c.id', 'c.title', 'c.cover_url', 'c.cat_id', 'c.is_completed', 'c.is_removed',
+      'c.last_updated_at', 'c.view_count',
+      db.raw('COALESCE(enr.students_count, 0) as students_count'),
+      db.raw('ROUND(COALESCE(rev.rating_avg, 0)::numeric, 2) as rating_avg'),
+      db.raw('COALESCE(rev.rating_count, 0) as rating_count'),
+      'cat.name as category'
+    )
+    .orderBy('c.last_updated_at', 'desc')
+    .limit(limit).offset(offset);
+}
+
+export function countByInstructorFlex(instructorId, userId) {
+  const ids = [instructorId, userId].filter(Boolean);
+  return db('courses').whereIn('instructor_id', ids).count('* as amount').first();
+}
+
+export async function overviewMetricsFlex(instructorId, userId) {
+  const ids = [instructorId, userId].filter(Boolean);
+
+  const [{ amount: total_courses }] = await db('courses')
+    .whereIn('instructor_id', ids)
+    .count('* as amount');
+
+  const [{ total_students }] = await db('enrollments as e')
+    .join('courses as c', 'c.id', 'e.course_id')
+    .whereIn('c.instructor_id', ids)
+    .count('* as total_students');
+
+  const [{ avg_rating, rating_count }] = await db('reviews as r')
+    .join('courses as c', 'c.id', 'r.course_id')
+    .whereIn('c.instructor_id', ids)
+    .avg('r.rating as avg_rating')
+    .count('* as rating_count');
+
+  const [{ total_views }] = await db('courses')
+    .whereIn('instructor_id', ids)
+    .sum('view_count as total_views');
+
+  return {
+    total_courses: Number(total_courses || 0),
+    total_students: Number(total_students || 0),
+    avg_rating: (avg_rating ? Number(avg_rating).toFixed(2) : '0.00'),
+    total_views: Number(total_views || 0),
+    rating_count: Number(rating_count || 0),
+  };
+}
+
+export function findPageByInstructor(instructorId, offset = 0, limit = 10, { excludeRemoved = false } = {}) {
+  const q = db('courses as c')
+    .leftJoin('categories as cat', 'cat.id', 'c.cat_id')
+    .select(
+      'c.id', 'c.title', 'c.cover_url',
+      'c.price', 'c.promo_price',
+      'c.is_completed', 'c.is_removed',
+      'c.last_updated_at',
+      db.raw('COALESCE(cat.name, c.cat_id::text) as category'),
+      'c.students_count', 'c.rating_avg', 'c.rating_count', 'c.view_count'
+    )
+    .where('c.instructor_id', instructorId)
+    .orderBy('c.id', 'desc')
     .offset(offset)
     .limit(limit);
-  if (excludeRemoved) q.andWhere('is_removed', false);
+
+  if (excludeRemoved) q.andWhere('c.is_removed', false);
   return q;
 }
 
-export function countByInstructor(instructorId, { excludeRemoved = false } = {}) {
+
+export function countByInstructors(instructorId, { excludeRemoved = false } = {}) {
   const q = db('courses')
     .where('instructor_id', instructorId)
     .count('* as amount')
@@ -82,6 +154,18 @@ export function markCompleted(id) {
     .update({ is_completed: true, last_updated_at: db.fn.now() });
 }
 
+export async function getCourseStats(courseId) {
+  const [{ students_count }] = await db('enrollments').where({ course_id: courseId }).count('* as students_count');
+  const [{ rating_avg, rating_count }] = await db('reviews')
+    .where({ course_id: courseId })
+    .avg('rating as rating_avg')
+    .count('* as rating_count');
+
+  return {
+    students_count: Number(students_count || 0),
+    rating_avg: rating_avg ? Number(rating_avg) : null,
+    rating_count: Number(rating_count || 0),
+  };}
 /* =========================================
  * ADMIN (toggle remove, paging admin)
  * ========================================= */
@@ -455,6 +539,69 @@ export function findTopFieldCourses(limit = 5) {
     );
 }
 
+/**
+ * Lấy danh sách khoá của 1 instructor kèm thống kê:
+ * - students_count: số enrollment
+ * - rating_avg, rating_count: thống kê review
+ * - view_count: cột trên bảng courses
+ * Có phân trang.
+ */
+export function findOverviewByInstructor(instructorId, limit = 10, offset = 0) {
+  return db('courses as c')
+    .leftJoin('categories as cat', 'cat.id', 'c.cat_id')
+    .select(
+      'c.id', 'c.title', 'c.cover_url',
+      db.raw('COALESCE(cat.name, c.cat_id::text) as category'),
+      'c.students_count',
+      'c.rating_avg', 'c.rating_count',
+      'c.view_count',
+      'c.is_completed', 'c.is_removed',
+      'c.last_updated_at'
+    )
+    .where('c.instructor_id', instructorId)
+    .andWhere('c.is_removed', false)
+    .orderBy('c.id', 'desc')
+    .offset(offset)
+    .limit(limit);
+}
+
+export function countByInstructor(instructorId) {
+  return db('courses')
+    .where('instructor_id', instructorId)
+    .count('* as amount')
+    .first();
+}
+
+/** (Tuỳ chọn) Tổng hợp số liệu KPIs cho header */
+export async function overviewMetrics(instructorId) {
+  const [{ amount: total_courses }] = await Promise.all([
+    db('courses').where('instructor_id', instructorId).count('* as amount')
+  ]);
+
+  const [{ total_students }] = await db('enrollments as e')
+    .join('courses as c', 'c.id', 'e.course_id')
+    .where('c.instructor_id', instructorId)
+    .count('* as total_students');
+
+  const [{ avg_rating, rating_count }] = await db('reviews as r')
+    .join('courses as c', 'c.id', 'r.course_id')
+    .where('c.instructor_id', instructorId)
+    .avg('r.rating as avg_rating')
+    .count('* as rating_count');
+
+  const [{ total_views }] = await db('courses')
+    .where('instructor_id', instructorId)
+    .sum('view_count as total_views');
+
+  return {
+    total_courses: Number(total_courses || 0),
+    total_students: Number(total_students || 0),
+    avg_rating: (avg_rating ? Number(avg_rating).toFixed(2) : '0.00'),
+    total_views: Number(total_views || 0),
+    rating_count: Number(rating_count || 0),
+  };
+}
+
 /* =========================================
  * DEFAULT EXPORT 
  * ========================================= */
@@ -462,7 +609,7 @@ export default {
   // core
   findAll, findById, add, patch,
   // instructor
-  findByInstructor, findPageByInstructor, countByInstructor, canComplete, markCompleted,
+  findByInstructor, findPageByInstructor, countByInstructors, canComplete, markCompleted,
   // admin
   setRemoved, findPageAdmin, countAdmin,
   // util
@@ -477,4 +624,8 @@ export default {
   all, findAllCourses, findCourses, countCourses,
   finBestSellerthanAvg, 
   countCoursesByCategory, getTopCategories, findTopFieldCourses,
+
+  findOverviewByInstructor, overviewMetrics, countByInstructor,
+
+  getCourseStats, countByInstructorFlex, findOverviewByInstructorFlex, overviewMetricsFlex,
 };

@@ -1,48 +1,79 @@
+{{!-- views/vwInstructor/sections.handlebars --}}
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+  <!-- ======= PAGE HEADER ======= -->
+  <div class="d-flex justify-content-between align-items-center mb-3 page-enter">
     <div>
-      <h3 class="mb-0">Course Content</h3>
-      <div class="text-muted">#{{course.id}} — {{course.title}}</div>
+      <h3 class="mb-0 fw-bold">
+        <i class="bi bi-list-check me-2"></i> Course Content
+      </h3>
+      <div class="text-muted small">
+        <span class="me-2">#{{course.id}}</span> — <span class="fw-semibold">{{course.title}}</span>
+      </div>
     </div>
+
     <div class="d-flex gap-2">
-      <a href="/instructor/my-course" class="btn btn-outline-secondary">Back</a>
+      <a href="/instructor/courses/{{course.id}}/edit" class="btn btn-outline-secondary" data-bs-toggle="tooltip" data-bs-title="Edit title, descriptions, cover, pricing">
+        <i class="bi bi-pencil-square me-1"></i> Edit preview
+      </a>
+      <a href="/instructor/my-course" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+
       {{#unless course.is_completed}}
-        <form action="/instructor/courses/{{course.id}}/complete" method="post"
-              onsubmit="return confirm('Mark this course as completed?');">
-          <button class="btn btn-success">Mark Completed</button>
-        </form>
+      <button class="btn btn-success" id="btnOpenComplete">
+        <i class="bi bi-check2-circle me-1"></i> Mark completed
+      </button>
       {{/unless}}
     </div>
   </div>
 
   {{> flash}}
 
-  <div class="card mb-4">
-    <div class="card-header fw-semibold">Add Section</div>
+  <!-- ======= QUICK HELP ======= -->
+  <div class="alert alert-light border softshadow small page-enter">
+    <div class="d-flex align-items-start gap-3">
+      <i class="bi bi-info-circle text-primary fs-5"></i>
+      <div>
+        <div class="fw-semibold mb-1">How to add lessons (3 steps)</div>
+        <ol class="mb-0 ps-3">
+          <li>Create a <strong>Section</strong> (e.g., “Getting Started”).</li>
+          <li>In that section, click <strong>Upload</strong> to choose your <code>.mp4/.webm/.ogg</code> file, or paste a valid <strong>YouTube URL</strong>.</li>
+          <li>Click <strong>Add Lesson</strong> or <strong>Save Lesson</strong>. Done ✅</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= ADD SECTION ======= -->
+  <div class="card mb-4 softshadow hover-lift page-enter">
+    <div class="card-header fw-semibold">
+      <i class="bi bi-layout-text-window-reverse me-2"></i> Add Section
+    </div>
     <div class="card-body">
-      <form method="post" action="/instructor/sections">
+      <form method="post" action="/instructor/sections" class="row g-3 align-items-end js-protect-submit">
         <input type="hidden" name="course_id" value="{{course.id}}">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-6">
-            <label class="form-label">Title</label>
-            <input name="title" class="form-control" required>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Order</label>
-            <input name="order_no" type="number" class="form-control" min="1" value="1">
-          </div>
-          <div class="col-md-4 text-end">
-            <button class="btn btn-primary">Add Section</button>
-          </div>
+        <div class="col-md-7">
+          <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+          <input name="title" class="form-control form-control-lg" required placeholder="e.g., Introduction">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Order</label>
+          <input name="order_no" type="number" class="form-control" min="1" value="1">
+        </div>
+        <div class="col-md-3 text-end">
+          <button class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Add Section
+          </button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- ======= SECTIONS & LESSONS ======= -->
   {{#if sections.length}}
-    <div class="accordion" id="accSections">
+    <div class="accordion page-enter-stagger" id="accSections">
       {{#each sections}}
-        <div class="accordion-item">
+        <div class="accordion-item softshadow border-0 mb-3">
           <h2 class="accordion-header" id="h{{this.id}}">
             <button
               class="accordion-button {{#unless @first}}collapsed{{/unless}}"
@@ -51,208 +82,225 @@
               data-bs-target="#c{{this.id}}"
               aria-expanded="{{#if @first}}true{{else}}false{{/if}}"
             >
-              <strong class="me-2">#{{this.order_no}}</strong> {{this.title}}
+              <span class="badge me-2 bg-secondary-subtle text-dark border">#{{this.order_no}}</span>
+              <span class="fw-semibold">{{this.title}}</span>
             </button>
           </h2>
-          <div
-            id="c{{this.id}}"
-            class="accordion-collapse collapse {{#if @first}}show{{/if}}"
-            data-bs-parent="#accSections"
-          >
+
+          <div id="c{{this.id}}" class="accordion-collapse collapse {{#if @first}}show{{/if}}" data-bs-parent="#accSections">
             <div class="accordion-body">
 
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <form class="row g-2" method="post" action="/instructor/sections/{{this.id}}">
-                  <div class="col-md-6">
-                    <label class="form-label">Title</label>
+              <!-- Section editor -->
+              <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <form class="row g-2 align-items-end js-protect-submit" method="post" action="/instructor/sections/{{this.id}}">
+                  <div class="col-md-7">
+                    <label class="form-label fw-semibold">Title</label>
                     <input name="title" class="form-control" value="{{this.title}}" required>
                   </div>
                   <div class="col-md-2">
-                    <label class="form-label">Order</label>
+                    <label class="form-label fw-semibold">Order</label>
                     <input name="order_no" type="number" class="form-control" min="1" value="{{this.order_no}}">
                   </div>
-                  <div class="col-md-4 text-end">
-                    <button class="btn btn-outline-primary">Save</button>
+                  <div class="col-md-3 text-end">
+                    <button class="btn btn-outline-primary">
+                      <i class="bi bi-save2 me-1"></i> Save section
+                    </button>
                   </div>
                 </form>
 
                 <form method="post" action="/instructor/sections/{{this.id}}/delete"
                       onsubmit="return confirm('Delete this section (no lessons)?');">
-                  <button class="btn btn-outline-danger">Delete</button>
+                  <button class="btn btn-outline-danger">
+                    <i class="bi bi-trash3 me-1"></i> Delete
+                  </button>
                 </form>
               </div>
 
-              {{!-- Lessons table --}}
+              <!-- Lessons table -->
               <div class="table-responsive mb-3">
                 <table class="table table-sm table-hover align-middle">
                   <thead class="table-light">
                     <tr>
                       <th style="width:60px">#</th>
-                      <th>Title</th>
-                      <th>Video URL</th>
-                      <th style="width:120px">Duration</th>
-                      <th style="width:120px">Preview</th>
-                      <th style="width:220px" class="text-end">Action</th>
+                      <th style="width:28%">Title</th>
+                      <th style="width:36%">Video URL</th>
+                      <th style="width:100px">Duration</th>
+                      <th style="width:100px">Preview</th>
+                      <th class="text-end" style="width:240px">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {{#if this.lessons.length}}
                       {{#each this.lessons}}
-                        <tr>
+                        <tr class="row-lift">
                           <td>{{inc @index}}</td>
-                          <td class="text-truncate" style="max-width:300px;">{{this.title}}</td>
-                          <td class="text-truncate" style="max-width:360px;">
-                            <a href="{{this.video_url}}" target="_blank">{{this.video_url}}</a>
+                          <td class="text-truncate" title="{{this.title}}">{{this.title}}</td>
+                          <td class="text-truncate">
+                            {{#if this.video_url}}
+                              <a href="{{this.video_url}}" target="_blank">{{this.video_url}}</a>
+                            {{else}}
+                              <span class="text-muted">—</span>
+                            {{/if}}
                           </td>
                           <td>{{#if this.duration_sec}}{{this.duration_sec}}s{{else}}—{{/if}}</td>
                           <td>{{#if this.is_preview}}Yes{{else}}No{{/if}}</td>
                           <td class="text-end">
                             <button class="btn btn-sm btn-outline-secondary" type="button"
                                     data-bs-toggle="collapse" data-bs-target="#editL{{this.id}}">
-                              Edit
+                              <i class="bi bi-pencil-square me-1"></i> Edit
                             </button>
                             <form method="post" action="/instructor/lessons/{{this.id}}/delete"
-                                  class="d-inline"
+                                  class="d-inline js-protect-submit"
                                   onsubmit="return confirm('Delete this lesson?');">
-                              <button class="btn btn-sm btn-outline-danger">Delete</button>
+                              <button class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash3 me-1"></i> Delete
+                              </button>
                             </form>
                           </td>
                         </tr>
+
+                        <!-- Inline edit row -->
                         <tr class="collapse" id="editL{{this.id}}">
                           <td colspan="6">
-                            <form class="row g-2 align-items-end" method="post" action="/instructor/lessons/{{this.id}}">
-                              <div class="col-md-4">
-                                <label class="form-label">Title</label>
-                                <input name="title" class="form-control" value="{{this.title}}" required>
+                            <div class="card border-0 softshadow">
+                              <div class="card-body">
+                                <form class="row g-3 align-items-end js-protect-submit" method="post" action="/instructor/lessons/{{this.id}}">
+                                  <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Title</label>
+                                    <input name="title" class="form-control" value="{{this.title}}" required>
+                                  </div>
+
+                                  <div class="col-md-5">
+                                    <label class="form-label fw-semibold">Video URL</label>
+
+                                    <div class="input-group mt-2">
+                                      <input id="video_url_{{this.id}}" name="video_url"
+                                             class="form-control"
+                                             value="{{this.video_url}}"
+                                             required
+                                             pattern="^(\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
+                                             title="Use /uploads/... or YouTube URL (https://youtube.com/watch?v=... / https://youtu.be/...)">
+                                      <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="video_url_{{this.id}}">
+                                        <i class="bi bi-upload me-1"></i> Upload
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-copy" type="button" data-target-input="video_url_{{this.id}}">
+                                        <i class="bi bi-clipboard-check me-1"></i> Copy
+                                      </button>
+                                    </div>
+                                    <div class="form-text">
+                                      Upload để hệ thống tự điền <code>/uploads/...</code> — hoặc dán YouTube URL (watch?v=... / youtu.be/...).
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 mt-2 small text-muted" id="status_{{this.id}}"></div>
+                                  </div>
+
+                                  <div class="col-md-2">
+                                    <label class="form-label fw-semibold">Duration (s)</label>
+                                    <input name="duration_sec" type="number" min="0" class="form-control" value="{{this.duration_sec}}">
+                                  </div>
+
+                                  <div class="col-md-1">
+                                    <label class="form-label fw-semibold">Ord</label>
+                                    <input name="order_no" type="number" min="1" class="form-control" value="{{this.order_no}}">
+                                  </div>
+
+                                  <div class="col-md-12">
+                                    <div class="form-check">
+                                      <input class="form-check-input" type="checkbox" name="is_preview" id="preview_{{this.id}}" {{#if this.is_preview}}checked{{/if}}>
+                                      <label class="form-check-label" for="preview_{{this.id}}">Mark as free preview</label>
+                                    </div>
+                                  </div>
+
+                                  <div class="col-12 text-end">
+                                    <button class="btn btn-primary">
+                                      <i class="bi bi-save2 me-1"></i> Save lesson
+                                    </button>
+                                  </div>
+                                </form>
                               </div>
-                              <div class="col-md-4">
-                                <label class="form-label">Video URL</label>
-                                <div class="input-group">
-                                  <input name="video_url"
-                                         class="form-control"
-                                         value="{{this.video_url}}"
-                                         required
-                                         pattern="^\/uploads\/.+"
-                                         title="Dùng URL trả về từ nút Upload (bắt đầu bằng /uploads/...)">
-                                  <button class="btn btn-outline-secondary btn-upload" type="button">Upload</button>
-                                </div>
-                              </div>
-                              <div class="col-md-2">
-                                <label class="form-label">Duration (s)</label>
-                                <input name="duration_sec" type="number" min="0" class="form-control" value="{{this.duration_sec}}">
-                              </div>
-                              <div class="col-md-1 form-check mt-4">
-                                <input class="form-check-input" type="checkbox" name="is_preview" {{#if this.is_preview}}checked{{/if}}>
-                                <label class="form-check-label">Preview</label>
-                              </div>
-                              <div class="col-md-1">
-                                <label class="form-label">Ord</label>
-                                <input name="order_no" type="number" min="1" class="form-control" value="{{this.order_no}}">
-                              </div>
-                              <div class="col-12 text-end">
-                                <button class="btn btn-primary">Save Lesson</button>
-                              </div>
-                            </form>
+                            </div>
                           </td>
                         </tr>
                       {{/each}}
                     {{else}}
-                      <tr><td colspan="6" class="text-muted">Chưa có bài học nào trong section này.</td></tr>
+                      <tr><td colspan="6" class="text-muted">No lessons yet in this section.</td></tr>
                     {{/if}}
                   </tbody>
                 </table>
               </div>
 
-              {{!-- Add Lesson --}}
+              <!-- Add Lesson -->
               <div class="card">
-                <div class="card-header fw-semibold">Add Lesson</div>
+                <div class="card-header fw-semibold">
+                  <i class="bi bi-plus-square me-2"></i> Add Lesson
+                </div>
                 <div class="card-body">
-                  <form class="row g-2 align-items-end" method="post" action="/instructor/lessons">
+                  <form class="row g-3 align-items-end js-protect-submit" method="post" action="/instructor/lessons">
                     <input type="hidden" name="section_id" value="{{this.id}}">
+
                     <div class="col-md-4">
-                      <label class="form-label">Title</label>
-                      <input name="title" class="form-control" required>
+                      <label class="form-label fw-semibold">Title</label>
+                      <input name="title" class="form-control" required placeholder="e.g., Welcome & Setup">
                     </div>
-                    <div class="col-md-4">
-                      <label class="form-label">Video URL</label>
-                      <div class="input-group">
-                        <input name="video_url"
+
+                    <div class="col-md-5">
+                      <label class="form-label fw-semibold">Video URL</label>
+
+                      <div class="input-group mt-2">
+                        <input id="new_video_{{this.id}}" name="video_url"
                                class="form-control"
-                               placeholder="/uploads/..."
+                               placeholder="/uploads/... or YouTube URL"
                                required
-                               pattern="^\/uploads\/.+"
-                               title="Dùng URL trả về từ nút Upload (bắt đầu bằng /uploads/...)">
-                        <button class="btn btn-outline-secondary btn-upload" type="button">Upload</button>
+                               pattern="^(\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
+                               title="Use /uploads/... or YouTube URL (https://youtube.com/watch?v=... / https://youtu.be/...)">
+                        <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="new_video_{{this.id}}">
+                          <i class="bi bi-upload me-1"></i> Upload
+                        </button>
+                        <button class="btn btn-outline-secondary btn-copy" type="button" data-target-input="new_video_{{this.id}}">
+                          <i class="bi bi-clipboard-check me-1"></i> Copy
+                        </button>
                       </div>
-                      <div class="form-text">Chọn file mp4/webm/ogg. Hệ thống sẽ upload và tự điền URL.</div>
+                      <div class="form-text">
+                        Upload để hệ thống tự điền <code>/uploads/...</code> — hoặc dán YouTube URL (watch?v=... / youtu.be/...).
+                      </div>
+
+                      <div class="d-flex align-items-center gap-2 mt-2 small text-muted" id="status_new_{{this.id}}"></div>
                     </div>
+
                     <div class="col-md-2">
-                      <label class="form-label">Duration (s)</label>
+                      <label class="form-label fw-semibold">Duration (s)</label>
                       <input name="duration_sec" type="number" min="0" class="form-control">
                     </div>
-                    <div class="col-md-1 form-check mt-4">
-                      <input class="form-check-input" type="checkbox" name="is_preview">
-                      <label class="form-check-label">Preview</label>
-                    </div>
+
                     <div class="col-md-1">
-                      <label class="form-label">Ord</label>
+                      <label class="form-label fw-semibold">Ord</label>
                       <input name="order_no" type="number" min="1" class="form-control" value="1">
                     </div>
+
+                    <div class="col-md-12">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_preview" id="add_preview_{{this.id}}">
+                        <label class="form-check-label" for="add_preview_{{this.id}}">Mark as free preview</label>
+                      </div>
+                    </div>
+
                     <div class="col-12 text-end">
-                      <button class="btn btn-primary">Add Lesson</button>
+                      <button class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i> Add lesson
+                      </button>
                     </div>
                   </form>
                 </div>
               </div>
 
-            </div> <!-- accordion-body -->
+            </div> <!-- /accordion-body -->
           </div>
         </div>
       {{/each}}
     </div>
   {{else}}
-    <div class="alert alert-info">Khoá học chưa có section nào — hãy thêm Section đầu tiên.</div>
+    <div class="alert alert-info softshadow page-enter">
+      This course has no sections yet — create your first section above.
+    </div>
   {{/if}}
 </div>
-
-<script>
-  // Upload video bằng Multer API
-  document.querySelectorAll('.btn-upload').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const input = btn.closest('.input-group')?.querySelector('input[name="video_url"]');
-      if (!input) return;
-
-      const picker = document.createElement('input');
-      picker.type = 'file';
-      picker.accept = 'video/mp4,video/webm,video/ogg';
-      picker.onchange = async (e) => {
-        const f = e.target.files?.[0];
-        if (!f) return;
-        const form = new FormData();
-        form.append('file', f, f.name);
-        try {
-          const res = await fetch('/instructor/upload', { method: 'POST', body: form });
-          if (!res.ok) throw new Error('Upload failed: ' + res.status);
-          const data = await res.json();
-          if (!data?.url) throw new Error('Invalid upload response');
-          input.value = data.url;
-        } catch (err) {
-          alert(err.message || 'Upload error');
-        }
-      };
-      picker.click();
-    });
-  });
-
-  // Double-submit guard + fix order/duration
-  document.querySelectorAll('form').forEach(f => {
-    f.addEventListener('submit', e => {
-      const ord = f.querySelector('input[name="order_no"]');
-      const dur = f.querySelector('input[name="duration_sec"]');
-      if (ord) ord.value = Math.max(1, Number(ord.value || 1));
-      if (dur && dur.value !== '') dur.value = Math.max(0, Number(dur.value || 0));
-      const btn = f.querySelector('button[type="submit"], button:not([type])');
-      btn && (btn.disabled = true);
-    });
-  });
-</script>

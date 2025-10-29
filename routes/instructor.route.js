@@ -50,11 +50,8 @@ function getSessionUser(req) {
 async function getInstructorFromSession(req) {
   const user = getSessionUser(req);
   if (!user) return { error: 'NOT_LOGGED_IN' };
-
-  // user.id: id trong bảng users
   const inst = await instructorModel.findByUserId(user.id);
   if (!inst) return { error: 'NO_INSTRUCTOR_RECORD', user };
-
   return { user, inst };
 }
 
@@ -104,9 +101,98 @@ router.use((err, _req, res, next) => {
   next(err);
 });
 
-/* ============================ INSTRUCTOR FEATURE ============================ */
+/* ============================ INSTRUCTOR DASHBOARD (NEW) ============================ */
+/** ✅ Trang tổng quan giảng viên: /instructor và /instructor/home */
+router.get(['/', '/home'], async (req, res, next) => {
+  try {
+    const got = await getInstructorFromSession(req);
+    if (got.error === 'NOT_LOGGED_IN') {
+      req.session.returnUrl = req.originalUrl;
+      res.flash?.('warning', 'Vui lòng đăng nhập.');
+      return res.redirect('/account/signin');
+    }
+    if (got.error === 'NO_INSTRUCTOR_RECORD') {
+      res.flash?.('danger', 'Tài khoản chưa được gán quyền giảng viên.');
+      return res.redirect('/');
+    }
+    const { user, inst } = got;
 
-// 📘 My Courses list
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
+    // 3 truy vấn: list + count + metrics
+    const [list, { amount }, metrics] = await Promise.all([
+      courseModel.findOverviewByInstructor(inst.id, limit, offset),
+      courseModel.countByInstructor(inst.id),      // ✅ sửa đúng tên hàm
+      courseModel.overviewMetrics(inst.id),
+    ]);
+
+    const total = Number(amount || 0);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    res.render('vwInstructor/index', {
+      user,
+      courses: list,
+      page,
+      totalPages,
+      startIndex: offset,
+      metrics,
+      title: 'Instructor Overview',
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** ✅ Xem như sinh viên: /instructor/preview/:id */
+router.get('/preview/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.sendStatus(400);
+
+    const got = await getInstructorFromSession(req);
+    if (got.error) return res.sendStatus(403);
+    const { inst: me } = got;
+
+    const course = await courseModel.findById(id);
+    if (!course) return res.sendStatus(404);
+    if (course.instructor_id !== me.id) return res.sendStatus(403);
+
+    // Sections + lessons
+    const sections = await sectionModel.findByCourse(id);
+    const outline = await Promise.all(
+      sections.map(async (s) => {
+        const lessons = await lessonModel.findBySection(s.id);
+        return { ...s, lessons };
+      })
+    );
+
+    // Thêm vài meta nếu course.model có sẵn; nếu chưa có, để mặc định
+    let students_count = 0, rating_avg = null, rating_count = 0;
+    if (typeof courseModel.getCourseStats === 'function') {
+      const stats = await courseModel.getCourseStats(id);
+      students_count = Number(stats?.students_count || 0);
+      rating_avg = stats?.rating_avg != null ? Number(stats.rating_avg).toFixed(2) : null;
+      rating_count = Number(stats?.rating_count || 0);
+    }
+
+    res.render('vwCourses/detail', {
+      course: { ...course, students_count, rating_avg, rating_count },
+      outline,
+      outlineEmpty: sections.length === 0,
+      hasReviews: rating_count > 0,
+      // tránh hiện các nút enroll/watchlist khi tự xem
+      isEnrolled: true,
+      inWatchlist: false,
+      title: 'Preview as Student',
+    });
+  } catch (err) { next(err); }
+});
+
+/* ============================ INSTRUCTOR FEATURE (CŨ) ============================ */
+
+// 📘 My Courses list (giữ nguyên để tương thích đường dẫn cũ)
 router.get('/my-course', async (req, res, next) => {
   try {
     const got = await getInstructorFromSession(req);
@@ -127,7 +213,7 @@ router.get('/my-course', async (req, res, next) => {
 
     const [rows, { amount }] = await Promise.all([
       courseModel.findPageByInstructor(me.id, offset, limit, { excludeRemoved: true }),
-      courseModel.countByInstructor(me.id, { excludeRemoved: true }),
+      courseModel.countByInstructors(me.id, { excludeRemoved: true }), 
     ]);
 
     res.render('vwInstructor/my-course', {
@@ -141,6 +227,7 @@ router.get('/my-course', async (req, res, next) => {
   }
 });
 
+/* ============================ COURSES ============================ */
 // 📘 New Course form
 router.get('/courses/new', async (req, res, next) => {
   try {
@@ -155,7 +242,7 @@ router.get('/courses/new', async (req, res, next) => {
   }
 });
 
-// 📘 Create Course
+// 📘 Create Course (POST)
 router.post('/courses', async (req, res, next) => {
   try {
     const got = await getInstructorFromSession(req);
@@ -218,7 +305,7 @@ router.post('/courses', async (req, res, next) => {
       return res.redirect('back');
     }
     const rowCC = await categoryModel.countChildren?.(payload.cat_id)
-                 ?? await (async () => ({ amount: 0 }))(); // fallback nếu chưa có hàm
+                   ?? await (async () => ({ amount: 0 }))(); // fallback nếu chưa có hàm
     const childCount = Number(rowCC?.amount ?? rowCC?.c ?? 0);
     if (childCount > 0) {
       res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
@@ -227,7 +314,8 @@ router.post('/courses', async (req, res, next) => {
 
     await courseModel.add(payload);
     res.flash('success', 'Course created successfully.');
-    res.redirect('/instructor/my-course');
+    // ⬇️ Sau khi tạo → đưa về dashboard mới (hoặc bạn đổi sang /instructor/courses/:id/content nếu muốn)
+    res.redirect('/instructor');
   } catch (err) {
     next(err);
   }
@@ -258,7 +346,7 @@ router.get('/courses/:id/edit', async (req, res, next) => {
   }
 });
 
-// 📘 Update Course
+// 📘 Update Course (POST)
 router.post('/courses/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -317,7 +405,7 @@ router.post('/courses/:id', async (req, res, next) => {
       return res.redirect('back');
     }
     const rowCC = await categoryModel.countChildren?.(patch.cat_id)
-                 ?? await (async () => ({ amount: 0 }))();
+                   ?? await (async () => ({ amount: 0 }))();
     const childCount = Number(rowCC?.amount ?? rowCC?.c ?? 0);
     if (childCount > 0) {
       res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
@@ -326,13 +414,14 @@ router.post('/courses/:id', async (req, res, next) => {
 
     await courseModel.patch(id, patch);
     res.flash('success', 'Course updated successfully.');
-    res.redirect('/instructor/my-course');
+    // ⬇️ Quay về dashboard mới
+    res.redirect('/instructor');
   } catch (err) {
     next(err);
   }
 });
 
-// 📘 Mark Course Completed (chỉ khi đủ nội dung)
+// 📘 Mark Course Completed (POST — chỉ khi đủ nội dung)
 router.post('/courses/:id/complete', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -354,7 +443,7 @@ router.post('/courses/:id/complete', async (req, res, next) => {
 
     await courseModel.markCompleted(id);
     res.flash('success', 'Marked as completed.');
-    res.redirect('/instructor/my-course');
+    res.redirect('/instructor');
   } catch (err) {
     next(err);
   }
@@ -378,10 +467,7 @@ router.get('/courses/:id/content', async (req, res, next) => {
 
     const sections = await sectionModel.findByCourse(courseId);
     const sectionsWithLessons = await Promise.all(
-      sections.map(async s => {
-        const lessons = await lessonModel.findBySection(s.id);
-        return { ...s, lessons };
-      })
+      sections.map(async s => ({ ...s, lessons: await lessonModel.findBySection(s.id) }))
     );
 
     res.render('vwInstructor/sections', {
@@ -393,60 +479,54 @@ router.get('/courses/:id/content', async (req, res, next) => {
 });
 
 // -------------------------- Sections CRUD --------------------------
-router.post('/sections', async (req, res, next) => {
+router.post('/sections', async (req, res) => {
+  const { course_id, title, order_no } = req.body;
+
   try {
-    const { course_id, title } = req.body;
-    const order_no = Number(req.body.order_no) || 1;
+    await sectionModel.add({
+      course_id: Number(course_id),
+      title: title?.trim(),
+      order_no: Number(order_no) || 1,
+    });
 
-    const got = await getInstructorFromSession(req);
-    if (got.error) return res.sendStatus(403);
-    const { inst: me } = got;
+    res.flash('success', 'Section added successfully.');
+    res.redirect('back');
 
-    const cId = Number(course_id);
-    if (!Number.isFinite(cId)) return res.sendStatus(400);
-
-    const course = await courseModel.findById(cId);
-    if (!course) return res.sendStatus(404);
-    if (course.instructor_id !== me.id) return res.sendStatus(403);
-
-    if (!title?.trim()) {
-      res.flash('error', 'Section title không được trống.');
+  } catch (err) {
+    // PostgreSQL duplicate key
+    if (err.code === '23505') {
+      res.flash('danger', 'Order number already exists in this course. Please choose another order.');
       return res.redirect('back');
     }
 
-    await sectionModel.add({ course_id: cId, title: title.trim(), order_no });
-    res.flash('success', 'Section created.');
-    res.redirect(`/instructor/courses/${cId}/content`);
-  } catch (err) { next(err); }
+    console.error(err);
+    res.flash('danger', 'Unexpected error while adding section.');
+    res.redirect('back');
+  }
 });
 
-router.post('/sections/:id', async (req, res, next) => {
+router.post('/sections/:id', async (req, res) => {
+  const { title, order_no } = req.body;
+  const id = +req.params.id;
+
   try {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.sendStatus(400);
+    await sectionModel.patch(id, {
+      title: title?.trim(),
+      order_no: Number(order_no) || 1,
+    });
 
-    const { title } = req.body;
-    const order_no = Number(req.body.order_no) || 1;
+    res.flash('success', 'Section updated.');
+    res.redirect('back');
 
-    const sec = await sectionModel.findById(id);
-    if (!sec) return res.sendStatus(404);
-
-    const got = await getInstructorFromSession(req);
-    if (got.error) return res.sendStatus(403);
-    const { inst: me } = got;
-
-    const course = await courseModel.findById(sec.course_id);
-    if (!course || course.instructor_id !== me.id) return res.sendStatus(403);
-
-    if (!title?.trim()) {
-      res.flash('error', 'Section title không được trống.');
+  } catch (err) {
+    if (err.code === '23505') {
+      res.flash('danger', 'Another section already uses that order number.');
       return res.redirect('back');
     }
-
-    await sectionModel.patch(id, { title: title.trim(), order_no });
-    res.flash('success', 'Section updated.');
-    res.redirect(`/instructor/courses/${sec.course_id}/content`);
-  } catch (err) { next(err); }
+    console.error(err);
+    res.flash('danger', 'Unexpected error while updating section.');
+    res.redirect('back');
+  }
 });
 
 router.post('/sections/:id/delete', async (req, res, next) => {
