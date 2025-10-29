@@ -285,4 +285,59 @@ router.get('/watchlist', async (req, res) => {
   }
 });
 
+// My Courses routes
+router.get("/my-courses", async (req, res) => {
+  if (!req.session.authUser) {
+    return res.redirect("/account/signin");
+  }
+
+  // BẮT BUỘC: lấy đúng khóa ID thật đang lưu trong session
+  const auth = req.session.authUser;
+  const userId = auth?.user_id ?? auth?.id ?? auth?.account_id;
+
+  if (!userId) {
+    console.error("❌ Không tìm thấy userId trong session:", auth);
+    return res.status(400).send("User ID not found in session");
+  }
+
+  const myCourses = await myCourseModel.getMyCoursesProgress(userId);
+
+  res.render("vwAccount/my-courses", {
+    layout: "main",
+    myCourses,
+    empty: myCourses.length === 0,
+  });
+});
+
+// Google Authentication routes
+router.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/account/signin' }),
+  async function(req, res) {
+    try {
+      if (req.user) {
+        req.session.isAuthenticated = true;
+        req.session.authUser = req.user;
+      }
+    } catch (e) {
+      console.error('Error saving auth session after Google callback', e);
+    }
+
+    // ✅ Lấy user để suy ra fallback theo role
+    const u = req.user || req.session.authUser;
+    let fallback = '/';
+    if (u?.role === 'admin')        fallback = '/admin/courses';
+    else if (u?.role === 'instructor') fallback = '/instructor/my-course';
+    else if (u?.role === 'student')    fallback = '/';
+
+    // ✅ Ưu tiên returnUrl nếu có
+    const returnUrl = req.session.returnUrl;
+    delete req.session.returnUrl;
+
+    res.redirect(returnUrl || fallback);
+  }
+);
+
 export default router;

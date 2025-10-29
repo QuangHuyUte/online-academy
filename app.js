@@ -121,8 +121,55 @@ app.use((req, res, next) => {
 });
 
 // ----------------------------------------------------------------------------
-// Passport Google OAuth (removed)
+// Passport Google OAuth (tuỳ chọn, bật nếu có ENV)
 // ----------------------------------------------------------------------------
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || '/account/auth/google/callback',
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const email = profile.emails?.[0]?.value;
+          if (!email) return done(null, false);
+
+          let user = await userModel.findByEmail(email);
+          if (!user) {
+            const placeholder = bcrypt.hashSync(profile.id + Date.now(), 10);
+            const newUser = {
+              name: profile.displayName || email.split('@')[0],
+              email,
+              password_hash: placeholder,
+              role: 'student',
+              created_at: new Date(),
+            };
+            await userModel.add(newUser);
+            user = await userModel.findByEmail(email);
+          }
+          return done(null, user);
+        } catch (err) {
+          return done(err);
+        }
+      }
+    )
+  );
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.serializeUser((user, done) => done(null, user.id));
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const u = await userModel.findById(id);
+      done(null, u);
+    } catch (err) {
+      done(err);
+    }
+  });
+}
 
 // ----------------------------------------------------------------------------
 // Locals middlewares: categories menu 2 cấp + auth flags + hide nav
