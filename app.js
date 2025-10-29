@@ -33,7 +33,7 @@ import previewRoute from './routes/preview.route.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // __dirname (ESM)
 const __filename = fileURLToPath(import.meta.url);
