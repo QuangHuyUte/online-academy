@@ -39,8 +39,7 @@ export function findByInstructor(instructorId, { excludeRemoved = false } = {}) 
   return q;
 }
 
-export function findOverviewByInstructorFlex(instructorId, userId, limit = 10, offset = 0) {
-  const ids = [instructorId, userId].filter(Boolean);
+export function findOverviewByInstructorFlex(instructorId, _userId, limit = 10, offset = 0) {
   return db('courses as c')
     .leftJoin('categories as cat', 'cat.id', 'c.cat_id')
     .leftJoin(
@@ -51,18 +50,19 @@ export function findOverviewByInstructorFlex(instructorId, userId, limit = 10, o
       db('reviews').select('course_id').avg('rating as rating_avg').count('* as rating_count').groupBy('course_id').as('rev'),
       'rev.course_id', 'c.id'
     )
-    .whereIn('c.instructor_id', ids)
+    .where('c.instructor_id', instructorId) // 👈 thay vì whereIn([...])
     .select(
-      'c.id', 'c.title', 'c.cover_url', 'c.cat_id', 'c.is_completed', 'c.is_removed',
-      'c.last_updated_at', 'c.view_count',
+      'c.id','c.title','c.cover_url','c.cat_id','c.is_completed','c.is_removed',
+      'c.last_updated_at','c.view_count',
       db.raw('COALESCE(enr.students_count, 0) as students_count'),
       db.raw('ROUND(COALESCE(rev.rating_avg, 0)::numeric, 2) as rating_avg'),
       db.raw('COALESCE(rev.rating_count, 0) as rating_count'),
       'cat.name as category'
     )
-    .orderBy('c.last_updated_at', 'desc')
+    .orderBy('c.last_updated_at','desc')
     .limit(limit).offset(offset);
 }
+
 
 export function countByInstructorFlex(instructorId, userId) {
   const ids = [instructorId, userId].filter(Boolean);

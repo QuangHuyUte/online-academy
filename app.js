@@ -248,11 +248,15 @@ app.use(async (req, res, next) => { // 💥 Thay đổi thành async để dùng
 // ----------------------------------------------------------------------------
 app.get('/', async (req, res, next) => {
   try {
-    // Các hàm dưới đây phải tồn tại trong course.model.js
+    const role = (res.locals.authUser?.role || '').toLowerCase();
+    if (role === 'instructor') return res.redirect('/instructor');
+    //if (role === 'admin')      return res.redirect('/admin');
+
+    // --- giữ nguyên render trang Home cho student/guest ---
     const courses_bestseller = await (courseModel.finBestSellerthanAvg?.() ?? []);
-    const courses_newest = await (courseModel.findCourses?.({ limit: 10, offset: 0, sortBy: 'newest' }) ?? []);
+    const courses_newest     = await (courseModel.findCourses?.({ limit: 10, offset: 0, sortBy: 'newest' }) ?? []);
     const Top10ViewedCourses = await (courseModel.findTop10ViewedCourses?.() ?? []);
-    const topfield = await (courseModel.findTopFieldCourses?.() ?? []);
+    const topfield           = await (courseModel.findTopFieldCourses?.() ?? []);
 
     res.render('vwHome/index', {
       title: 'Home',
@@ -265,6 +269,7 @@ app.get('/', async (req, res, next) => {
     next(err);
   }
 });
+
 
 // ----------------------------------------------------------------------------
 // Mount routes

@@ -102,8 +102,8 @@ router.use((err, _req, res, next) => {
 });
 
 /* ============================ INSTRUCTOR DASHBOARD (NEW) ============================ */
-/** ✅ Trang tổng quan giảng viên: /instructor và /instructor/home */
-router.get(['/', '/home'], async (req, res, next) => {
+/** ✅ Trang tổng quan giảng viên */
+router.get(['/instructor', '/'], async (req, res, next) => {
   try {
     const got = await getInstructorFromSession(req);
     if (got.error === 'NOT_LOGGED_IN') {
@@ -115,35 +115,41 @@ router.get(['/', '/home'], async (req, res, next) => {
       res.flash?.('danger', 'Tài khoản chưa được gán quyền giảng viên.');
       return res.redirect('/');
     }
-    const { user, inst } = got;
+    const { inst: me, user } = got;
 
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = 10;
+    const limit = Math.max(1, Number(req.query.limit) || 10);
+    const page  = Math.max(1, Number(req.query.page)  || 1);
     const offset = (page - 1) * limit;
 
-    // 3 truy vấn: list + count + metrics
-    const [list, { amount }, metrics] = await Promise.all([
-      courseModel.findOverviewByInstructor(inst.id, limit, offset),
-      courseModel.countByInstructor(inst.id),      // ✅ sửa đúng tên hàm
-      courseModel.overviewMetrics(inst.id),
+    const [courses, totalRow, metrics] = await Promise.all([
+      courseModel.findOverviewByInstructor(me.id, limit, offset),
+      courseModel.countByInstructor(me.id),
+      courseModel.overviewMetrics(me.id),
     ]);
 
-    const total = Number(amount || 0);
+    const total = Number(totalRow?.amount || 0);
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
-    res.render('vwInstructor/index', {
-      user,
-      courses: list,
+    console.log('[INSTRUCTOR] me.id =', me.id, 'user.id =', user?.id);
+    console.log('[INSTRUCTOR] list.length =', courses?.length || 0, 'total =', total);
+    if (courses && courses.length) {
+      console.log('[INSTRUCTOR] sample row =', courses[0]);
+    }
+
+    return res.render('vwInstructor/index', {
+      user: req.session.authUser,
+      metrics,
+      courses,
       page,
       totalPages,
       startIndex: offset,
-      metrics,
-      title: 'Instructor Overview',
     });
   } catch (err) {
+    console.error('[GET /instructor] error:', err);
     next(err);
   }
 });
+
 
 /** ✅ Xem như sinh viên: /instructor/preview/:id */
 router.get('/preview/:id', async (req, res, next) => {
@@ -159,7 +165,6 @@ router.get('/preview/:id', async (req, res, next) => {
     if (!course) return res.sendStatus(404);
     if (course.instructor_id !== me.id) return res.sendStatus(403);
 
-    // Sections + lessons
     const sections = await sectionModel.findByCourse(id);
     const outline = await Promise.all(
       sections.map(async (s) => {
@@ -168,7 +173,6 @@ router.get('/preview/:id', async (req, res, next) => {
       })
     );
 
-    // Thêm vài meta nếu course.model có sẵn; nếu chưa có, để mặc định
     let students_count = 0, rating_avg = null, rating_count = 0;
     if (typeof courseModel.getCourseStats === 'function') {
       const stats = await courseModel.getCourseStats(id);
@@ -182,7 +186,6 @@ router.get('/preview/:id', async (req, res, next) => {
       outline,
       outlineEmpty: sections.length === 0,
       hasReviews: rating_count > 0,
-      // tránh hiện các nút enroll/watchlist khi tự xem
       isEnrolled: true,
       inWatchlist: false,
       title: 'Preview as Student',
@@ -213,7 +216,7 @@ router.get('/my-course', async (req, res, next) => {
 
     const [rows, { amount }] = await Promise.all([
       courseModel.findPageByInstructor(me.id, offset, limit, { excludeRemoved: true }),
-      courseModel.countByInstructors(me.id, { excludeRemoved: true }), 
+      courseModel.countByInstructors(me.id, { excludeRemoved: true }),
     ]);
 
     res.render('vwInstructor/my-course', {
@@ -228,6 +231,7 @@ router.get('/my-course', async (req, res, next) => {
 });
 
 /* ============================ COURSES ============================ */
+
 // 📘 New Course form
 router.get('/courses/new', async (req, res, next) => {
   try {
@@ -273,49 +277,48 @@ router.post('/courses', async (req, res, next) => {
     // Validate số hợp lệ
     if (payload.price == null && req.body.price?.trim()) {
       res.flash('error', 'Giá không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
     if (payload.promo_price == null && req.body.promo_price?.trim()) {
       res.flash('error', 'Giá khuyến mãi không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
 
     // Validate logic
     if (!payload.title) {
       res.flash('error', 'Title không được để trống.');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
     if (payload.price != null && payload.price < 0) {
       res.flash('error', 'Giá không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
     if (payload.promo_price != null && payload.price != null && payload.promo_price > payload.price) {
       res.flash('error', 'Giá khuyến mãi không được lớn hơn giá gốc.');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
 
     // Category leaf
     if (!Number.isFinite(payload.cat_id)) {
       res.flash('error', 'Category không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
     const cat = await categoryModel.findById(payload.cat_id);
     if (!cat) {
       res.flash('error', 'Category không tồn tại.');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
     const rowCC = await categoryModel.countChildren?.(payload.cat_id)
-                   ?? await (async () => ({ amount: 0 }))(); // fallback nếu chưa có hàm
+                   ?? await (async () => ({ amount: 0 }))();
     const childCount = Number(rowCC?.amount ?? rowCC?.c ?? 0);
     if (childCount > 0) {
       res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
-      return res.redirect('back');
+      return res.redirect('/instructor/courses/new');
     }
 
     await courseModel.add(payload);
     res.flash('success', 'Course created successfully.');
-    // ⬇️ Sau khi tạo → đưa về dashboard mới (hoặc bạn đổi sang /instructor/courses/:id/content nếu muốn)
-    res.redirect('/instructor');
+    return res.redirect('/instructor');
   } catch (err) {
     next(err);
   }
@@ -373,81 +376,78 @@ router.post('/courses/:id', async (req, res, next) => {
     // Validate số hợp lệ
     if (patch.price == null && req.body.price?.trim()) {
       res.flash('error', 'Giá không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
     if (patch.promo_price == null && req.body.promo_price?.trim()) {
       res.flash('error', 'Giá khuyến mãi không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
 
     // Validate logic
     if (!patch.title) {
       res.flash('error', 'Title không được để trống.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
     if (patch.price != null && patch.price < 0) {
       res.flash('error', 'Giá không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
     if (patch.promo_price != null && patch.price != null && patch.promo_price > patch.price) {
       res.flash('error', 'Giá khuyến mãi không được lớn hơn giá gốc.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
 
     // Category leaf
     if (!Number.isFinite(patch.cat_id)) {
       res.flash('error', 'Category không hợp lệ.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
     const cat = await categoryModel.findById(patch.cat_id);
     if (!cat) {
       res.flash('error', 'Category không tồn tại.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
     const rowCC = await categoryModel.countChildren?.(patch.cat_id)
                    ?? await (async () => ({ amount: 0 }))();
     const childCount = Number(rowCC?.amount ?? rowCC?.c ?? 0);
     if (childCount > 0) {
       res.flash('error', 'Vui lòng chọn Category cấp 2 (không phải nhóm cha).');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${id}/edit`);
     }
 
     await courseModel.patch(id, patch);
     res.flash('success', 'Course updated successfully.');
-    // ⬇️ Quay về dashboard mới
-    res.redirect('/instructor');
+    return res.redirect('/instructor');
   } catch (err) {
     next(err);
   }
 });
 
 // 📘 Mark Course Completed (POST — chỉ khi đủ nội dung)
-router.post('/courses/:id/complete', async (req, res, next) => {
+router.post('/courses/:id/complete', authRequired, requireInstructor, async (req, res) => {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.sendStatus(400);
-
-    const got = await getInstructorFromSession(req);
-    if (got.error) return res.sendStatus(403);
-    const { inst: me } = got;
-
-    const course = await courseModel.findById(id);
-    if (!course) return res.sendStatus(404);
-    if (course.instructor_id !== me.id) return res.sendStatus(403);
-
-    const ok = await courseModel.canComplete(id);
-    if (!ok) {
-      res.flash('error', 'Khoá học chưa đủ nội dung (cần ít nhất 1 Chapter và 1 Lesson).');
-      return res.redirect('back');
+    const courseId = Number(req.params.id) || 0;
+    if (!courseId) {
+      res.flash?.('danger', 'Course ID không hợp lệ.');
+      return res.redirect('/instructor/my-course');
     }
 
-    await courseModel.markCompleted(id);
-    res.flash('success', 'Marked as completed.');
-    res.redirect('/instructor');
+    const ok = await courseModel.canComplete(courseId);
+    if (!ok) {
+      res.flash?.('warning', 'Khoá học chưa đủ nội dung (cần ≥1 section & ≥1 lesson).');
+      return res.redirect(`/instructor/courses/${courseId}/content`);
+    }
+
+    await courseModel.markCompleted(courseId);
+    res.flash?.('success', 'Đã đánh dấu khoá học là hoàn thành.');
+    return res.redirect(`/instructor/courses/${courseId}/content`);
   } catch (err) {
-    next(err);
+    console.error('[COURSE/COMPLETE] ERROR =', err);
+    res.flash?.('danger', 'Có lỗi khi đánh dấu hoàn thành.');
+    return res.redirect('/instructor/my-course');
   }
 });
+
 
 /* ===================== CONTENT MANAGEMENT (Sections & Lessons) ===================== */
 
@@ -490,18 +490,17 @@ router.post('/sections', async (req, res) => {
     });
 
     res.flash('success', 'Section added successfully.');
-    res.redirect('back');
+    return res.redirect(`/instructor/courses/${Number(course_id)}/content`);
 
   } catch (err) {
-    // PostgreSQL duplicate key
     if (err.code === '23505') {
       res.flash('danger', 'Order number already exists in this course. Please choose another order.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${Number(course_id)}/content`);
     }
 
     console.error(err);
     res.flash('danger', 'Unexpected error while adding section.');
-    res.redirect('back');
+    return res.redirect(`/instructor/courses/${Number(course_id)}/content`);
   }
 });
 
@@ -510,22 +509,28 @@ router.post('/sections/:id', async (req, res) => {
   const id = +req.params.id;
 
   try {
+    const sec = await sectionModel.findById(id);
+    if (!sec) return res.sendStatus(404);
+
     await sectionModel.patch(id, {
       title: title?.trim(),
       order_no: Number(order_no) || 1,
     });
 
     res.flash('success', 'Section updated.');
-    res.redirect('back');
+    return res.redirect(`/instructor/courses/${sec.course_id}/content`);
 
   } catch (err) {
+    console.error(err);
     if (err.code === '23505') {
       res.flash('danger', 'Another section already uses that order number.');
-      return res.redirect('back');
+    } else {
+      res.flash('danger', 'Unexpected error while updating section.');
     }
-    console.error(err);
-    res.flash('danger', 'Unexpected error while updating section.');
-    res.redirect('back');
+    // quay lại trang content của course hiện tại
+    const sec = await sectionModel.findById(id).catch(() => null);
+    const courseId = sec?.course_id ?? 0;
+    return res.redirect(courseId ? `/instructor/courses/${courseId}/content` : '/instructor/my-course');
   }
 });
 
@@ -550,7 +555,7 @@ router.post('/sections/:id/delete', async (req, res, next) => {
     } else {
       res.flash('success', 'Section deleted.');
     }
-    res.redirect(`/instructor/courses/${sec.course_id}/content`);
+    return res.redirect(`/instructor/courses/${sec.course_id}/content`);
   } catch (err) { next(err); }
 });
 
@@ -577,11 +582,11 @@ router.post('/lessons', async (req, res, next) => {
 
     if (!title?.trim()) {
       res.flash('error', 'Lesson title không được trống.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${sec.course_id}/content`);
     }
     if (!video_url?.trim()) {
       res.flash('error', 'Vui lòng upload hoặc nhập Video URL.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${sec.course_id}/content`);
     }
 
     await lessonModel.add({
@@ -594,7 +599,7 @@ router.post('/lessons', async (req, res, next) => {
     });
 
     res.flash('success', 'Lesson created.');
-    res.redirect(`/instructor/courses/${sec.course_id}/content`);
+    return res.redirect(`/instructor/courses/${sec.course_id}/content`);
   } catch (err) { next(err); }
 });
 
@@ -623,11 +628,11 @@ router.post('/lessons/:id', async (req, res, next) => {
 
     if (!title?.trim()) {
       res.flash('error', 'Lesson title không được trống.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${sec.course_id}/content`);
     }
     if (!video_url?.trim()) {
       res.flash('error', 'Vui lòng upload hoặc nhập Video URL.');
-      return res.redirect('back');
+      return res.redirect(`/instructor/courses/${sec.course_id}/content`);
     }
 
     await lessonModel.patch(id, {
@@ -639,7 +644,7 @@ router.post('/lessons/:id', async (req, res, next) => {
     });
 
     res.flash('success', 'Lesson updated.');
-    res.redirect(`/instructor/courses/${sec.course_id}/content`);
+    return res.redirect(`/instructor/courses/${sec.course_id}/content`);
   } catch (err) { next(err); }
 });
 
@@ -663,7 +668,7 @@ router.post('/lessons/:id/delete', async (req, res, next) => {
 
     await lessonModel.remove(id);
     res.flash('success', 'Lesson deleted.');
-    res.redirect(`/instructor/courses/${sec.course_id}/content`);
+    return res.redirect(`/instructor/courses/${sec.course_id}/content`);
   } catch (err) { next(err); }
 });
 
