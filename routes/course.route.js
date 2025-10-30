@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
       courseModel.getFeaturedCourses(),
       courseModel.getMostViewedCourses(),
       courseModel.getNewestCourses(),
-      courseModel.getTopCategories(),
+      courseModel.getTopCategorcategory/ies(),
       categoryModel.getMenuCategories()
     ]);
 
@@ -37,37 +37,49 @@ router.get('/list', async (req, res) => {
 });
 
 router.get('/category/:id', async (req, res) => {
-  const categoryId = +req.params.id || 0;
-  const page = parseInt(req.query.page) || 1;
-  const limit = 6;
+  const categoryId = Number(req.params.id) || 0;
+  const page = Number(req.query.page) || 1;
+  const limit = 3;
   const offset = (page - 1) * limit;
+  const sort = String(req.query.sort || 'rating_desc'); //  rating_desc | rating_asc | price_desc | price_asc | newest
 
-  try {
-    const [total, courses, menu] = await Promise.all([
-      courseModel.countCoursesByCategory(categoryId),
-      courseModel.getCoursesByCategory(categoryId, limit, offset),
-      categoryModel.getMenuCategories()
-    ]);
+  const [totalResult, courses] = await Promise.all([
+    courseModel.countCoursesByCategory(categoryId),
+    courseModel.getCoursesByCategory(categoryId, limit, offset,sort),
+  ]);
 
-    const totalPages = Math.max(1, Math.ceil(total / limit));
+  const totalCount = Number(totalResult?.count || totalResult?.amount || 0);
+  const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
-    res.render('course/list', {
-      layout: 'main',
-      courses,
-      currentPage: page,
-      totalPages,
-      hasPrev: page > 1,
-      hasNext: page < totalPages,
-      prevPage: page > 1 ? page - 1 : null,
-      nextPage: page < totalPages ? page + 1 : null,
-      pageNumbers: Array.from({ length: totalPages }, (_, i) => ({ value: i + 1, isActive: i + 1 === page })),
-      menu
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Lỗi khi tải danh sách khóa học');
-  }
+  //  Base URL 
+  const baseUrl = `/courses/category/${categoryId}?limit=${limit}&sort=${encodeURIComponent(sort)}`;
+  //  Tạo object pagination đầy đủ
+  const pagination = {
+    page,
+    totalPages,
+    hasPrev: page > 1,
+    hasNext: page < totalPages,
+    prevUrl: `${baseUrl}&page=${Math.max(1, page - 1)}`,
+    nextUrl: `${baseUrl}&page=${Math.min(totalPages, page + 1)}`,
+    pages: Array.from({ length: totalPages }, (_, i) => {
+      const p = i + 1;
+      return {
+        page: p,
+        active: p === page,
+        url: `${baseUrl}&page=${p}`,
+      };
+    }),
+  };
+  
+  //  Render ra view
+  res.render('course/list', {
+    courses,
+    pagination,
+    sort,
+  });
+
 });
+
 
 // Pagination for newest courses (page 1 is on home, pages >=2 served here)
 router.get('/newest', async (req, res) => {
@@ -84,9 +96,9 @@ router.get('/newest', async (req, res) => {
       categoryModel.getMenuCategories()
     ]);
 
-  const totalRemaining = Math.max(0, total - 4);
-  const additionalPages = totalRemaining > 0 ? Math.ceil(totalRemaining / limit) : 0;
-  const totalPages = 1 + additionalPages;
+    const totalRemaining = Math.max(0, total - 4);
+    const additionalPages = totalRemaining > 0 ? Math.ceil(totalRemaining / limit) : 0;
+    const totalPages = 1 + additionalPages;
 
     // If requested page > totalPages, redirect to last
     if (page > totalPages) return res.redirect(`/courses/newest?page=${totalPages}`);

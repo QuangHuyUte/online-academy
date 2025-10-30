@@ -1,50 +1,85 @@
+<!-- ================== Bộ lọc ================== -->
+<section class="container my-4">
+  <form method="get" class="d-flex align-items-center">
+    <label for="sort" class="me-2 fw-semibold">Arrange by:</label>
+    <select name="sort" id="sort" class="form-select w-auto" onchange="this.form.submit()">
+      <option value="rating_desc" {{#if (eq sort "rating_desc")}}selected{{/if}}>
+        Rating: High to Low
+      </option>
+      <option value="rating_asc" {{#if (eq sort "rating_asc")}}selected{{/if}}>
+        Rating: Low to High
+      </option>
+      <option value="price_desc" {{#if (eq sort "price_desc")}}selected{{/if}}>
+        Price: High to Low
+      </option>
+      <option value="price_asc" {{#if (eq sort "price_asc")}}selected{{/if}}>
+        Price: Low to High
+      </option>
+      <option value="newest" {{#if (eq sort "newest")}}selected{{/if}}>
+        Newest
+      </option>
+    </select>
+  </form>
+</section>
+
 <div class="container mt-4">
   <h2 class="mb-4 text-center">Course List</h2>
 
-  {{#if empty}}
-    <p class="text-center text-muted">No courses available in this category.</p>
-  {{else}}
-  <div class="row">
-    {{#each courses}}
-    <div class="col-md-4 mb-4">
-      <a href="/courses/details?id={{id}}" class="course-card-link text-decoration-none text-reset">
-        <div class="card h-100 shadow-sm border-0 card-hover">
-          <img src="{{image}}" class="card-img-top grid-fixed-img" alt="{{title}}">
-          <div class="card-body">
-            <h5 class="card-title">{{title}}</h5>
-            <p class="text-muted small mb-1">{{category_name}} </p>
-            <p class="text-muted small mb-1">Instructor: {{teacher_name}}</p>
-            <p class="small mb-2">⭐ {{rating}} ({{rating_count}} Rating)</p>
-            <p class="fw-bold mb-0">
-              {{#if promo_price}}
-                <span class="text-danger">{{promo_price}}₫</span>
-                <del class="text-muted ms-2">{{price}}₫</del>
-              {{else}}
-                <span>{{price}}₫</span>
-              {{/if}}
-            </p>
-          </div>
-        </div>
-      </a>
-    </div>
-    {{/each}}
-  </div>
+  {{!-- Hiển thị lỗi nếu có --}}
+  {{#if errorMessage}}
+  <p class="text-center text-danger">{{errorMessage}}</p>
+  {{/if}}
 
-  <!-- Phân trang -->
-  <nav aria-label="Page navigation example">
+{{!-- Kiểm tra có khóa học hay không --}}
+{{#if courses.length}}
+<div class="row">
+  {{#each courses}}
+  <div class="col-md-4 mb-4">
+    <a href="/courses/details?id={{id}}" class="course-card-link text-decoration-none text-reset">
+      <div class="card h-100 shadow-sm border-0 card-hover">
+        <!-- Ảnh cố định, crop center -->
+        <div class="card-img-wrapper">
+          <img src="{{image}}" class="card-img-top grid-fixed-img" alt="{{title}}">
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">{{title}}</h5>
+          <p class="text-muted small mb-1">{{category_name}}</p>
+          <p class="text-muted small mb-1">Instructor: {{teacher_name}}</p>
+          <p class="small mb-2"><i class="bi bi-star-fill"></i> {{rating_avg}} ({{rating_count}} Rating)</p>
+          <p class="fw-bold mt-auto mb-0">
+            {{#if promo_price}}
+              <span class="text-danger">$ {{promo_price}}</span>
+              <del class="text-muted ms-2">$ {{price}}</del>
+            {{else}}
+              <span>$ {{price}}</span>
+            {{/if}}
+          </p>
+        </div>
+      </div>
+    </a>
+  </div>
+  {{/each}}
+</div>
+{{/if}}
+
+
+  {{!-- Phân trang --}}
+  {{#if pagination}}
+  <nav aria-label="Page navigation" class="mt-4">
     <ul class="pagination justify-content-center">
-      {{#if prevPage}}
-      <li class="page-item"><a class="page-link" href="?page={{prevPage}}">Previous</a></li>
-      {{/if}}
-      {{#each pageNumbers}}
-      <li class="page-item {{#if isActive}}active{{/if}}">
-        <a class="page-link" href="?page={{value}}">{{value}}</a>
+      <li class="page-item {{#unless pagination.hasPrev}}disabled{{/unless}}">
+        <a class="page-link" href="{{pagination.prevUrl}}" aria-label="Previous">&laquo;</a>
+      </li>
+
+      {{#each pagination.pages}}
+      <li class="page-item {{#if active}}active{{/if}}">
+        <a class="page-link" href="{{url}}">{{page}}</a>
       </li>
       {{/each}}
-      {{#if nextPage}}
-      <li class="page-item"><a class="page-link" href="?page={{nextPage}}">Next</a></li>
-      {{/if}}
+
+      <li class="page-item {{#unless pagination.hasNext}}disabled{{/unless}}">
+        <a class="page-link" href="{{pagination.nextUrl}}" aria-label="Next">&raquo;</a>
+      </li>
     </ul>
   </nav>
   {{/if}}
-</div>

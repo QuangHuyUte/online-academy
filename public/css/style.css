@@ -1,3 +1,4 @@
+/* này của card*/
 .course-img {
   width: 100%;
   height: 200px;
@@ -12,8 +13,29 @@
   object-position: center;
   display: block;
 }
+/* này của card trong list.hbs*/
+/* wrapper để fix chiều cao cho ảnh */
+.card-img-wrapper {
+  width: 100%;
+  height: 200px;           /* Chiều cao cố định */
+  overflow: hidden;         /* Ẩn phần vượt */
+  border-top-left-radius: 0.25rem;
+  border-top-right-radius: 0.25rem;
+}
 
+.grid-fixed-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;       /* Crop ảnh và giữ tỉ lệ */
+  object-position: center; /* Crop từ trung tâm */
+}
 
+/* Hover effect nếu muốn */
+.card-hover:hover {
+  transform: translateY(-3px);
+  transition: all 0.2s ease-in-out;
+}
+/* dưới của slide show*/
 /* MultiCarousel container */
 .MultiCarousel {
     overflow: hidden;

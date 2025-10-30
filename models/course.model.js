@@ -144,7 +144,7 @@ export async function canComplete(courseId) {
   );
 
   const exists_section = r1?.[0]?.exists_section;
-  const exists_lesson  = r2?.[0]?.exists_lesson;
+  const exists_lesson = r2?.[0]?.exists_lesson;
   return Boolean(exists_section && exists_lesson);
 }
 
@@ -165,7 +165,8 @@ export async function getCourseStats(courseId) {
     students_count: Number(students_count || 0),
     rating_avg: rating_avg ? Number(rating_avg) : null,
     rating_count: Number(rating_count || 0),
-  };}
+  };
+}
 /* =========================================
  * ADMIN (toggle remove, paging admin)
  * ========================================= */
@@ -403,7 +404,7 @@ export function getByIdJoined(id) {
 }
 
 // Courses theo category (tự động gom category con nếu là nhóm cha)
-export async function getCoursesByCategory(catId, limit = 6, offset = 0) {
+export async function getCoursesByCategory(catId, limit = 6, offset = 0, sort) {
   return db.transaction(async trx => {
     const subCats = await trx('categories').select('id').where('parent_id', catId);
 
@@ -418,23 +419,47 @@ export async function getCoursesByCategory(catId, limit = 6, offset = 0) {
         'c.short_desc as shortDesc',
         db.raw("coalesce(cat.name, 'Uncategorized') as category_name"),
         db.raw("coalesce(u.name, 'Giảng viên chưa rõ') as teacher_name"),
-        db.raw('coalesce(c.rating_avg, 0) as rating'),
+        db.raw('coalesce(c.rating_avg, 0) as rating_avg'),
         db.raw('coalesce(c.rating_count, 0) as rating_count'),
         db.raw('coalesce(c.price, 0) as price'),
         db.raw('coalesce(c.promo_price, 0) as promo_price')
       )
       .andWhere(builder =>
         builder.whereNull('c.is_removed').orWhere('c.is_removed', false)
-      )
-      .orderBy('c.created_at', 'desc')
-      .limit(limit)
-      .offset(offset);
+      );
 
+    // Lọc category cha/con
     if (subCats.length > 0) {
       q.whereIn('c.cat_id', subCats.map(c => c.id));
     } else {
       q.where('c.cat_id', catId);
     }
+
+    // Xử lý sort
+    switch (sort) {
+      case 'rating_desc':
+        q.orderBy('c.rating_avg', 'desc');
+        break;
+      case 'rating_asc':
+        q.orderBy('c.rating_avg', 'asc');
+        break;
+      case 'price_desc':
+        // ưu tiên promo_price, nếu không có thì price
+        q.orderByRaw('coalesce(c.promo_price, c.price) desc');
+        break;
+      case 'price_asc':
+        q.orderByRaw('coalesce(c.promo_price, c.price) asc');
+        break;
+      case 'newest':
+        q.orderBy('c.created_at', 'desc');
+        break;
+      default:
+        q.orderBy('c.created_at', 'desc');
+    }
+
+    // Limit và offset luôn đặt sau orderBy
+    q.limit(limit).offset(offset);
+
     return q;
   });
 }
@@ -460,12 +485,24 @@ export function findNewest7day() {
 }
 
 // Full-text search (plainto_tsquery trên cột fts)
-export function findByKeyword(keyword, { limit = 10, offset = 0 } = {}) {
-  return db('courses')
-    .whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
-    .orderBy('created_at', 'desc')
-    .limit(limit)
-    .offset(offset);
+export function findByKeyword(keyword, { limit = 4, offset = 0, sort = "rating" } = {}) {
+  const query = db('courses').whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
+  switch (sort) {
+    case 'rating':
+      query.orderBy('rating_avg', 'desc');
+      break;
+    case 'price':
+      query.orderByRaw('COALESCE(promo_price, price) ASC');
+      break;
+    case 'newest':
+      query.orderBy('created_at', 'desc');
+      break;
+    case 'bestseller':
+      query.orderBy('students_count', 'desc');
+      break;
+
+  }
+  return query.limit(limit).offset(offset);
 }
 
 export function countByKeyword(keyword) {
@@ -492,11 +529,11 @@ export function findAllCourses() {
 export function findCourses({ limit = 12, offset = 0, sortBy = 'rating' } = {}) {
   let query = db('courses').select('*');
   switch (sortBy) {
-    case 'rating':     query.orderBy('rating_avg', 'desc');      break;
-    case 'price':      query.orderBy('price', 'asc');            break;
-    case 'newest':     query.orderBy('created_at', 'desc');      break;
-    case 'bestseller': query.orderBy('students_count', 'desc');  break;
-    default:           query.orderBy('rating_avg', 'desc');
+    case 'rating': query.orderBy('rating_avg', 'desc'); break;
+    case 'price': query.orderBy('price', 'asc'); break;
+    case 'newest': query.orderBy('created_at', 'desc'); break;
+    case 'bestseller': query.orderBy('students_count', 'desc'); break;
+    default: query.orderBy('rating_avg', 'desc');
   }
   return query.limit(limit).offset(offset);
 }
@@ -530,7 +567,7 @@ export function findTopFieldCourses(limit = 5) {
     .groupBy('c.id', 'c.name')
     .orderBy('enroll_count', 'desc')
     .limit(limit)
-    .then(rows => 
+    .then(rows =>
       rows.map(r => ({
         id: r.id,
         name: r.name,
@@ -622,7 +659,7 @@ export default {
   findByKeyword, countByKeyword, findTop10ViewedCourses,
   // compat & misc
   all, findAllCourses, findCourses, countCourses,
-  finBestSellerthanAvg, 
+  finBestSellerthanAvg,
   countCoursesByCategory, getTopCategories, findTopFieldCourses,
 
   findOverviewByInstructor, overviewMetrics, countByInstructor,
