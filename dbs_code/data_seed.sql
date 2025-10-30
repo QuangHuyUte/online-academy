@@ -1,23 +1,265 @@
 -- =====================================================================
--- ONLINE ACADEMY - FULL SEED (ALL-IN-ONE)
--- Tác giả: Team UTE (tổng hợp)
--- Chạy 1 lần để tạo dữ liệu đầy đủ cho demo
+-- ONLINE ACADEMY - FULL RESET & CREATE (Supabase/PostgreSQL)
+-- - Giữ nguyên tối ưu hoá & ràng buộc của bản bạn gửi
+-- - Bổ sung view_count vào courses + index
+-- - Dọn sạch schema cũ an toàn
 -- =====================================================================
 
 BEGIN;
 
+-- ---------- SAFETY ----------
+SET client_min_messages = WARNING;
+SET search_path = public;
+
+-- ---------- DROP OBJECTS (theo đúng thứ tự phụ thuộc) ----------
+-- Bỏ trigger tùy biến nếu có (tránh lỗi khi DROP function/table)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_trigger t
+    JOIN pg_class c ON c.oid = t.tgrelid
+    WHERE t.tgname = 'trg_courses_updated_at'
+      AND c.relname = 'courses'
+  ) THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS trg_courses_updated_at ON courses;';
+  END IF;
+END$$;
+
+-- Không còn function FTS thủ công (vì dùng GENERATED), chỉ còn function updated_at
+DROP FUNCTION IF EXISTS set_courses_updated_at() CASCADE;
+
+-- Bảng (theo quan hệ FK)
+DROP TABLE IF EXISTS email_otps        CASCADE;
+DROP TABLE IF EXISTS watchlist         CASCADE;
+DROP TABLE IF EXISTS reviews           CASCADE;
+DROP TABLE IF EXISTS progress          CASCADE;
+DROP TABLE IF EXISTS enrollments       CASCADE;
+DROP TABLE IF EXISTS lessons           CASCADE;
+DROP TABLE IF EXISTS sections          CASCADE;
+DROP TABLE IF EXISTS courses           CASCADE;
+DROP TABLE IF EXISTS instructors       CASCADE;
+DROP TABLE IF EXISTS users             CASCADE;
+DROP TABLE IF EXISTS categories        CASCADE;
+
+-- Enum
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    DROP TYPE user_role;
+  END IF;
+END$$;
+
+-- =====================================================================
+-- RE-CREATE
+-- =====================================================================
+
+-- ---------- ENUM: user_role ----------
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE user_role AS ENUM ('student','instructor','admin');
+  END IF;
+END$$;
+
+-- ---------- CATEGORIES (2 cấp) ----------
+CREATE TABLE IF NOT EXISTS categories (
+  id            SERIAL PRIMARY KEY,
+  parent_id     INT REFERENCES categories(id) ON DELETE SET NULL,
+  name          VARCHAR(120) NOT NULL,
+  slug          VARCHAR(160) NOT NULL UNIQUE,
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+-- Tránh trùng tên trong cùng 1 nhóm cha
+CREATE UNIQUE INDEX IF NOT EXISTS uq_categories_parent_name
+  ON categories(parent_id, name);
+
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
+
+-- ---------- USERS ----------
+CREATE TABLE IF NOT EXISTS users (
+  id            SERIAL PRIMARY KEY,
+  name          VARCHAR(120) NOT NULL,
+  email         VARCHAR(160) UNIQUE NOT NULL,
+  password_hash VARCHAR(200) NOT NULL,
+  role          user_role NOT NULL DEFAULT 'student',
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+-- Email unique theo lower() (tránh trùng hoa/thường)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_lower ON users (lower(email));
+
+-- ---------- INSTRUCTORS ----------
+CREATE TABLE IF NOT EXISTS instructors (
+  id            SERIAL PRIMARY KEY,
+  user_id       INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  bio           TEXT,
+  avatar_url    TEXT,
+  socials_json  JSONB DEFAULT '{}'::jsonb,
+  CONSTRAINT uq_instructors_user UNIQUE (user_id)
+);
+
+-- ---------- COURSES (đÃ BỔ SUNG view_count) ----------
+CREATE TABLE IF NOT EXISTS courses (
+  id              SERIAL PRIMARY KEY,
+  cat_id          INT NOT NULL REFERENCES categories(id)   ON DELETE RESTRICT,
+  instructor_id   INT NOT NULL REFERENCES instructors(id)  ON DELETE RESTRICT,
+  title           VARCHAR(200) NOT NULL,
+  short_desc      TEXT,
+  long_desc_html  TEXT,
+  cover_url       TEXT,
+  price           NUMERIC(12,2),
+  promo_price     NUMERIC(12,2),
+  rating_avg      NUMERIC(3,2) DEFAULT 0,
+  rating_count    INT          DEFAULT 0,
+  students_count  INT          DEFAULT 0,
+  view_count      INT          NOT NULL DEFAULT 0,  -- NEW: lượt xem trang khoá học
+  is_completed    BOOLEAN      DEFAULT FALSE,
+  is_removed      BOOLEAN      DEFAULT FALSE,
+  last_updated_at TIMESTAMPTZ  DEFAULT now(),
+  created_at      TIMESTAMPTZ  DEFAULT now(),
+  -- FTS sẽ thêm ở dưới bằng GENERATED (an toàn hơn)
+  fts             tsvector
+);
+
+-- Giá trị hợp lệ
+ALTER TABLE courses
+  ADD CONSTRAINT ck_courses_price_pos CHECK (price IS NULL OR price >= 0),
+  ADD CONSTRAINT ck_courses_promo_pos CHECK (promo_price IS NULL OR promo_price >= 0),
+  ADD CONSTRAINT ck_courses_promo_le_price CHECK (
+    promo_price IS NULL OR price IS NULL OR promo_price <= price
+  );
+
+-- Trigger tự cập nhật last_updated_at
+CREATE OR REPLACE FUNCTION set_courses_updated_at() RETURNS trigger AS $$
+BEGIN
+  NEW.last_updated_at := now();
+  RETURN NEW;
+END$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_courses_updated_at
+BEFORE UPDATE ON courses
+FOR EACH ROW EXECUTE FUNCTION set_courses_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_courses_cat       ON courses(cat_id);
+CREATE INDEX IF NOT EXISTS idx_courses_created   ON courses(created_at);
+CREATE INDEX IF NOT EXISTS idx_courses_students  ON courses(students_count DESC);
+CREATE INDEX IF NOT EXISTS idx_courses_views     ON courses(view_count DESC);  -- NEW
+
+-- ---------- SECTIONS ----------
+CREATE TABLE IF NOT EXISTS sections (
+  id         SERIAL PRIMARY KEY,
+  course_id  INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  title      VARCHAR(200) NOT NULL,
+  order_no   INT NOT NULL CHECK (order_no > 0),
+  UNIQUE(course_id, order_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sections_course ON sections(course_id);
+
+-- ---------- LESSONS ----------
+CREATE TABLE IF NOT EXISTS lessons (
+  id           SERIAL PRIMARY KEY,
+  section_id   INT NOT NULL REFERENCES sections(id) ON DELETE CASCADE,
+  title        VARCHAR(200) NOT NULL,
+  video_url    TEXT NOT NULL,
+  duration_sec INT CHECK (duration_sec IS NULL OR duration_sec >= 0),
+  is_preview   BOOLEAN DEFAULT FALSE,
+  order_no     INT NOT NULL CHECK (order_no > 0),
+  UNIQUE(section_id, order_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lessons_section ON lessons(section_id);
+
+-- ---------- ENROLLMENTS ----------
+CREATE TABLE IF NOT EXISTS enrollments (
+  user_id      INT NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+  course_id    INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  purchased_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY(user_id, course_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_enroll_user   ON enrollments(user_id);
+CREATE INDEX IF NOT EXISTS idx_enroll_course ON enrollments(course_id);
+
+-- ---------- PROGRESS ----------
+CREATE TABLE IF NOT EXISTS progress (
+  user_id     INT NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
+  lesson_id   INT NOT NULL REFERENCES lessons(id)  ON DELETE CASCADE,
+  watched_sec INT DEFAULT 0,
+  is_done     BOOLEAN DEFAULT FALSE,
+  updated_at  TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY(user_id, lesson_id)
+);
+
+-- ---------- REVIEWS ----------
+CREATE TABLE IF NOT EXISTS reviews (
+  id         SERIAL PRIMARY KEY,
+  course_id  INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  user_id    INT NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+  rating     INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment    TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(course_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_course ON reviews(course_id);
+
+-- ---------- WATCHLIST ----------
+CREATE TABLE IF NOT EXISTS watchlist (
+  user_id    INT NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+  course_id  INT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY(user_id, course_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist(user_id);
+
+-- ---------- EMAIL_OTPS ----------
+CREATE TABLE IF NOT EXISTS email_otps (
+  id          BIGSERIAL PRIMARY KEY,
+  email       VARCHAR(160) NOT NULL,
+  otp         VARCHAR(6)   NOT NULL CHECK (otp ~ '^[0-9]{6}$'),
+  expires_at  TIMESTAMPTZ  NOT NULL,
+  created_at  TIMESTAMPTZ  DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_otps_email      ON email_otps(email);
+CREATE INDEX IF NOT EXISTS idx_email_otps_expires_at ON email_otps(expires_at);
+
+-- ---------- FULL-TEXT SEARCH (FTS) ----------
+-- Dùng GENERATED ALWAYS để đồng bộ FTS tự động, không cần trigger
+ALTER TABLE courses DROP COLUMN IF EXISTS fts;
+
+ALTER TABLE courses
+  ADD COLUMN fts tsvector GENERATED ALWAYS AS (
+    to_tsvector('simple',
+      coalesce(title,'') || ' ' ||
+      coalesce(short_desc,'') || ' ' ||
+      coalesce(long_desc_html,'')
+    )
+  ) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_courses_fts ON courses USING GIN (fts);
+
+COMMIT;
+
 -- ========================================================
 -- 01_base_data.sql
--- Người thực hiện: PHÚC
+-- Người thực hiện:PHÚC
 -- Nhiệm vụ: seed categories + users + instructors + email_otps
 -- ========================================================
+
 
 -- ---------- RESET DỮ LIỆU ----------
 TRUNCATE TABLE email_otps, instructors, users, categories RESTART IDENTITY CASCADE;
 
+
 -- ========================================================
 -- 1. CATEGORIES (5 nhóm lớn + 5 lĩnh vực nhỏ mỗi nhóm)
 -- ========================================================
+
 
 -- Nhóm cha
 INSERT INTO categories (name, slug) VALUES
@@ -27,6 +269,7 @@ INSERT INTO categories (name, slug) VALUES
   ('Marketing & Communication', 'marketing-communication'),
   ('Language & Culture', 'language-culture');
 
+
 -- Nhóm con (5 lĩnh vực nhỏ mỗi nhóm)
 INSERT INTO categories (parent_id, name, slug) VALUES
   ((SELECT id FROM categories WHERE slug='information-technology'), 'Web Development', 'web-development'),
@@ -35,11 +278,13 @@ INSERT INTO categories (parent_id, name, slug) VALUES
   ((SELECT id FROM categories WHERE slug='information-technology'), 'Data Science', 'data-science'),
   ((SELECT id FROM categories WHERE slug='information-technology'), 'Cloud Computing', 'cloud-computing'),
 
+
   ((SELECT id FROM categories WHERE slug='business-management'), 'Finance & Accounting', 'finance-accounting'),
   ((SELECT id FROM categories WHERE slug='business-management'), 'Entrepreneurship', 'entrepreneurship'),
   ((SELECT id FROM categories WHERE slug='business-management'), 'Human Resources', 'human-resources'),
   ((SELECT id FROM categories WHERE slug='business-management'), 'Project Management', 'project-management'),
   ((SELECT id FROM categories WHERE slug='business-management'), 'E-commerce', 'e-commerce'),
+
 
   ((SELECT id FROM categories WHERE slug='design-creativity'), 'Graphic Design', 'graphic-design'),
   ((SELECT id FROM categories WHERE slug='design-creativity'), 'UI/UX Design', 'uiux-design'),
@@ -47,11 +292,13 @@ INSERT INTO categories (parent_id, name, slug) VALUES
   ((SELECT id FROM categories WHERE slug='design-creativity'), 'Photography', 'photography'),
   ((SELECT id FROM categories WHERE slug='design-creativity'), 'Animation', 'animation'),
 
+
   ((SELECT id FROM categories WHERE slug='marketing-communication'), 'Digital Marketing', 'digital-marketing'),
   ((SELECT id FROM categories WHERE slug='marketing-communication'), 'Brand Strategy', 'brand-strategy'),
   ((SELECT id FROM categories WHERE slug='marketing-communication'), 'SEO & Content Writing', 'seo-content-writing'),
   ((SELECT id FROM categories WHERE slug='marketing-communication'), 'Public Relations', 'public-relations'),
   ((SELECT id FROM categories WHERE slug='marketing-communication'), 'Social Media Marketing', 'social-media-marketing'),
+
 
   ((SELECT id FROM categories WHERE slug='language-culture'), 'English Language', 'english-language'),
   ((SELECT id FROM categories WHERE slug='language-culture'), 'Japanese Language', 'japanese-language'),
@@ -59,13 +306,16 @@ INSERT INTO categories (parent_id, name, slug) VALUES
   ((SELECT id FROM categories WHERE slug='language-culture'), 'Chinese Language', 'chinese-language'),
   ((SELECT id FROM categories WHERE slug='language-culture'), 'Translation & Interpretation', 'translation-interpretation');
 
+
 -- ========================================================
 -- 2. USERS (1 admin + 5 instructors + 8 students)
 -- ========================================================
 
+
 INSERT INTO users (name, email, password_hash, role) VALUES
   -- Admin
   ('Admin Master', 'admin@academy.com', '$2b$10$dummyhashadmin', 'admin'),
+
 
   -- Instructors
   ('Emma Johnson', 'emma@academy.com', '$2b$10$dummyhash', 'instructor'),
@@ -73,6 +323,7 @@ INSERT INTO users (name, email, password_hash, role) VALUES
   ('Sophia Tran', 'sophia@academy.com', '$2b$10$dummyhash', 'instructor'),
   ('Michael Chen', 'michael@academy.com', '$2b$10$dummyhash', 'instructor'),
   ('Olivia Lee', 'olivia@academy.com', '$2b$10$dummyhash', 'instructor'),
+
 
   -- Students
   ('Tommy Pham', 'tommy@academy.com', '$2b$10$dummyhash', 'student'),
@@ -84,9 +335,11 @@ INSERT INTO users (name, email, password_hash, role) VALUES
   ('Ryan Phan', 'ryan@academy.com', '$2b$10$dummyhash', 'student'),
   ('Amy Vo', 'amy@academy.com', '$2b$10$dummyhash', 'student');
 
+
 -- ========================================================
 -- 3. INSTRUCTORS (liên kết với bảng users)
 -- ========================================================
+
 
 INSERT INTO instructors (user_id, bio, avatar_url) VALUES
   ((SELECT id FROM users WHERE email='emma@academy.com'), 'Senior Web Developer specialized in React and Node.js.', 'https://i.pravatar.cc/150?img=11'),
@@ -95,9 +348,11 @@ INSERT INTO instructors (user_id, bio, avatar_url) VALUES
   ((SELECT id FROM users WHERE email='michael@academy.com'), 'Digital Marketing expert and brand growth strategist.', 'https://i.pravatar.cc/150?img=14'),
   ((SELECT id FROM users WHERE email='olivia@academy.com'), 'Language instructor fluent in English, Japanese, and Korean.', 'https://i.pravatar.cc/150?img=15');
 
+
 -- ========================================================
 -- 4. EMAIL_OTPS (demo xác thực email)
 -- ========================================================
+
 
 INSERT INTO email_otps (email, otp, expires_at) VALUES
   ('tommy@academy.com', '321654', now() + interval '10 minutes'),
@@ -107,6 +362,12 @@ INSERT INTO email_otps (email, otp, expires_at) VALUES
   ('amy@academy.com', '753951', now() + interval '10 minutes');
 
 -- ========================================================
+
+
+
+
+-- 5. COURSE
+
 -- 02_courses.sql
 -- Người thực hiện: Cường
 -- Nhiệm vụ: Tạo khóa học (gắn category + instructor)
@@ -431,13 +692,372 @@ VALUES
  'Understanding Context', 'https://www.youtube.com/watch?v=twCpijr_GeQ&pp=ygUndHJhbnNsYXRpb24gaW50ZXJwcmV0YXRpb24gZnVuZGFsbWVudGFs', 480, FALSE, 1),
 ((SELECT id FROM sections WHERE title='Interpretation Practice' 
   AND course_id=(SELECT id FROM courses WHERE title='Translation and Interpretation Basics')),
- 'Simultaneous Interpretation', 'https://www.youtube.com/watch?v=20Shv0XTQfg&pp=ygUXaW50ZXJwcmV0aW9uIHByYWN0aWNl%3D', 500, FALSE, 1);
+ 'Simultaneous Interpretation', 'https://www.youtube.com/watch?v=20Shv0XTQfg&pp=ygUXaW50ZXJwcmV0YXRpb24gcHJhY3RpY2U%3D', 500, FALSE, 1);
 
 -- ========================================================
--- 03b_auto_generate_courses.sql (THÊM MỚI)
--- Sinh bổ sung khoá học + sections/lessons cho TẤT CẢ subcategory
--- (chèn ngay sau phần 03 và trước phần 04)
+-- 04_enrollments.sql
+-- Người thực hiện: Thong
+-- Nhiệm vụ: Tạo enrollments (học viên đăng ký khóa học)
 -- ========================================================
+INSERT INTO enrollments (user_id, course_id)
+SELECT u.id, c.id
+FROM users u, courses c
+WHERE u.role = 'student'
+AND (
+    (u.email = 'tommy@academy.com'
+     AND c.title IN ('Modern Web Development with React', 
+                     'Flutter for Beginners', 
+                     'UI/UX Design for Beginners')
+    ) OR
+    (u.email = 'hannah@academy.com'
+     AND c.title IN ('English Communication for Beginners', 
+                     'Translation and Interpretation Basics')
+    ) OR
+    (u.email = 'kevin@academy.com'
+     AND c.title IN ('Digital Marketing 101', 
+                     'Social Media Marketing Strategy', 
+                     'Adobe Photoshop Masterclass')
+    ) OR
+    (u.email = 'lily@academy.com'
+     AND c.title IN ('Japanese Language N5 Preparation', 
+                     'Korean for Everyday Conversation', 
+                     'English Communication for Beginners')
+    ) OR
+    (u.email = 'jason@academy.com'
+     AND c.title IN ('Introduction to Cybersecurity', 
+                     'AWS Cloud Fundamentals')
+    ) OR
+    (u.email = 'sarah@academy.com'
+     AND c.title IN ('UI/UX Design for Beginners', 
+                     'Adobe Photoshop Masterclass', 
+                     'Digital Marketing 101')
+    ) OR
+    (u.email = 'ryan@academy.com'
+     AND c.title IN ('Modern Web Development with React', 
+                     'AWS Cloud Fundamentals', 
+                     'Social Media Marketing Strategy')
+    ) OR
+    (u.email = 'amy@academy.com'
+     AND c.title IN ('Korean for Everyday Conversation', 
+                     'English Communication for Beginners', 
+                     'Translation and Interpretation Basics')
+    )
+);
+
+
+-- =====================================================================
+-- 05_watchlist_progress.sql (Final Unified Version)
+-- Người thực hiện: Bao + Zeno
+-- Mục tiêu: Gộp WATCHLIST + PROGRESS chạy 1 lần, giữ nguyên chức năng
+-- =====================================================================
+
+DO $$
+BEGIN
+  -- 1️⃣ WATCHLIST (Danh sách yêu thích) - ~20 bản ghi
+  WITH student_ids AS (
+      SELECT id, email FROM users WHERE role = 'student'
+  ),
+  course_ids AS (
+      SELECT id, title FROM courses
+  ),
+  lesson_ids AS (
+      SELECT id, section_id, duration_sec FROM lessons LIMIT 10
+  )
+  INSERT INTO watchlist (user_id, course_id)
+  VALUES
+  -- Tommy Pham (ID: 7)
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Flutter for Beginners')),
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Introduction to Cybersecurity')),
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'UI/UX Design for Beginners')),
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Digital Marketing 101')),
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Japanese Language N5 Preparation')),
+
+  -- Hannah Vu (ID: 8)
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Modern Web Development with React')),
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'AWS Cloud Fundamentals')),
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Adobe Photoshop Masterclass')),
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Social Media Marketing Strategy')),
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Korean for Everyday Conversation')),
+
+  -- Kevin Do (ID: 9)
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Flutter for Beginners')),
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Introduction to Cybersecurity')),
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'UI/UX Design for Beginners')),
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Digital Marketing 101')),
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Japanese Language N5 Preparation')),
+
+  -- Lily Tran (ID: 10)
+  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Modern Web Development with React')),
+  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'AWS Cloud Fundamentals')),
+  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Adobe Photoshop Masterclass')),
+  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Social Media Marketing Strategy')),
+  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Korean for Everyday Conversation'))
+  ON CONFLICT DO NOTHING;
+END $$;
+
+
+DO $$
+BEGIN
+  -- 2️⃣ PROGRESS (Tiến độ học tập) - ~10 bản ghi
+  WITH student_ids AS (
+      SELECT id, email FROM users WHERE role = 'student'
+  ),
+  course_ids AS (
+      SELECT id, title FROM courses
+  ),
+  lesson_ids AS (
+      SELECT id, section_id, duration_sec FROM lessons LIMIT 10
+  )
+  INSERT INTO progress (user_id, lesson_id, watched_sec, is_done, updated_at)
+  VALUES
+  -- Tommy Pham (React)
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'),
+   (SELECT id FROM lessons WHERE title='What is React?'),
+   (SELECT duration_sec FROM lessons WHERE title='What is React?'),
+   TRUE, now() - interval '25 days'),
+
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'),
+   (SELECT id FROM lessons WHERE title='Props and State'),
+   (SELECT duration_sec/2 FROM lessons WHERE title='Props and State'),
+   FALSE, now() - interval '20 days'),
+
+  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'),
+   (SELECT id FROM lessons WHERE title='Using useState and useEffect'),
+   60, FALSE, now() - interval '10 days'),
+
+  -- Hannah Vu (AWS Cloud)
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
+   (SELECT id FROM lessons WHERE title='What is Cloud Computing?'),
+   (SELECT duration_sec FROM lessons WHERE title='What is Cloud Computing?'),
+   TRUE, now() - interval '18 days'),
+
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
+   (SELECT id FROM lessons WHERE title='Amazon EC2 and S3'),
+   (SELECT duration_sec FROM lessons WHERE title='Amazon EC2 and S3'),
+   TRUE, now() - interval '15 days'),
+
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
+   (SELECT id FROM lessons WHERE title='Deploying on AWS Lambda'),
+   (SELECT duration_sec*3/4 FROM lessons WHERE title='Deploying on AWS Lambda'),
+   FALSE, now() - interval '5 days'),
+
+  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
+   (SELECT id FROM lessons WHERE title='Understanding Threats'),
+   (SELECT duration_sec/2 FROM lessons WHERE title='Understanding Threats'),
+   FALSE, now() - interval '1 days'),
+
+  -- Kevin Do (UI/UX)
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'),
+   (SELECT id FROM lessons WHERE title='Design Thinking Basics'),
+   (SELECT duration_sec FROM lessons WHERE title='Design Thinking Basics'),
+   TRUE, now() - interval '10 days'),
+
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'),
+   (SELECT id FROM lessons WHERE title='Using Figma'),
+   (SELECT duration_sec*9/10 FROM lessons WHERE title='Using Figma'),
+   FALSE, now() - interval '5 days'),
+
+  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'),
+   (SELECT id FROM lessons WHERE title='Testing Techniques'),
+   0, FALSE, now() - interval '1 days')
+  ON CONFLICT DO NOTHING;
+END $$;
+
+
+-- ========================================================
+-- 06_reviews.sql
+-- Người thực hiện: Phúc
+-- Nhiệm vụ: Tạo dữ liệu đánh giá (reviews)
+-- Mỗi khóa học có khoảng 4–5 đánh giá từ các học viên
+-- ========================================================
+
+-- Giả định: bảng reviews có các cột:
+-- id | user_id | course_id | rating | comment | created_at
+
+INSERT INTO reviews (user_id, course_id, rating, comment, created_at)
+VALUES
+-- ========================================================
+-- 1️⃣ Modern Web Development with React (5 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 5, 'Amazing course! Helped me understand React clearly.', now() - interval '28 days'),
+
+((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 4, 'Good content, but could use more hands-on coding.', now() - interval '26 days'),
+
+((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 5, 'Instructor explains concepts very well. Loved it!', now() - interval '23 days'),
+
+((SELECT id FROM users WHERE email='lily@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 4, 'Nice structure, examples are clear and helpful.', now() - interval '20 days'),
+
+((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
+ 5, 'Very practical and beginner-friendly!', now() - interval '19 days'),
+
+
+-- ========================================================
+-- 2️⃣ Flutter for Beginners (4 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 4, 'Good for starting Flutter, nice step-by-step approach.', now() - interval '25 days'),
+
+((SELECT id FROM users WHERE email='jason@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 5, 'Really fun! I built my first app after this course.', now() - interval '22 days'),
+
+((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 4, 'Great visuals, a bit fast in advanced parts though.', now() - interval '18 days'),
+
+((SELECT id FROM users WHERE email='sarah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
+ 5, 'Loved it! The lessons were clear and easy to follow.', now() - interval '16 days'),
+
+
+-- ========================================================
+-- 3️⃣ AWS Cloud Fundamentals (5 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 5, 'Excellent introduction to AWS core services.', now() - interval '14 days'),
+
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 4, 'Good overview, I liked the EC2 and S3 labs.', now() - interval '12 days'),
+
+((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 5, 'Super useful and very up-to-date.', now() - interval '10 days'),
+
+((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 4, 'Clear explanations, could use more practice examples.', now() - interval '8 days'),
+
+((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
+ 5, 'Perfect for beginners to cloud computing!', now() - interval '6 days'),
+
+
+-- ========================================================
+-- 4️⃣ UI/UX Design for Beginners (4 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 5, 'Loved this course! Strong fundamentals in design.', now() - interval '10 days'),
+
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 4, 'Nice visuals, Figma lessons were really cool.', now() - interval '8 days'),
+
+((SELECT id FROM users WHERE email='sarah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 5, 'Great mix of theory and practice.', now() - interval '7 days'),
+
+((SELECT id FROM users WHERE email='lily@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
+ 4, 'Could use more design challenges, but very good.', now() - interval '5 days'),
+
+
+-- ========================================================
+-- 5️⃣ Digital Marketing 101 (5 reviews)
+-- ========================================================
+((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 5, 'Fantastic course! I learned SEO and Ads basics.', now() - interval '6 days'),
+
+((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 4, 'Good examples, very practical for real-world work.', now() - interval '5 days'),
+
+((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 5, 'Clear structure, easy to follow.', now() - interval '4 days'),
+
+((SELECT id FROM users WHERE email='jason@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 5, 'Loved the instructor energy, great intro to marketing!', now() - interval '3 days'),
+
+((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
+ (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
+ 4, 'Helpful but could use more case studies.', now() - interval '2 days');
+-- ========================================================
+-- 07_update_stats.sql + 08_sanity_check.sql
+-- Người thực hiện: VŨ
+-- Nhiệm vụ:
+--   07: Cập nhật số học viên và đánh giá trung bình cho khóa học
+--   08: Kiểm tra tổng quan DB + test FTS
+-- ========================================================
+
+-- ========================================================
+-- 07: CẬP NHẬT THỐNG KÊ KHÓA HỌC
+-- ========================================================
+
+-- 1. Cập nhật số học viên (students_count) cho mỗi khóa
+UPDATE courses c
+SET students_count = sub.cnt
+FROM (
+  SELECT course_id, COUNT(*) AS cnt
+  FROM enrollments
+  GROUP BY course_id
+) sub
+WHERE c.id = sub.course_id;
+
+-- 2. Cập nhật số đánh giá (rating_count) và điểm trung bình (rating_avg)
+UPDATE courses c
+SET rating_avg = sub.avg, rating_count = sub.cnt
+FROM (
+  SELECT course_id, ROUND(AVG(rating), 2) AS avg, COUNT(*) AS cnt
+  FROM reviews
+  GROUP BY course_id
+) sub
+WHERE c.id = sub.course_id;
+
+-- 3. Cập nhật số view (view_count) của mỗi course
+UPDATE courses
+SET view_count = FLOOR(100 + random() * 900); -- tạo số ngẫu nhiên 100–999
+
+
+-- ========================================================
+-- 08: SANITY CHECK + FTS TEST
+-- ========================================================
+
+-- 1. Tổng số bản ghi của tất cả bảng (gộp bằng UNION ALL)
+SELECT 'categories' AS table_name, COUNT(*) AS total FROM categories
+UNION ALL
+SELECT 'users', COUNT(*) FROM users
+UNION ALL
+SELECT 'courses', COUNT(*) FROM courses
+UNION ALL
+SELECT 'sections', COUNT(*) FROM sections
+UNION ALL
+SELECT 'lessons', COUNT(*) FROM lessons
+UNION ALL
+SELECT 'enrollments', COUNT(*) FROM enrollments
+UNION ALL
+SELECT 'reviews', COUNT(*) FROM reviews
+UNION ALL
+SELECT 'watchlist', COUNT(*) FROM watchlist;
+
+-- 2. Test FTS: tìm các khóa học chứa từ khóa 'web'
+SELECT id, title
+FROM courses
+WHERE fts @@ to_tsquery('web');
+
+
+INSERT INTO enrollments (user_id, course_id, purchased_at)
+VALUES (15, 7, NOW());
+
+INSERT INTO enrollments (user_id, course_id, purchased_at)
+SELECT 15, id, NOW()
+FROM courses
+ON CONFLICT (user_id, course_id) DO NOTHING;
+
 
 DO $$
 DECLARE
@@ -657,7 +1277,6 @@ BEGIN
     v_cat_id := rec_sub.sub_id;
     v_parent_slug := rec_sub.parent_slug;
     v_sub_display := rec_sub.sub_display;
-
     v_instructor_email := CASE v_parent_slug
       WHEN 'information-technology'   THEN 'emma@academy.com'
       WHEN 'business-management'      THEN 'david@academy.com'
@@ -666,16 +1285,9 @@ BEGIN
       WHEN 'language-culture'         THEN 'olivia@academy.com'
       ELSE 'emma@academy.com'
     END;
-
-    SELECT id INTO v_instructor_id
-    FROM instructors
-    WHERE user_id = (SELECT id FROM users WHERE email = v_instructor_email)
-    LIMIT 1;
-
+    SELECT id INTO v_instructor_id FROM instructors WHERE user_id = (SELECT id FROM users WHERE email = v_instructor_email) LIMIT 1;
     IF v_instructor_id IS NULL THEN CONTINUE; END IF;
-
     SELECT ARRAY(SELECT jsonb_array_elements_text(v_imgs->rec_sub.sub_slug)) INTO v_arr;
-
     IF v_arr IS NULL OR array_length(v_arr,1) < 5 THEN
       v_arr := ARRAY[
         'https://source.unsplash.com/1600x900/?'||rec_sub.sub_slug||'&1',
@@ -685,17 +1297,13 @@ BEGIN
         'https://source.unsplash.com/1600x900/?'||rec_sub.sub_slug||'&5'
       ];
     END IF;
-
     FOR i IN 1..5 LOOP
       v_title_base := v_sub_display;
       v_course_title := format(v_title_templates[((i-1) % array_length(v_title_templates,1)) + 1], v_title_base);
-
       v_price := round((29.99 + (random() * 40.0))::numeric, 2);
       v_promo := round( (v_price * (0.60 + random() * 0.20))::numeric, 2 );
-      IF v_promo >= v_price THEN
-        v_promo := greatest(round(v_price * 0.80, 2), v_price - 0.01);
-      END IF;
-
+      IF v_promo >= v_price THEN v_promo := greatest(round(v_price * 0.80, 2), v_price - 0.01); END IF;
+      v_cover_url := v_arr[i];
       INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
       VALUES (
         v_cat_id,
@@ -703,31 +1311,24 @@ BEGIN
         v_course_title,
         'Learn ' || lower(v_title_base) || ' with hands-on examples and projects.',
         '<p>This course focuses on practical ' || lower(v_title_base) || ' with real-world exercises and mini-projects.</p>',
-        v_arr[i],
+        v_cover_url,
         v_price,
         v_promo
       )
       RETURNING id INTO v_course_id;
-
       FOR sec_no IN 1..3 LOOP
         INSERT INTO sections (course_id, title, order_no)
         VALUES (
           v_course_id,
-          CASE sec_no WHEN 1 THEN 'Section 1: Fundamentals'
-                      WHEN 2 THEN 'Section 2: Practice'
-                      ELSE 'Section 3: Project' END,
+          CASE sec_no WHEN 1 THEN 'Section 1: Fundamentals' WHEN 2 THEN 'Section 2: Practice' ELSE 'Section 3: Project' END,
           sec_no
         )
         RETURNING id INTO v_section_id;
-
         v_duration := 380 + floor(random()*180)::int;
-
         INSERT INTO lessons (section_id, title, video_url, duration_sec, is_preview, order_no)
         VALUES (
           v_section_id,
-          CASE sec_no WHEN 1 THEN 'Getting Started'
-                      WHEN 2 THEN 'Hands-on Session'
-                      ELSE 'Capstone Exercise' END,
+          CASE sec_no WHEN 1 THEN 'Getting Started' WHEN 2 THEN 'Hands-on Session' ELSE 'Capstone Exercise' END,
           v_videos[sec_no],
           v_duration,
           (sec_no = 1),
@@ -739,341 +1340,357 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
--- ========================================================
--- 04_enrollments.sql
--- Người thực hiện: Thong
--- Nhiệm vụ: Tạo enrollments (học viên đăng ký khóa học)
--- ========================================================
 
-INSERT INTO enrollments (user_id, course_id)
-SELECT u.id, c.id
-FROM users u, courses c
-WHERE u.role = 'student'
-AND (
-    (u.email = 'tommy@academy.com'
-     AND c.title IN ('Modern Web Development with React', 
-                     'Flutter for Beginners', 
-                     'UI/UX Design for Beginners')
-    ) OR
-    (u.email = 'hannah@academy.com'
-     AND c.title IN ('English Communication for Beginners', 
-                     'Translation and Interpretation Basics')
-    ) OR
-    (u.email = 'kevin@academy.com'
-     AND c.title IN ('Digital Marketing 101', 
-                     'Social Media Marketing Strategy', 
-                     'Adobe Photoshop Masterclass')
-    ) OR
-    (u.email = 'lily@academy.com'
-     AND c.title IN ('Japanese Language N5 Preparation', 
-                     'Korean for Everyday Conversation', 
-                     'English Communication for Beginners')
-    ) OR
-    (u.email = 'jason@academy.com'
-     AND c.title IN ('Introduction to Cybersecurity', 
-                     'AWS Cloud Fundamentals')
-    ) OR
-    (u.email = 'sarah@academy.com'
-     AND c.title IN ('UI/UX Design for Beginners', 
-                     'Adobe Photoshop Masterclass', 
-                     'Digital Marketing 101')
-    ) OR
-    (u.email = 'ryan@academy.com'
-     AND c.title IN ('Modern Web Development with React', 
-                     'AWS Cloud Fundamentals', 
-                     'Social Media Marketing Strategy')
-    ) OR
-    (u.email = 'amy@academy.com'
-     AND c.title IN ('Korean for Everyday Conversation', 
-                     'English Communication for Beginners', 
-                     'Translation and Interpretation Basics')
-    )
+
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1567581935884-3349723552ca?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=3174' WHERE title ILIKE '%Mastering mobile development%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1512428559087-560fa5ceab42?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1740' WHERE title ILIKE '%Advanced cyber security%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1701179596614-9c64f50cda76?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTN8fGN5YmVyc2VjdXJpdHl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=900' WHERE title ILIKE '%Mastering cyber security%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8ZGF0YXNjaWVuY2V8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=900' WHERE title ILIKE '%Foundation of datascience%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1711915482570-a7714a3a4660?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8RmluYW5hY2V8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=900' WHERE title ILIKE '%Finance accounting bootcamp%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1661781131006-492d7c4ade4d?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8RW50cmVwcmVuZXVyc2hpcHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=900' WHERE title ILIKE '%Advance Entrepreneurship%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1706259481452-f857c96ceaca?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8cHJvamVjdCUyMG1hbmFnZW1lbnR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation of Project Management%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1681488350342-19084ba8e224?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8ZSUyMGNvbW1lcmNlfGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced of Project Management%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1688561808434-886a6dd97b8c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8ZSUyMGNvbW1lcmNlfGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation E commerce%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1661284886711-4eaee4fa7771?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Z3JhcGhpYyUyMGRlc2lnbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Mastering E commerce%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1611532736597-de2d4265fba3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Z3JhcGhpYyUyMGRlc2lnbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation Graphic Design%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1609921212029-bb5a28e60960?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8Z3JhcGhpYyUyMGRlc2lnbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical Graphic Design%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1661326248013-3107a4b2bd91?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8dWklMjB1eHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced Graphic Design%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1586717799252-bd134ad00e26?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dWklMjB1eHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation Ui/Ux%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1545235617-9465d2a55698?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8dWklMjB1eHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical Ui/Ux%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1680037568964-6d0ccae595d6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8M2QlMjBtb2RlbGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation 3D Modeling%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1616344787023-a1829b69beea?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8M2QlMjBtb2RlbGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical 3D Modeling%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1612888262725-6b300edf916c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8M2QlMjBtb2RlbGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced 3D Modeling%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1641391503184-a2131018701b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8M2QlMjBtb2RlbGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Mastering 3D Modeling%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1563520240533-66480a3916fe?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8M2QlMjBtb2RlbGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Bootcamp 3D Modeling%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8cGhvdG9ncmFwaHl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical Photography%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1486916856992-e4db22c8df33?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8cGhvdG9ncmFwaHl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Mastering Photography%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1682308336208-7f3c19e6a96b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8YW5pbWF0aW9ufGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation Animation%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1611643378160-39d6dd915b69?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YW5pbWF0aW9ufGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Mastering Animation%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1439436556258-1f7fab1bfd4f?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YW5pbWF0aW9ufGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Bootcamp Animation%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1680859126164-ac4fd8f56625?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8YnJhbmR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced Brand Strategy%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1683880731020-83b984105a72?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Y29udGVudCUyMHdyaXRpbmd8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Mastering SEO content writing%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1661414415246-3e502e2fb241?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8cHVibGljJTIwcmVsYXRpb258ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced public relation%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1684979564941-dbf8664a68fc?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8c29jaWFsJTIwbWVkaWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced Social Media Marketing%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1543109740-4bdb38fda756?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8ZW5nbGlzaHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical English%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1565022536102-f7645c84354a?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8ZW5nbGlzaHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced English%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1543165796-5426273eaab3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8ZW5nbGlzaHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Bootcamp English%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1661964177687-57387c2cbd14?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8SmFwYW58ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical Japanese%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1545569341-9eb8b30979d9?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8SmFwYW58ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced Japanese%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1601823984263-b87b59798b70?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8SmFwYW58ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Bootcamp Japanese%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1661948404806-391a240d6d40?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8a29yZWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation Korean%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1517154421773-0529f29ea451?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8a29yZWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical Korean%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1619179834700-7a886aac80cc?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8a29yZWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Advanced Korean%';
+UPDATE courses SET cover_url='https://plus.unsplash.com/premium_photo-1661886333708-877148b43ae1?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8a29yZWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Mastering Korean%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1548115184-bc6544d06a58?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8a29yZWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Bootcamp Korean%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1546874177-9e664107314e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8a29yZWF8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Foundation Translation Interpretion%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1613759257379-345c4cc69de9?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW50ZXJwcmV0YXRpb258ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Practical Translation Interpretion%';
+UPDATE courses SET cover_url='https://images.unsplash.com/photo-1721830991086-6060b6979cf6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8aW50ZXJwcmV0YXRpb258ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=1600' WHERE title ILIKE '%Bootcamp Translation Interpretion%';
+
+-- ===========================================================
+-- INSERT MISSING COURSES (18 records)
+-- ===========================================================
+
+-- Foundation of Data Science
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='data-science'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='david@academy.com')),
+  'Foundation of Data Science',
+  'Start your journey into data analysis and visualization.',
+  '<p>Learn the basics of Python, statistics, and data manipulation for real-world insights.</p>',
+  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=900',
+  49.99, 29.99
 );
 
--- =====================================================================
--- 05_watchlist_progress.sql (Final Unified Version)
--- Người thực hiện: Bao + Zeno
--- Mục tiêu: Gộp WATCHLIST + PROGRESS chạy 1 lần, giữ nguyên chức năng
--- =====================================================================
+-- Advance Entrepreneurship
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='entrepreneurship'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='michael@academy.com')),
+  'Advance Entrepreneurship',
+  'Develop advanced strategies to scale and sustain your startup.',
+  '<p>Explore fundraising, leadership, and business growth strategies for entrepreneurs.</p>',
+  'https://plus.unsplash.com/premium_photo-1661781131006-492d7c4ade4d?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=900',
+  59.99, 39.99
+);
+
+-- Foundation of Project Management
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='project-management'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='david@academy.com')),
+  'Foundation of Project Management',
+  'Master the fundamentals of planning and executing projects.',
+  '<p>Learn to manage teams, scope, and deliver successful projects using proven frameworks.</p>',
+  'https://plus.unsplash.com/premium_photo-1706259481452-f857c96ceaca?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  44.99, 26.99
+);
+
+-- Advanced of Project Management
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='project-management'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='david@academy.com')),
+  'Advanced of Project Management',
+  'Advanced methods for large-scale projects and risk management.',
+  '<p>Develop high-level planning, agile execution, and performance tracking techniques.</p>',
+  'https://plus.unsplash.com/premium_photo-1706259481452-f857c96ceaca?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  54.99, 32.99
+);
+
+-- Foundation E Commerce
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='e-commerce'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='michael@academy.com')),
+  'Foundation E Commerce',
+  'Learn how to launch and manage your first online store.',
+  '<p>Understand e-commerce platforms, payment gateways, and customer experience.</p>',
+  'https://plus.unsplash.com/premium_photo-1681488350342-19084ba8e224?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  39.99, 24.99
+);
+
+-- Foundation Graphic Design
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='graphic-design'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='sophia@academy.com')),
+  'Foundation Graphic Design',
+  'Explore color, typography, and layout principles.',
+  '<p>Learn graphic design fundamentals and how to create visual impact effectively.</p>',
+  'https://plus.unsplash.com/premium_photo-1661284886711-4eaee4fa7771?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  49.99, 29.99
+);
+
+-- Foundation UiUx Design
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='uiux-design'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='sophia@academy.com')),
+  'Foundation UiUx Design',
+  'Understand the basics of user interface and user experience design.',
+  '<p>Learn how to create intuitive and user-centered digital products.</p>',
+  'https://plus.unsplash.com/premium_photo-1661326248013-3107a4b2bd91?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  45.99, 27.99
+);
+
+-- Design BootCamp UiUx
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='uiux-design'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='sophia@academy.com')),
+  'Design BootCamp UiUx',
+  'An immersive program to practice UI/UX design with real projects.',
+  '<p>Hands-on exercises and mentorship to become a job-ready UI/UX designer.</p>',
+  'https://images.unsplash.com/photo-1586717799252-bd134ad00e26?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  59.99, 34.99
+);
+
+-- BootCamp 3D Modeling
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='3d-modeling'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='sophia@academy.com')),
+  'BootCamp 3D Modeling',
+  'Intensive hands-on training in 3D object creation and rendering.',
+  '<p>Master the workflow of professional 3D modeling for design and animation.</p>',
+  'https://images.unsplash.com/photo-1641391503184-a2131018701b?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  54.99, 32.99
+);
+
+-- BootCamp Photography
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='photography'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='sophia@academy.com')),
+  'BootCamp Photography',
+  'Practice lighting, shooting, and editing like a professional.',
+  '<p>Learn camera setup, lighting control, and post-production techniques.</p>',
+  'https://images.unsplash.com/photo-1486916856992-e4db22c8df33?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  44.99, 26.99
+);
+
+-- Foundation Animation
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='animation'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='sophia@academy.com')),
+  'Foundation Animation',
+  'Introduction to movement, timing, and visual storytelling.',
+  '<p>Learn animation principles and how to create captivating motion graphics.</p>',
+  'https://plus.unsplash.com/premium_photo-1682308336208-7f3c19e6a96b?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  39.99, 23.99
+);
+
+-- BootCamp Animation
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='animation'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='sophia@academy.com')),
+  'BootCamp Animation',
+  'Complete projects blending 2D, 3D, and motion design.',
+  '<p>Intensive workshop covering concept to finished animated production.</p>',
+  'https://images.unsplash.com/photo-1439436556258-1f7fab1bfd4f?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  59.99, 34.99
+);
+
+-- BootCamp English
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='english-language'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='olivia@academy.com')),
+  'BootCamp English',
+  'Practice English skills intensively through speaking and listening drills.',
+  '<p>Master everyday English conversation through immersive speaking exercises.</p>',
+  'https://images.unsplash.com/photo-1543165796-5426273eaab3?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  34.99, 21.99
+);
+
+-- BootCamp Japanese
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='japanese-language'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='olivia@academy.com')),
+  'BootCamp Japanese',
+  'Final JLPT N5/N4 mock tests and conversation practice.',
+  '<p>Consolidate vocabulary and grammar through practical activities and tests.</p>',
+  'https://images.unsplash.com/photo-1601823984263-b87b59798b70?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  39.99, 25.99
+);
+
+-- Foundation Korean
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='korean-language'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='olivia@academy.com')),
+  'Foundation Korean',
+  'Learn Hangul and basic Korean grammar structures.',
+  '<p>Get started with Korean alphabets, pronunciation, and greetings.</p>',
+  'https://plus.unsplash.com/premium_photo-1661948404806-391a240d6d40?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  34.99, 22.99
+);
+
+-- BootCamp Korean
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='korean-language'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='olivia@academy.com')),
+  'BootCamp Korean',
+  'Complete conversational practice and Korean culture lessons.',
+  '<p>Gain fluency through dialogues, pronunciation drills, and situational practice.</p>',
+  'https://images.unsplash.com/photo-1546874177-9e664107314e?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  39.99, 25.99
+);
+
+-- Practical Translation Interpretion
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='translation-interpretation'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='olivia@academy.com')),
+  'Practical Translation Interpretion',
+  'Hands-on English–Vietnamese translation practice.',
+  '<p>Work with real materials to master translation accuracy and fluency.</p>',
+  'https://images.unsplash.com/photo-1613759257379-345c4cc69de9?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  39.99, 25.99
+);
+
+-- BootCamp Translation Interpretion
+INSERT INTO courses (cat_id, instructor_id, title, short_desc, long_desc_html, cover_url, price, promo_price)
+VALUES (
+  (SELECT id FROM categories WHERE slug='translation-interpretation'),
+  (SELECT id FROM instructors WHERE user_id=(SELECT id FROM users WHERE email='olivia@academy.com')),
+  'BootCamp Translation Interpretion',
+  'Advanced interpreting simulations and live practice.',
+  '<p>Gain professional-level translation and interpretation experience with diverse content.</p>',
+  'https://images.unsplash.com/photo-1721830991086-6060b6979cf6?ixlib=rb-4.1.0&auto=format&fit=crop&q=60&w=1600',
+  49.99, 29.99
+);
+
+DELETE FROM courses
+WHERE title IN (
+  'Foundations of Data Science',
+  'Advanced Entrepreneurship',
+  'Foundations of Project Management',
+  'Advanced Project Management',
+  'Foundations of E Commerce',
+  'Foundations of Graphic Design',
+  'Foundations of Uiux Design',
+  'Uiux Design Bootcamp',
+  'Mastering Uiux Design',
+  'Foundations of 3d Modeling',
+  '3d Modeling Bootcamp',
+  'Photography Bootcamp',
+  'Foundations of Animation',
+  'Animation Bootcamp',
+  'English Language Bootcamp',
+  'Mastering English Language',
+  'Japanese Language Bootcamp',
+  'Korean for Everyday Conversation',
+  'Foundations of Korean Language',
+  'Korean Language Bootcamp',
+  'Practical Translation Interpretation',
+  'Translation Interpretation Bootcamp'
+);
+
+-- ===========================================================
+-- ADD 3 DEFAULT SECTIONS + LESSONS TO EACH NEW COURSE
+-- ===========================================================
 
 DO $$
+DECLARE
+  r RECORD;
+  sec1_id INT;
+  sec2_id INT;
+  sec3_id INT;
 BEGIN
-  -- 1️⃣ WATCHLIST (Danh sách yêu thích) - ~20 bản ghi
-  WITH student_ids AS (
-      SELECT id, email FROM users WHERE role = 'student'
-  ),
-  course_ids AS (
-      SELECT id, title FROM courses
-  ),
-  lesson_ids AS (
-      SELECT id, section_id, duration_sec FROM lessons LIMIT 10
-  )
-  INSERT INTO watchlist (user_id, course_id)
-  VALUES
-  -- Tommy Pham (ID: 7)
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Flutter for Beginners')),
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Introduction to Cybersecurity')),
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'UI/UX Design for Beginners')),
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Digital Marketing 101')),
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'), (SELECT id FROM course_ids WHERE title = 'Japanese Language N5 Preparation')),
+  FOR r IN 
+    SELECT id, title FROM courses 
+    WHERE title IN (
+      'Foundation of Data Science',
+      'Advance Entrepreneurship',
+      'Foundation of Project Management',
+      'Advanced of Project Management',
+      'Foundation E Commerce',
+      'Foundation Graphic Design',
+      'Foundation UiUx Design',
+      'Design BootCamp UiUx',
+      'BootCamp 3D Modeling',
+      'BootCamp Photography',
+      'Foundation Animation',
+      'BootCamp Animation',
+      'BootCamp English',
+      'BootCamp Japanese',
+      'Foundation Korean',
+      'BootCamp Korean',
+      'Practical Translation Interpretion',
+      'BootCamp Translation Interpretion'
+    )
+  LOOP
+    -- ========== INSERT 3 SECTIONS ==========
+    INSERT INTO sections (course_id, title, order_no)
+    VALUES (r.id, 'Introduction', 1)
+    RETURNING id INTO sec1_id;
 
-  -- Hannah Vu (ID: 8)
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Modern Web Development with React')),
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'AWS Cloud Fundamentals')),
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Adobe Photoshop Masterclass')),
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Social Media Marketing Strategy')),
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'), (SELECT id FROM course_ids WHERE title = 'Korean for Everyday Conversation')),
+    INSERT INTO sections (course_id, title, order_no)
+    VALUES (r.id, 'Core Concepts', 2)
+    RETURNING id INTO sec2_id;
 
-  -- Kevin Do (ID: 9)
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Flutter for Beginners')),
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Introduction to Cybersecurity')),
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'UI/UX Design for Beginners')),
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Digital Marketing 101')),
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'), (SELECT id FROM course_ids WHERE title = 'Japanese Language N5 Preparation')),
+    INSERT INTO sections (course_id, title, order_no)
+    VALUES (r.id, 'Final Project', 3)
+    RETURNING id INTO sec3_id;
 
-  -- Lily Tran (ID: 10)
-  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Modern Web Development with React')),
-  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'AWS Cloud Fundamentals')),
-  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Adobe Photoshop Masterclass')),
-  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Social Media Marketing Strategy')),
-  ((SELECT id FROM student_ids WHERE email = 'lily@academy.com'), (SELECT id FROM course_ids WHERE title = 'Korean for Everyday Conversation'))
-  ON CONFLICT DO NOTHING;
-END $$;
+    -- ========== INSERT LESSONS ==========
+    INSERT INTO lessons (section_id, title, video_url, duration_sec, order_no, is_preview)
+    VALUES 
+      (sec1_id, 'Course Overview', 'https://www.youtube.com/watch?v=GxmfcnU3feo', 600, 1, TRUE),
+      (sec2_id, 'Main Tutorial', 'https://www.youtube.com/watch?v=ysEN5RaKOlA', 1200, 1, FALSE),
+      (sec3_id, 'Final Practice', 'https://www.youtube.com/watch?v=uRRKVif4D5c', 900, 1, FALSE);
+  END LOOP;
+END$$;
 
-DO $$
-BEGIN
-  -- 2️⃣ PROGRESS (Tiến độ học tập) - ~10 bản ghi
-  WITH student_ids AS (
-      SELECT id, email FROM users WHERE role = 'student'
-  ),
-  course_ids AS (
-      SELECT id, title FROM courses
-  ),
-  lesson_ids AS (
-      SELECT id, section_id, duration_sec FROM lessons LIMIT 10
-  )
-  INSERT INTO progress (user_id, lesson_id, watched_sec, is_done, updated_at)
-  VALUES
-  -- Tommy Pham (React)
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'),
-   (SELECT id FROM lessons WHERE title='What is React?'),
-   (SELECT duration_sec FROM lessons WHERE title='What is React?'),
-   TRUE, now() - interval '25 days'),
+ALTER TABLE courses
+ALTER COLUMN price TYPE DOUBLE PRECISION USING (price::double precision),
+ALTER COLUMN promo_price TYPE DOUBLE PRECISION USING (promo_price::double precision),
+ALTER COLUMN rating_avg TYPE DOUBLE PRECISION USING (rating_avg::double precision);
 
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'),
-   (SELECT id FROM lessons WHERE title='Props and State'),
-   (SELECT duration_sec/2 FROM lessons WHERE title='Props and State'),
-   FALSE, now() - interval '20 days'),
 
-  ((SELECT id FROM student_ids WHERE email = 'tommy@academy.com'),
-   (SELECT id FROM lessons WHERE title='Using useState and useEffect'),
-   60, FALSE, now() - interval '10 days'),
-
-  -- Hannah Vu (AWS Cloud)
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
-   (SELECT id FROM lessons WHERE title='What is Cloud Computing?'),
-   (SELECT duration_sec FROM lessons WHERE title='What is Cloud Computing?'),
-   TRUE, now() - interval '18 days'),
-
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
-   (SELECT id FROM lessons WHERE title='Amazon EC2 and S3'),
-   (SELECT duration_sec FROM lessons WHERE title='Amazon EC2 and S3'),
-   TRUE, now() - interval '15 days'),
-
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
-   (SELECT id FROM lessons WHERE title='Deploying on AWS Lambda'),
-   (SELECT duration_sec*3/4 FROM lessons WHERE title='Deploying on AWS Lambda'),
-   FALSE, now() - interval '5 days'),
-
-  ((SELECT id FROM student_ids WHERE email = 'hannah@academy.com'),
-   (SELECT id FROM lessons WHERE title='Understanding Threats'),
-   (SELECT duration_sec/2 FROM lessons WHERE title='Understanding Threats'),
-   FALSE, now() - interval '1 days'),
-
-  -- Kevin Do (UI/UX)
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'),
-   (SELECT id FROM lessons WHERE title='Design Thinking Basics'),
-   (SELECT duration_sec FROM lessons WHERE title='Design Thinking Basics'),
-   TRUE, now() - interval '10 days'),
-
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'),
-   (SELECT id FROM lessons WHERE title='Using Figma'),
-   (SELECT duration_sec*9/10 FROM lessons WHERE title='Using Figma'),
-   FALSE, now() - interval '5 days'),
-
-  ((SELECT id FROM student_ids WHERE email = 'kevin@academy.com'),
-   (SELECT id FROM lessons WHERE title='Testing Techniques'),
-   0, FALSE, now() - interval '1 days')
-  ON CONFLICT DO NOTHING;
-END $$;
-
--- ========================================================
--- 06_reviews.sql
--- Người thực hiện: Phúc
--- Nhiệm vụ: Tạo dữ liệu đánh giá (reviews)
--- Mỗi khóa học có khoảng 4–5 đánh giá từ các học viên
--- ========================================================
-
--- Giả định: bảng reviews có các cột:
--- id | user_id | course_id | rating | comment | created_at
-
-INSERT INTO reviews (user_id, course_id, rating, comment, created_at)
-VALUES
--- 1️⃣ Modern Web Development with React (5 reviews)
-((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
- 5, 'Amazing course! Helped me understand React clearly.', now() - interval '28 days'),
-
-((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
- 4, 'Good content, but could use more hands-on coding.', now() - interval '26 days'),
-
-((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
- 5, 'Instructor explains concepts very well. Loved it!', now() - interval '23 days'),
-
-((SELECT id FROM users WHERE email='lily@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
- 4, 'Nice structure, examples are clear and helpful.', now() - interval '20 days'),
-
-((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Modern Web Development with React' LIMIT 1),
- 5, 'Very practical and beginner-friendly!', now() - interval '19 days'),
-
--- 2️⃣ Flutter for Beginners (4 reviews)
-((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
- 4, 'Good for starting Flutter, nice step-by-step approach.', now() - interval '25 days'),
-
-((SELECT id FROM users WHERE email='jason@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
- 5, 'Really fun! I built my first app after this course.', now() - interval '22 days'),
-
-((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
- 4, 'Great visuals, a bit fast in advanced parts though.', now() - interval '18 days'),
-
-((SELECT id FROM users WHERE email='sarah@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Flutter for Beginners' LIMIT 1),
- 5, 'Loved it! The lessons were clear and easy to follow.', now() - interval '16 days'),
-
--- 3️⃣ AWS Cloud Fundamentals (5 reviews)
-((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
- 5, 'Excellent introduction to AWS core services.', now() - interval '14 days'),
-
-((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
- 4, 'Good overview, I liked the EC2 and S3 labs.', now() - interval '12 days'),
-
-((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
- 5, 'Super useful and very up-to-date.', now() - interval '10 days'),
-
-((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
- 4, 'Clear explanations, could use more practice examples.', now() - interval '8 days'),
-
-((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='AWS Cloud Fundamentals' LIMIT 1),
- 5, 'Perfect for beginners to cloud computing!', now() - interval '6 days'),
-
--- 4️⃣ UI/UX Design for Beginners (4 reviews)
-((SELECT id FROM users WHERE email='kevin@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
- 5, 'Loved this course! Strong fundamentals in design.', now() - interval '10 days'),
-
-((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
- 4, 'Nice visuals, Figma lessons were really cool.', now() - interval '8 days'),
-
-((SELECT id FROM users WHERE email='sarah@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
- 5, 'Great mix of theory and practice.', now() - interval '7 days'),
-
-((SELECT id FROM users WHERE email='lily@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='UI/UX Design for Beginners' LIMIT 1),
- 4, 'Could use more design challenges, but very good.', now() - interval '5 days'),
-
--- 5️⃣ Digital Marketing 101 (5 reviews)
-((SELECT id FROM users WHERE email='amy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
- 5, 'Fantastic course! I learned SEO and Ads basics.', now() - interval '6 days'),
-
-((SELECT id FROM users WHERE email='tommy@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
- 4, 'Good examples, very practical for real-world work.', now() - interval '5 days'),
-
-((SELECT id FROM users WHERE email='hannah@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
- 5, 'Clear structure, easy to follow.', now() - interval '4 days'),
-
-((SELECT id FROM users WHERE email='jason@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
- 5, 'Loved the instructor energy, great intro to marketing!', now() - interval '3 days'),
-
-((SELECT id FROM users WHERE email='ryan@academy.com' LIMIT 1),
- (SELECT id FROM courses WHERE title='Digital Marketing 101' LIMIT 1),
- 4, 'Helpful but could use more case studies.', now() - interval '2 days');
-
--- ========================================================
--- 07_update_stats.sql + 08_sanity_check.sql
--- Người thực hiện: VŨ
--- Nhiệm vụ:
---   07: Cập nhật số học viên và đánh giá trung bình cho khóa học
---   08: Kiểm tra tổng quan DB + test FTS
--- ========================================================
-
--- 07: CẬP NHẬT THỐNG KÊ KHÓA HỌC
-
--- 1. Cập nhật số học viên (students_count) cho mỗi khóa
-UPDATE courses c
-SET students_count = sub.cnt
-FROM (
-  SELECT course_id, COUNT(*) AS cnt
-  FROM enrollments
-  GROUP BY course_id
-) sub
-WHERE c.id = sub.course_id;
-
--- 2. Cập nhật số đánh giá (rating_count) và điểm trung bình (rating_avg)
-UPDATE courses c
-SET rating_avg = sub.avg, rating_count = sub.cnt
-FROM (
-  SELECT course_id, ROUND(AVG(rating), 2) AS avg, COUNT(*) AS cnt
-  FROM reviews
-  GROUP BY course_id
-) sub
-WHERE c.id = sub.course_id;
-
--- 3. Cập nhật số view (view_count) của mỗi course
-UPDATE courses
-SET view_count = FLOOR(100 + random() * 900); -- tạo số ngẫu nhiên 100–999
-
--- 08: SANITY CHECK + FTS TEST
-
--- 1. Tổng số bản ghi của tất cả bảng (gộp bằng UNION ALL)
-SELECT 'categories' AS table_name, COUNT(*) AS total FROM categories
-UNION ALL
-SELECT 'users', COUNT(*) FROM users
-UNION ALL
-SELECT 'courses', COUNT(*) FROM courses
-UNION ALL
-SELECT 'sections', COUNT(*) FROM sections
-UNION ALL
-SELECT 'lessons', COUNT(*) FROM lessons
-UNION ALL
-SELECT 'enrollments', COUNT(*) FROM enrollments
-UNION ALL
-SELECT 'reviews', COUNT(*) FROM reviews
-UNION ALL
-SELECT 'watchlist', COUNT(*) FROM watchlist;
-
--- 2. Test FTS: tìm các khóa học chứa từ khóa 'web'
-SELECT id, title
-FROM courses
-WHERE fts @@ to_tsquery('web');
-
-COMMIT;
-
--- ============================ END OF FULL SEED =========================
