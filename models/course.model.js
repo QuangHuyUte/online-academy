@@ -16,13 +16,13 @@ export function findById(id) {
   return db('courses').where('id', id).first();
 }
 
-export function add(course) {
+export async function add(course) {
   // Postgres: trả về [{ id }]
-  return db('courses').insert(course).returning('id');
+  return await db('courses').insert(course).returning('id');
 }
 
-export function patch(id, course) {
-  return db('courses')
+export async function patch(id, course) {
+  return await db('courses')
     .where('id', id)
     .update({ ...course, last_updated_at: db.fn.now() });
 }

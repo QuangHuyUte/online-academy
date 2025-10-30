@@ -74,7 +74,7 @@
 
             <div class="d-flex justify-content-between mt-2">
               <div class="form-text">
-                Use the <strong>image</strong> button to upload media (stored via <code>/instructor/upload</code>).
+                Insert images in the editor by pasting an <strong>image URL</strong>.
               </div>
               <button class="btn btn-sm btn-outline-secondary" type="button" id="btnExpandEditor">
                 <i class="bi bi-arrows-fullscreen"></i> Toggle Focus
@@ -131,20 +131,25 @@
             </div>
           </div>
 
-          <!-- Cover -->
+          <!-- Cover (USE URL instead of upload) -->
           <div class="mt-3">
-            <label class="form-label fw-semibold">Cover Image</label>
-            <div class="d-flex align-items-center gap-3">
+            <label class="form-label fw-semibold">Cover Image (URL)</label>
+            <div class="d-flex align-items-start gap-3">
               <div class="cover-wrap">
                 <img id="coverPreview" src="{{course.cover_url}}" alt="Cover preview" class="rounded"
                      style="{{#unless course.cover_url}}display:none;{{/unless}}">
                 <div class="cover-skeleton {{#if course.cover_url}}d-none{{/if}}"></div>
               </div>
-              <div>
-                <input id="coverFile" type="file" accept="image/*" class="form-control form-control-sm" />
+              <div class="flex-grow-1">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">URL</span>
+                  <input type="url" id="coverUrlInput" class="form-control" placeholder="https://example.com/image.jpg"
+                         value="{{course.cover_url}}">
+                  <button type="button" id="btnApplyCoverUrl" class="btn btn-outline-primary">Apply</button>
+                </div>
                 <input type="hidden" name="cover_url" id="coverUrl" value="{{course.cover_url}}">
-                <div class="form-text">
-                  Recommended: <strong>1600×900</strong>. JPG/PNG/WebP.
+                <div class="form-text mt-2">
+                  Paste a direct image URL (JPG/PNG/WebP, recommended <strong>1600×900</strong>).
                 </div>
               </div>
             </div>
@@ -255,11 +260,14 @@
   /* Buttons micro-interactions */
   .btn { transition: transform .15s ease, box-shadow .2s ease; }
   .btn:hover { transform: translateY(-1px); }
+
+  /* Focus mode for editor */
+  .rich-editor--focus { height: 640px; outline: 2px solid rgba(13,110,253,.2); }
 </style>
 
 <script>
 /* ==========================================================
-   Quill Setup + Image Upload
+   Quill Setup (paste image URL instead of uploading)
 ========================================================== */
 const quill = new Quill('#editor', {
   theme: 'snow',
@@ -277,32 +285,20 @@ const quill = new Quill('#editor', {
   }
 });
 
-// custom image upload
-function selectLocalImage() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.click();
-  input.onchange = async () => {
-    const file = input.files?.[0];
-    if (!file) return;
-    const form = new FormData();
-    form.append('file', file, file.name);
-    try {
-      const res = await fetch('/instructor/upload', { method: 'POST', body: form });
-      if (!res.ok) throw new Error('Upload failed: ' + res.status);
-      const data = await res.json();
-      if (!data?.url) throw new Error('Invalid upload response');
-      const range = quill.getSelection(true) || { index: quill.getLength() };
-      quill.insertEmbed(range.index, 'image', data.url, 'user');
-      quill.setSelection(range.index + 1, 0, 'user');
-      markDirty();
-    } catch (err) {
-      alert(err.message || 'Upload error');
-    }
-  };
+// Replace default image handler: prompt for URL
+function insertImageByUrl() {
+  const url = prompt('Paste the image URL');
+  if (!url) return;
+  try {
+    const range = quill.getSelection(true) || { index: quill.getLength() };
+    quill.insertEmbed(range.index, 'image', url.trim(), 'user');
+    quill.setSelection(range.index + 1, 0, 'user');
+    markDirty();
+  } catch (err) {
+    alert('Invalid image URL.');
+  }
 }
-quill.getModule('toolbar').addHandler('image', selectLocalImage);
+quill.getModule('toolbar').addHandler('image', insertImageByUrl);
 
 /* ==========================================================
    Counters + Live Preview
@@ -356,32 +352,38 @@ $promo?.addEventListener('input', () => { refreshPriceView(); markDirty(); });
 refreshPriceView();
 
 /* ==========================================================
-   Cover Upload + Preview
+   Cover URL (no upload)
 ========================================================== */
-const $file = document.getElementById('coverFile');
-const $url  = document.getElementById('coverUrl');
-const $img  = document.getElementById('coverPreview');
-const $thumb= document.getElementById('liveThumb');
+const $coverInput = document.getElementById('coverUrlInput');
+const $coverHidden = document.getElementById('coverUrl');
+const $coverImg  = document.getElementById('coverPreview');
+const $liveThumb = document.getElementById('liveThumb');
+const $coverSkeleton = document.querySelector('.cover-skeleton');
+const $thumbSkeleton = document.querySelector('.preview-skeleton');
+const $btnApplyCoverUrl = document.getElementById('btnApplyCoverUrl');
 
-$file?.addEventListener('change', async (e) => {
-  const f = e.target.files?.[0];
-  if (!f) return;
-  const form = new FormData();
-  form.append('file', f, f.name);
-  try {
-    const res = await fetch('/instructor/upload', { method: 'POST', body: form });
-    if (!res.ok) throw new Error('Upload failed: ' + res.status);
-    const data = await res.json();
-    if (!data?.url) throw new Error('Invalid upload response');
-    $url.value = data.url;
-    [$img, $thumb].forEach(el => { if (el){ el.src = data.url; el.classList.remove('d-none'); el.style.display=''; }});
-    document.querySelector('.cover-skeleton')?.classList.add('d-none');
-    document.querySelector('.preview-skeleton')?.classList.add('d-none');
-    markDirty();
-  } catch (err) {
-    alert(err.message || 'Upload error');
-  } finally {
-    e.target.value = '';
+function applyCoverUrl(url) {
+  if (!url) return;
+  const clean = String(url).trim();
+  $coverHidden.value = clean;
+  [$coverImg, $liveThumb].forEach(el => {
+    if (!el) return;
+    el.src = clean;
+    el.classList.remove('d-none');
+    el.style.display = '';
+  });
+  $coverSkeleton?.classList.add('d-none');
+  $thumbSkeleton?.classList.add('d-none');
+  markDirty();
+}
+
+$btnApplyCoverUrl?.addEventListener('click', () => {
+  applyCoverUrl($coverInput?.value);
+});
+$coverInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    applyCoverUrl($coverInput?.value);
   }
 });
 
@@ -473,14 +475,4 @@ if (grid) requestAnimationFrame(()=> grid.classList.add('loaded'));
   const sel = $cat?.selectedOptions?.[0];
   $liveCat.textContent = sel ? sel.textContent : '—';
 })();
-
-// Focus style for editor
-const editor = document.getElementById('editor');
-editor.addEventListener('focusin', ()=> editor.style.boxShadow = '0 0 0 3px rgba(25,135,84,.15)');
-editor.addEventListener('focusout', ()=> editor.style.boxShadow = 'none');
 </script>
-
-<style>
-  /* Focus mode for editor */
-  .rich-editor--focus { height: 640px; outline: 2px solid rgba(13,110,253,.2); }
-</style>
