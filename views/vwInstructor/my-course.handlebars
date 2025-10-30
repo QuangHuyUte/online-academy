@@ -28,7 +28,7 @@
         <tbody>
           {{#each courses}}
           <tr class="row-lift">
-            <td class="text-muted">{{add (../startIndex) (inc @index)}}</td>
+            <td class="text-muted">{{add (../startIndex) (inc @index 1)}}</td>
 
             <!-- Title + thumb + updated -->
             <td class="text-truncate" style="max-width: 480px;">
@@ -135,28 +135,7 @@
       </table>
     </div>
 
-    <!-- Pagination -->
-    {{#with (buildPagination page totalPages "/instructor/my-course") as |p|}}
-      <nav aria-label="Courses pages" class="mt-4 page-enter">
-        <ul class="pagination justify-content-center">
-          {{#if p.hasPrev}}
-            <li class="page-item">
-              <a class="page-link" href="{{p.prevUrl}}">Prev</a>
-            </li>
-          {{/if}}
-          {{#each p.pages}}
-            <li class="page-item {{#if this.active}}active{{/if}}">
-              <a class="page-link" href="{{this.url}}">{{this.page}}</a>
-            </li>
-          {{/each}}
-          {{#if p.hasNext}}
-            <li class="page-item">
-              <a class="page-link" href="{{p.nextUrl}}">Next</a>
-            </li>
-          {{/if}}
-        </ul>
-      </nav>
-    {{/with}}
+    
   {{else}}
     <div class="alert alert-info d-flex justify-content-between align-items-center softshadow border page-enter">
       <div>

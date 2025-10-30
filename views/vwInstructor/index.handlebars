@@ -6,7 +6,7 @@
       <h3 class="fw-bold mb-1">
         <i class="bi bi-person-workspace me-2"></i> Instructor Overview
       </h3>
-      <div class="text-muted">Xin chào, {{user.name}} — đây là cách khoá học của bạn “hiện ra” với người học.</div>
+      <div class="text-muted">Xin chào, {{user.name}} — đây là báo cáo sơ bộ về cách khoá học của bạn</div>
     </div>
     <a class="btn btn-primary" href="/instructor/courses/new">
       <i class="bi bi-plus-circle me-1"></i> New Course
@@ -53,6 +53,9 @@
   </div>
   {{/if}}
 
+  {{!-- Debug tạm thời, xoá sau khi OK --}}
+  <pre class="text-muted small">courses.length = {{courses.length}}</pre>
+
   {{#if courses.length}}
     <!-- ===== COURSE LIST ===== -->
     <div class="table-responsive softshadow rounded-3 border bg-white page-enter-stagger">
@@ -71,7 +74,8 @@
         <tbody>
           {{#each courses}}
           <tr class="row-lift">
-            <td class="text-muted">{{add (../startIndex) (inc @index)}}</td>
+            {{!-- chỉ dùng add, không dùng inc --}}
+            <td class="text-muted">{{add (../startIndex) (add @index 1)}}</td>
 
             <td class="text-truncate" style="max-width: 520px;">
               <div class="d-flex align-items-center gap-3">
@@ -97,7 +101,8 @@
 
                   <div class="small text-muted mt-1">
                     {{#if this.last_updated_at}}
-                      <i class="bi bi-clock me-1"></i> Updated: {{dateVN this.last_updated_at}}
+                      <i class="bi bi-clock me-1"></i>
+                      Updated: {{formatDate this.last_updated_at}}
                     {{/if}}
                     {{#if this.rating_count}}
                       <span class="mx-2">•</span>
@@ -141,23 +146,8 @@
 
             <td class="text-end">
               <div class="btn-group" role="group" aria-label="Row actions">
-                <!-- Xem như học viên -->
-                <a class="btn btn-sm btn-primary"
-                   href="/instructor/preview/{{this.id}}"
-                   data-bs-toggle="tooltip" data-bs-title="Xem như sinh viên thấy">
-                  <i class="bi bi-eye me-1"></i> View as student
-                </a>
-
-                <!-- Chỉnh nội dung -->
-                <a class="btn btn-sm btn-outline-secondary"
-                   href="/instructor/courses/{{this.id}}/content">
-                  <i class="bi bi-kanban me-1"></i> Edit content
-                </a>
-
-                <!-- Chỉnh bản preview -->
-                <a class="btn btn-sm btn-outline-secondary"
-                   href="/instructor/courses/{{this.id}}/edit">
-                  <i class="bi bi-pencil-square me-1"></i> Edit preview
+                <a class="btn btn-sm btn-primary" href="/instructor/preview/{{this.id}}">
+                  <i class="bi bi-eye me-1"></i> View
                 </a>
               </div>
             </td>
@@ -166,25 +156,6 @@
         </tbody>
       </table>
     </div>
-
-    <!-- Pagination -->
-    {{#with (buildPagination page totalPages "/instructor") as |p|}}
-      <nav aria-label="Courses pages" class="mt-4 page-enter">
-        <ul class="pagination justify-content-center">
-          {{#if p.hasPrev}}
-            <li class="page-item"><a class="page-link" href="{{p.prevUrl}}">Prev</a></li>
-          {{/if}}
-          {{#each p.pages}}
-            <li class="page-item {{#if this.active}}active{{/if}}">
-              <a class="page-link" href="{{this.url}}">{{this.page}}</a>
-            </li>
-          {{/each}}
-          {{#if p.hasNext}}
-            <li class="page-item"><a class="page-link" href="{{p.nextUrl}}">Next</a></li>
-          {{/if}}
-        </ul>
-      </nav>
-    {{/with}}
 
   {{else}}
     <!-- EMPTY STATE -->
@@ -206,33 +177,53 @@
   .row-lift { transition: transform .15s ease, box-shadow .18s ease, background-color .25s ease; }
   .row-lift:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.07); background-color:#fcfcfd; }
 
-  /* KPI cards */
   .kpi { border: 0; }
   .kpi-label { color:#6c757d; font-size:.85rem; }
   .kpi-value { font-size:1.6rem; font-weight:700; }
 
-  /* Empty */
   .empty-wrap { background: linear-gradient(180deg,#fff, #fafbfe); }
 
-  /* Motion */
-  .page-enter { animation: enter .28s ease both; }
-  .page-enter-stagger > [class*='col'], .page-enter-stagger tbody tr { opacity: 0; transform: translateY(8px); }
-  .page-enter-stagger.loaded > [class*='col'], .page-enter-stagger.loaded tbody tr { animation: itemIn .34s ease both; }
-  .page-enter-stagger.loaded > [class*='col']:nth-child(1){ animation-delay:.02s }
-  .page-enter-stagger.loaded > [class*='col']:nth-child(2){ animation-delay:.06s }
-  .page-enter-stagger.loaded > [class*='col']:nth-child(3){ animation-delay:.10s }
-  .page-enter-stagger.loaded > [class*='col']:nth-child(4){ animation-delay:.14s }
-  @keyframes enter { from{opacity:0; transform: translateY(-6px)} to{opacity:1; transform:none} }
-  @keyframes itemIn { to{opacity:1; transform:none} }
+.page-enter { 
+  animation: enter .28s ease both; 
+}
+
+/* ✅ Mặc định hiển thị bình thường (opacity:1) */
+.page-enter-stagger > [class*='col'],
+.page-enter-stagger tbody tr {
+  opacity: 1;
+  transform: none;
+}
+
+/* ✅ Khi có .loaded thì mới animate */
+.page-enter-stagger.loaded > [class*='col'],
+.page-enter-stagger.loaded tbody tr {
+  animation: itemIn .34s ease both;
+}
+
+/* ✅ Các delay nhỏ cho cột/row khi animate */
+.page-enter-stagger.loaded > [class*='col']:nth-child(1) { animation-delay:.02s; }
+.page-enter-stagger.loaded > [class*='col']:nth-child(2) { animation-delay:.06s; }
+.page-enter-stagger.loaded > [class*='col']:nth-child(3) { animation-delay:.10s; }
+.page-enter-stagger.loaded > [class*='col']:nth-child(4) { animation-delay:.14s; }
+
+@keyframes enter { 
+  from { opacity:0; transform: translateY(-6px); } 
+  to { opacity:1; transform:none; } 
+}
+@keyframes itemIn { 
+  from { opacity:0; transform: translateY(8px); } 
+  to { opacity:1; transform:none; } 
+}
+
 </style>
 
 <script>
-  // Stagger entrance
-  const wrap = document.querySelector('.page-enter-stagger');
-  if (wrap) requestAnimationFrame(()=> wrap.classList.add('loaded'));
-
-  // Tooltips (Bootstrap)
-  if (window.bootstrap) {
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const wrap = document.querySelector('.page-enter-stagger');
+    if (wrap) wrap.classList.add('loaded');
+    if (window.bootstrap) {
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    }
+  });
 </script>
+

@@ -1,46 +1,95 @@
-<div class="row">
+<div class="row page-enter">
   <div class="col-3">
     {{> sidebar}}
   </div>
 
   <div class="col-9">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h3 class="mb-0">Instructors</h3>
+    <!-- ===== Header ===== -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+      <div>
+        <h3 class="fw-bold mb-0">
+          <i class="bi bi-mortarboard text-primary me-2"></i> Instructors
+        </h3>
+        <div class="text-muted small">Manage instructor accounts</div>
+      </div>
+
       <form class="d-flex" method="get" action="/admin/instructors">
         <input name="q" class="form-control me-2" value="{{q}}" placeholder="Search name or email...">
-        <button class="btn btn-outline-primary">Search</button>
+        <button class="btn btn-primary">
+          <i class="bi bi-search"></i>
+        </button>
       </form>
     </div>
 
     {{> flash}}
 
+    <!-- ===== Table ===== -->
     {{#if instructors.length}}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
+      <div class="table-responsive card border-0 shadow-sm table-enter">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light sticky-top">
             <tr>
-              <th style="width:72px">#</th>
+              <th style="width:60px;">#</th>
               <th>Name</th>
               <th>Email</th>
-              <th>Avatar</th>
+              <th style="width:90px;">Avatar</th>
               <th>Bio</th>
-              <th class="text-end" style="width:160px">Action</th>
+              <th style="width:120px;">Status</th>
+              <th class="text-end" style="width:200px;">Action</th>
             </tr>
           </thead>
           <tbody>
             {{#each instructors}}
               <tr>
                 <td>{{inc (add ../offset @index)}}</td>
-                <td>{{this.name}}</td>
-                <td>{{this.email}}</td>
+
+                <td class="fw-semibold">{{this.name}}</td>
+
+                <td class="text-truncate" style="max-width:240px;">
+                  <a href="mailto:{{this.email}}" class="text-decoration-none">{{this.email}}</a>
+                </td>
+
                 <td>
                   {{#if this.avatar_url}}
-                    <img src="{{this.avatar_url}}" alt="" class="rounded border" style="height:36px;width:36px;object-fit:cover;">
-                  {{else}}—{{/if}}
+                    <img src="{{this.avatar_url}}" alt="Avatar"
+                         class="rounded border" style="height:40px;width:40px;object-fit:cover;">
+                  {{else}}
+                    <span class="text-muted">—</span>
+                  {{/if}}
                 </td>
-                <td class="text-truncate" style="max-width:320px;">{{this.bio}}</td>
+
+                <td class="text-truncate" style="max-width:300px;">{{this.bio}}</td>
+
+                <td>
+                  {{#if this.is_available}}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                      <i class="bi bi-check-circle me-1"></i> Available
+                    </span>
+                  {{else}}
+                    <span class="badge bg-secondary">
+                      <i class="bi bi-lock me-1"></i> Locked
+                    </span>
+                  {{/if}}
+                </td>
+
                 <td class="text-end">
-                  <a href="/admin/instructors/{{this.id}}" class="btn btn-sm btn-outline-primary">View</a>
+                  <a href="/admin/instructors/{{this.id}}" class="btn btn-sm btn-outline-primary me-1">
+                    <i class="bi bi-eye"></i> View
+                  </a>
+
+                  <form action="/admin/instructors/{{this.id}}/availability" method="post" class="d-inline"
+                        onsubmit="return confirm('Bạn muốn {{#if this.is_available}}KHÓA{{else}}MỞ{{/if}} tài khoản giảng viên này?');">
+                    <input type="hidden" name="q" value="{{../q}}">
+                    <input type="hidden" name="page" value="{{../page}}">
+                    <input type="hidden" name="available" value="{{#if this.is_available}}0{{else}}1{{/if}}">
+                    <button class="btn btn-sm {{#if this.is_available}}btn-warning{{else}}btn-success{{/if}}">
+                      {{#if this.is_available}}
+                        <i class="bi bi-lock"></i> Lock
+                      {{else}}
+                        <i class="bi bi-unlock"></i> Unlock
+                      {{/if}}
+                    </button>
+                  </form>
                 </td>
               </tr>
             {{/each}}
@@ -48,22 +97,81 @@
         </table>
       </div>
 
-      {{#with (buildPagination page totalPages (concat "/admin/instructors?q=" (encodeURIComponent q))) as |p|}}
-        <nav>
-            <ul class="pagination">
-            {{#if p.hasPrev}} <li class="page-item"><a class="page-link" href="{{p.prevUrl}}">Prev</a></li> {{/if}}
-            {{#each p.pages}}
-                <li class="page-item {{#if this.active}}active{{/if}}">
-                <a class="page-link" href="{{this.url}}">{{this.page}}</a>
+      <!-- ===== Pagination ===== -->
+      {{#if (gt totalPages 1)}}
+        {{#with (buildPagination page totalPages (concat "/admin/instructors?q=" (encodeURIComponent q))) as |p|}}
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted small">
+              Page <strong>{{page}}</strong> of <strong>{{totalPages}}</strong>
+            </div>
+
+            <nav>
+              <ul class="pagination mb-0">
+                {{!-- Prev --}}
+                <li class="page-item {{#unless p.hasPrev}}disabled{{/unless}}" title="Previous page">
+                  <a class="page-link" href="{{#if p.hasPrev}}{{p.prevUrl}}{{else}}#{{/if}}">
+                    <i class="bi bi-chevron-left"></i>
+                  </a>
                 </li>
-            {{/each}}
-            {{#if p.hasNext}} <li class="page-item"><a class="page-link" href="{{p.nextUrl}}">Next</a></li> {{/if}}
-            </ul>
-        </nav>
+
+                {{!-- Page numbers --}}
+                {{#each p.pages}}
+                  <li class="page-item {{#if this.active}}active{{/if}}">
+                    <a class="page-link" href="{{this.url}}">{{this.page}}</a>
+                  </li>
+                {{/each}}
+
+                {{!-- Next --}}
+                <li class="page-item {{#unless p.hasNext}}disabled{{/unless}}" title="Next page">
+                  <a class="page-link" href="{{#if p.hasNext}}{{p.nextUrl}}{{else}}#{{/if}}">
+                    <i class="bi bi-chevron-right"></i>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
         {{/with}}
+      {{/if}}
 
     {{else}}
-      <div class="alert alert-info">No instructors found.</div>
+      <div class="alert alert-info d-flex justify-content-between align-items-center mt-3">
+        <div>No instructors found.</div>
+        <a href="/admin/instructors" class="btn btn-primary">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </a>
+      </div>
     {{/if}}
   </div>
 </div>
+
+<!-- ===== CSS & Motion ===== -->
+<style>
+  @media (prefers-reduced-motion:no-preference){
+    .page-enter{animation:fadeUp .4s ease-out both}
+    .table-enter{animation:fadeUp .45s .05s ease-out both}
+  }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .table tbody tr:hover{background:rgba(13,110,253,.05);transition:background .2s ease}
+  .badge{font-size:.85rem;padding:.4em .6em}
+  .btn-sm i{vertical-align:-1px}
+
+  /* ===== Pagination style ===== */
+  .pagination {
+    --bs-pagination-active-bg: var(--bs-primary);
+    --bs-pagination-active-border-color: var(--bs-primary);
+  }
+  .pagination .page-item.disabled .page-link {
+    color: #999;
+    pointer-events: none;
+    background: #f9f9f9;
+  }
+  .pagination .page-link {
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin: 0 2px;
+  }
+  .pagination .page-link:hover {
+    background: rgba(13,110,253,0.1);
+  }
+</style>

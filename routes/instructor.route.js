@@ -103,6 +103,7 @@ router.use((err, _req, res, next) => {
 
 /* ============================ INSTRUCTOR DASHBOARD (NEW) ============================ */
 /** ✅ Trang tổng quan giảng viên */
+// routes/instructor.route.js
 router.get(['/instructor', '/'], async (req, res, next) => {
   try {
     const got = await getInstructorFromSession(req);
@@ -115,34 +116,20 @@ router.get(['/instructor', '/'], async (req, res, next) => {
       res.flash?.('danger', 'Tài khoản chưa được gán quyền giảng viên.');
       return res.redirect('/');
     }
-    const { inst: me, user } = got;
+    const { inst: me } = got;
 
-    const limit = Math.max(1, Number(req.query.limit) || 10);
-    const page  = Math.max(1, Number(req.query.page)  || 1);
-    const offset = (page - 1) * limit;
+    // ⬇️ Lấy TẤT CẢ khoá học của giảng viên (không phân trang)
+    const courses = await courseModel.findOverviewByInstructorAll?.(me.id)
+                    ?? await courseModel.findOverviewByInstructor(me.id, 1000000, 0);
 
-    const [courses, totalRow, metrics] = await Promise.all([
-      courseModel.findOverviewByInstructor(me.id, limit, offset),
-      courseModel.countByInstructor(me.id),
-      courseModel.overviewMetrics(me.id),
-    ]);
-
-    const total = Number(totalRow?.amount || 0);
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-
-    console.log('[INSTRUCTOR] me.id =', me.id, 'user.id =', user?.id);
-    console.log('[INSTRUCTOR] list.length =', courses?.length || 0, 'total =', total);
-    if (courses && courses.length) {
-      console.log('[INSTRUCTOR] sample row =', courses[0]);
-    }
+    const metrics = await courseModel.overviewMetrics(me.id);
 
     return res.render('vwInstructor/index', {
       user: req.session.authUser,
       metrics,
       courses,
-      page,
-      totalPages,
-      startIndex: offset,
+      // luôn render từ 0
+      startIndex: 0,
     });
   } catch (err) {
     console.error('[GET /instructor] error:', err);
@@ -151,7 +138,11 @@ router.get(['/instructor', '/'], async (req, res, next) => {
 });
 
 
+
+
+
 /** ✅ Xem như sinh viên: /instructor/preview/:id */
+// ✅ Xem như sinh viên: /instructor/preview/:id
 router.get('/preview/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -167,10 +158,7 @@ router.get('/preview/:id', async (req, res, next) => {
 
     const sections = await sectionModel.findByCourse(id);
     const outline = await Promise.all(
-      sections.map(async (s) => {
-        const lessons = await lessonModel.findBySection(s.id);
-        return { ...s, lessons };
-      })
+      sections.map(async (s) => ({ ...s, lessons: await lessonModel.findBySection(s.id) }))
     );
 
     let students_count = 0, rating_avg = null, rating_count = 0;
@@ -181,17 +169,18 @@ router.get('/preview/:id', async (req, res, next) => {
       rating_count = Number(stats?.rating_count || 0);
     }
 
-    res.render('vwCourses/detail', {
+    res.render('vwInstructor/detail', {
+      title: 'Preview as Instructor',
       course: { ...course, students_count, rating_avg, rating_count },
       outline,
       outlineEmpty: sections.length === 0,
       hasReviews: rating_count > 0,
-      isEnrolled: true,
-      inWatchlist: false,
-      title: 'Preview as Student',
+      // 🚫 Không cho phép các hành động
+      isInstructorPreview: true,
     });
   } catch (err) { next(err); }
 });
+
 
 /* ============================ INSTRUCTOR FEATURE (CŨ) ============================ */
 

@@ -1,27 +1,112 @@
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-dark text-white fw-semibold">
-    <i class="bi bi-gear-fill me-2"></i> Admin Panel
+<div class="card shadow-sm border-0 sidebar-enter">
+  <div class="card-header bg-gradient bg-dark text-white fw-semibold d-flex align-items-center">
+    <i class="bi bi-gear-fill me-2"></i>
+    <span>Admin Panel</span>
   </div>
 
-  <div class="list-group list-group-flush">
+  <div class="list-group list-group-flush sidebar-menu">
+    <!-- Categories -->
     <a href="/admin/categories"
-       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Category')}}active{{/if}}">
-      <span><i class="bi bi-tags me-2"></i> Categories</span>
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center sidebar-item {{#if (contains ../title 'Category')}}active{{/if}}">
+      <span class="d-flex align-items-center">
+        <i class="bi bi-tags me-2"></i> Categories
+      </span>
+      <i class="bi bi-chevron-right small opacity-50"></i>
     </a>
 
+    <!-- Courses -->
     <a href="/admin/courses"
-       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Course')}}active{{/if}}">
-      <span><i class="bi bi-collection-play me-2"></i> Courses</span>
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center sidebar-item {{#if (contains ../title 'Course')}}active{{/if}}">
+      <span class="d-flex align-items-center">
+        <i class="bi bi-collection-play me-2"></i> Courses
+      </span>
+      <i class="bi bi-chevron-right small opacity-50"></i>
     </a>
 
+    <!-- Instructors -->
     <a href="/admin/instructors"
-       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Instructor')}}active{{/if}}">
-      <span><i class="bi bi-person-badge me-2"></i> Instructors</span>
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center sidebar-item {{#if (contains ../title 'Instructor')}}active{{/if}}">
+      <span class="d-flex align-items-center">
+        <i class="bi bi-person-badge me-2"></i> Instructors
+      </span>
+      <i class="bi bi-chevron-right small opacity-50"></i>
     </a>
 
+    <!-- Students -->
     <a href="/admin/students"
-       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {{#if (contains ../title 'Student')}}active{{/if}}">
-      <span><i class="bi bi-people me-2"></i> Students</span>
+       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center sidebar-item {{#if (contains ../title 'Student')}}active{{/if}}">
+      <span class="d-flex align-items-center">
+        <i class="bi bi-people me-2"></i> Students
+      </span>
+      <i class="bi bi-chevron-right small opacity-50"></i>
     </a>
   </div>
 </div>
+
+<!-- ===== CSS & Motion ===== -->
+<style>
+  @media (prefers-reduced-motion:no-preference){
+    .sidebar-enter { animation: fadeIn .4s ease-out both; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* --- Sidebar item --- */
+  .sidebar-menu .sidebar-item {
+    border: none;
+    padding: .8rem 1rem;
+    font-weight: 500;
+    border-radius: .5rem;
+    margin: .25rem .5rem;
+    color: #444;
+    background: transparent;
+    transition: all 0.25s ease;
+  }
+
+  /* Hover effect */
+  .sidebar-menu .sidebar-item:hover {
+    background: rgba(13,110,253,0.07);
+    color: var(--bs-primary);
+    transform: translateX(2px);
+  }
+
+  .sidebar-menu .sidebar-item:hover i.bi {
+    color: var(--bs-primary);
+  }
+
+  /* Active state — highlight nguyên khối */
+  .sidebar-menu .sidebar-item.active {
+    background: var(--bs-primary);
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: .5rem;
+    box-shadow: 0 0 8px rgba(13,110,253,.3);
+  }
+
+  .sidebar-menu .sidebar-item.active i {
+    color: #fff !important;
+  }
+
+  .sidebar-menu .sidebar-item.active:hover {
+    transform: none;
+    background: var(--bs-primary);
+  }
+
+  /* Chevron alignment */
+  .sidebar-menu .bi-chevron-right {
+    transition: transform .2s ease, color .2s ease;
+  }
+
+  .sidebar-menu .sidebar-item:hover .bi-chevron-right {
+    transform: translateX(3px);
+    color: var(--bs-primary);
+  }
+
+  /* Header */
+  .card-header {
+    font-size: 1rem;
+    letter-spacing: .3px;
+  }
+</style>

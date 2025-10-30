@@ -30,7 +30,16 @@ export async function add(user) {
   return typeof row === 'object' ? row.id : row;
 }
 
+export function setAvailability(userId, available) {
+  const safeValue = available === true || available === 1 || available === '1';
+  return db('users').where('id', userId).update({ is_available: safeValue });
+}
 
+
+export async function getAvailability(userId) {
+  const row = await db('users').where('id', userId).select('is_available').first();
+  return !!row?.is_available;
+}
 
 export function patch(id, user) {
   // LƯU Ý: Ở route nên whitelist field (name, avatar_url, email...) để tránh sửa role/password ngoài ý muốn
@@ -104,6 +113,8 @@ const userModel = {
   getpasswordHash,
   patch,
   // API mới hữu ích cho admin
+  setAvailability,
+  getAvailability,
   listAll,
   listByRole,
   findPage,

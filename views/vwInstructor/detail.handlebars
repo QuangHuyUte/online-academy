@@ -1,0 +1,218 @@
+<style>
+  .hover-shadow:hover { transform: translateY(-3px); transition: all .2s ease-in-out; box-shadow: 0 6px 15px rgba(0,0,0,.1); }
+  .course-logo { position:absolute; z-index:9999; background:#fff; padding:4px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,.2); transition:all .25s; }
+  .course-logo img { display:block; border-radius:6px; }
+  .course-logo:hover { transform: scale(1.05); box-shadow:0 8px 18px rgba(0,0,0,.25); }
+  .course-header { background: linear-gradient(90deg, #003973 0%, #005AA7 100%); width:100vw; margin-left:calc(-50vw + 50%); padding:60px 0; box-shadow:0 8px 25px rgba(0,0,0,.2); color:#fff; position:relative; z-index:1; }
+</style>
+
+<div class="container py-5">
+  <div class="course-header mb-5">
+    <div class="container">
+      <div class="row align-items-center">
+
+        <!-- LEFT -->
+        <div class="col-md-8 text-white">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <h1 class="fw-bold mb-0">{{course.title}}</h1>
+            {{#if isInstructorPreview}}
+              <span class="badge bg-warning text-dark ms-2">Instructor preview</span>
+            {{/if}}
+          </div>
+
+          <p class="mb-3">{{course.short_desc}}</p>
+
+          <div class="d-flex align-items-center flex-wrap">
+            <div class="text-warning me-2">
+              {{#each (range 1 6)}}
+                {{#ifCond @index '<=' ../course.rating_avg}}★{{else}}☆{{/ifCond}}
+              {{/each}}
+            </div>
+            <span class="fw-bold me-2">{{course.rating_avg}}/5</span>
+            <span>({{course.rating_count}} đánh giá)</span>
+            <span class="mx-2">|</span>
+            <span>{{course.students_count}} học viên</span>
+          </div>
+
+          <p class="mt-2">
+            <i class="bi bi-clock-history"></i> Cập nhật lần cuối:
+            {{formatDate course.last_updated_at}}
+          </p>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="col-md-4 text-center">
+          {{#if course.preview_video}}
+            <iframe width="100%" height="230" src="{{course.preview_video}}" title="{{course.title}}" allowfullscreen></iframe>
+          {{else}}
+            <img src="{{course.cover_url}}" alt="{{course.title}}" class="img-fluid rounded shadow">
+          {{/if}}
+
+          <h4 class="text-warning fw-bold mt-3">{{course.promo_price}}₫</h4>
+          {{#if course.price}}
+            <p class="text-decoration-line-through text-light small">{{course.price}}₫</p>
+          {{/if}}
+
+          {{!-- 🚫 Ẩn toàn bộ hành động khi là instructor preview --}}
+          {{#unless isInstructorPreview}}
+            {{#if isEnrolled}}
+              <button class="btn btn-secondary w-100" disabled>Đã đăng ký</button>
+            {{else}}
+              <form action="/courses/enroll/{{course.id}}" method="post">
+                <button type="submit" class="btn btn-outline-primary w-100">Đăng ký học</button>
+              </form>
+            {{/if}}
+
+            <!-- Watchlist -->
+            <form id="watchlistForm" class="mt-3">
+              <input type="hidden" id="courseId" value="{{course.id}}">
+              <button type="submit" id="watchlistBtn"
+                class="btn {{#if inWatchlist}}btn-danger{{else}}btn-outline-danger{{/if}} w-75">
+                <i class="bi {{#if inWatchlist}}bi-heart-fill{{else}}bi-heart{{/if}}"></i>
+                {{#if inWatchlist}}Đã yêu thích{{else}}Thêm vào yêu thích{{/if}}
+              </button>
+            </form>
+
+            <script>
+              document.getElementById('watchlistForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('watchlistBtn');
+                const courseId = document.getElementById('courseId').value;
+                const isAdded = btn.classList.contains('btn-danger');
+                const url = isAdded ? '/courses/watchlist/remove' : '/courses/watchlist/add';
+                try {
+                  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ course_id: courseId }) });
+                  const result = await res.json();
+                  if (res.status === 401) { alert(result.message || 'Vui lòng đăng nhập.'); return (window.location.href = '/account/signin'); }
+                  if (result.success) {
+                    btn.classList.toggle('btn-danger');
+                    btn.classList.toggle('btn-outline-danger');
+                    btn.innerHTML = isAdded ? '<i class="bi bi-heart"></i> Thêm vào yêu thích' : '<i class="bi bi-heart-fill"></i> Đã yêu thích';
+                  } else { alert(result.message || 'Lỗi khi xử lý yêu thích.'); }
+                } catch (err) { console.error('Watchlist error:', err); alert('Không thể kết nối đến máy chủ.'); }
+              });
+            </script>
+          {{else}}
+          {{/unless}}
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mt-4" id="courseTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Tổng quan</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="outline-tab" data-bs-toggle="tab" data-bs-target="#outline" type="button" role="tab">Đề cương</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">Đánh giá</button>
+      </li>
+    </ul>
+
+    <div class="tab-content p-4 border border-top-0 rounded-bottom">
+      <!-- Tổng quan -->
+      <div class="tab-pane fade show active" id="overview" role="tabpanel">
+        {{{course.long_desc_html}}}
+      </div>
+
+      <!-- Đề cương -->
+      <div class="tab-pane fade" id="outline" role="tabpanel">
+        {{#if outlineEmpty}}
+          <p class="text-muted">Chưa có nội dung đề cương.</p>
+        {{else}}
+          {{#each outline}}
+            <div class="mb-4">
+              <h5 class="fw-bold text-primary mt-3"><i class="bi bi-journal-text me-2"></i> {{title}}</h5>
+              <ul class="list-group mb-3">
+                {{#each lessons}}
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                      <i class="bi bi-play-btn text-danger me-2"></i>
+                      <span class="fw-semibold">{{title}}</span>
+                      {{#if duration_sec}}<small class="text-muted ms-2">⏱ {{duration_sec}}s</small>{{/if}}
+                    </div>
+                    {{#if is_preview}}
+                      <a href="{{video_url}}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-play-circle"></i> Xem thử
+                      </a>
+                    {{/if}}
+                  </li>
+                {{/each}}
+              </ul>
+            </div>
+          {{/each}}
+        {{/if}}
+      </div>
+
+      <!-- Đánh giá -->
+      <div class="tab-pane fade" id="reviews" role="tabpanel">
+        {{#if hasReviews}}
+          {{#each reviews}}
+            <div class="border-bottom pb-3 mb-3">
+              <div class="d-flex align-items-center mb-2">
+                <div class="fw-bold me-2">{{user_name}}</div>
+                <div class="text-warning">
+                  {{#each (range 1 6)}}
+                    {{#ifCond this '<=' ../rating}}★{{else}}☆{{/ifCond}}
+                  {{/each}}
+                </div>
+              </div>
+              <p class="mb-1">{{comment}}</p>
+              <small class="text-muted">Gửi ngày {{formatDate created_at}}</small>
+            </div>
+          {{/each}}
+        {{else}}
+          <p>Chưa có đánh giá nào cho khóa học này.</p>
+        {{/if}}
+
+        {{!-- 🚫 Ẩn form gửi đánh giá khi instructor preview --}}
+        {{#unless isInstructorPreview}}
+          <hr>
+          <h5 class="fw-bold mt-4">Gửi đánh giá của bạn</h5>
+          <form action="/courses/reviews/add" method="POST" class="mt-3">
+            <input type="hidden" name="course_id" value="{{course.id}}">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Chọn số sao:</label>
+              <select name="rating" class="form-select w-auto d-inline-block" required>
+                <option value="5">⭐⭐⭐⭐⭐ (5 - Tuyệt vời)</option>
+                <option value="4">⭐⭐⭐⭐ (4 - Tốt)</option>
+                <option value="3">⭐⭐⭐ (3 - Khá)</option>
+                <option value="2">⭐⭐ (2 - Trung bình)</option>
+                <option value="1">⭐ (1 - Kém)</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nhận xét của bạn:</label>
+              <textarea name="comment" class="form-control" rows="3" placeholder="Nhập đánh giá..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Gửi đánh giá</button>
+          </form>
+        {{else}}
+          <div class="alert alert-light border mt-4">
+            Bạn đang ở <b>chế độ xem thử</b>; chỉ có thể đọc đánh giá, không thể gửi đánh giá.
+          </div>
+        {{/unless}}
+
+        <!-- Giảng viên -->
+        <div class="row align-items-center mt-4">
+          <div class="col-md-2 text-center">
+            <img src="{{course.instructor_avatar}}" alt="{{course.instructor_name}}"
+                 class="rounded-circle img-fluid shadow-sm"
+                 style="width: 100px; height: 100px; object-fit: cover;">
+          </div>
+          <div class="col-md-10">
+            <h5 class="fw-bold">{{course.instructor_name}}</h5>
+            <p class="text-muted mb-1">{{course.instructor_bio}}</p>
+            <small class="text-secondary">Giảng viên chuyên ngành • {{course.category_name}}</small>
+          </div>
+        </div>
+
+        <hr class="my-5">
+
+      </div>
+    </div>
+  </div>
+</div>

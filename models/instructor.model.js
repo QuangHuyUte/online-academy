@@ -29,11 +29,22 @@ export function findAll() {
 export function findPage(offset, limit, keyword = '') {
   const q = db('instructors as i')
     .join('users as u', 'u.id', 'i.user_id')
-    .select('i.*', 'u.name', 'u.email')
+    .select(
+      'i.*',
+      'u.name',
+      'u.email',
+      db.ref('u.is_available').as('is_available') // NEW
+    )
     .orderBy('i.id', 'asc')
     .offset(offset)
     .limit(limit);
-  if (keyword) q.whereILike('u.name', `%${keyword}%`).orWhereILike('u.email', `%${keyword}%`);
+
+  if (keyword) {
+    q.where((b) =>
+      b.whereILike('u.name', `%${keyword}%`)
+       .orWhereILike('u.email', `%${keyword}%`)
+    );
+  }
   return q;
 }
 
@@ -46,6 +57,28 @@ export function countAll(keyword = '') {
   return q;
 }
 
+export function count(keyword = '') {
+  const q = db('instructors as i')
+    .join('users as u', 'u.id', 'i.user_id')
+    .count('* as amount')
+    .first();
+
+  if (keyword) {
+    q.where((b) =>
+      b.whereILike('u.name', `%${keyword}%`)
+       .orWhereILike('u.email', `%${keyword}%`)
+    );
+  }
+  return q;
+}
+
+export function findByIdWithUser(instructorId) {
+  return db('instructors as i')
+    .join('users as u', 'u.id', 'i.user_id')
+    .select('i.id', 'i.user_id', 'u.name', 'u.email', 'u.is_available')
+    .where('i.id', instructorId)
+    .first();
+}
 // ---- CRUD ----
 export function add(instructor) {
   return db('instructors').insert(instructor).returning('id'); // [{ id }]
@@ -122,6 +155,8 @@ const instructorModel = {
   findCoursesPage,
   // helpers
   isValidVideoUrl,
+  findByIdWithUser,
+  count,
 };
 
 export default instructorModel;

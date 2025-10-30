@@ -12,7 +12,7 @@ export default {
 
   // numbers & text
   inc: (v) => Number(v) + 1,
-  add: (a, b) => Number(a) + Number(b), // <— thêm để dùng STT theo trang
+  add: (a, b) => (Number(a) || 0) + (Number(b) || 0), // <— thêm để dùng STT theo trang
   truncate: (str, len = 120) => (str?.length > len ? str.slice(0, len) + '…' : (str || '')),
   stripHtml: (html = '') => String(html).replace(/<[^>]+>/gms, ''),
 
@@ -31,7 +31,7 @@ export default {
     for (let i = 0; i < Number(n || 0); i++) out += block.fn(i);
     return out;
   },
-
+  
   // formatting
     formatCurrency: (n, currency = 'VND', locale = 'vi-VN', opts) => {
     // Handlebars luôn truyền đối tượng options ở THAM SỐ CUỐI
@@ -111,9 +111,9 @@ export default {
   // string utils for HBS composing URLs
   concat: (...args) => args.slice(0, -1).join(''),               // <— thêm
   encodeURIComponent: (s='') => encodeURIComponent(String(s)),   // <— thêm
-
+  
   // pagination
-  buildPagination: (page = 1, totalPages = 1, baseUrl = '?') => {
+  /*buildPagination: (page = 1, totalPages = 1, baseUrl = '?') => {
     page = Math.max(1, Number(page) || 1);
     totalPages = Math.max(1, Number(totalPages) || 1);
 
@@ -143,12 +143,38 @@ export default {
       nextUrl: makeUrl(Math.min(totalPages, page + 1)),
       pages
     };
-    
-    
-    
-  },
-};
+  },*/
 
+  // pagination (fixed version)
+
+  buildPagination(page = 1, totalPages = 1, baseUrl = '?') {
+    const safeUrl = ensureSlash(baseUrl);
+    const current = Math.max(1, Number(page) || 1);
+    const total   = Math.max(1, Number(totalPages) || 1);
+
+    const join = (u, p) => {
+      const sep = u.includes('?') ? '&' : '?';
+      return `${u}${sep}page=${p}`;
+    };
+
+    const pages = [];
+    const start = Math.max(1, current - 2);
+    const end   = Math.min(total, current + 2);
+
+    for (let i = start; i <= end; i++)
+      pages.push({ page: i, url: join(safeUrl, i), active: i === current });
+
+    return {
+      hasPrev: current > 1,
+      hasNext: current < total,
+      prevUrl: join(safeUrl, current - 1),
+      nextUrl: join(safeUrl, current + 1),
+      pages,
+    };
+  },
+
+};
+  
 export function isYouTube(url = '') {
   return /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)/i.test(url);
 }
@@ -161,3 +187,4 @@ export function toYouTubeEmbed(url = '') {
   return id ? `https://www.youtube.com/embed/${id}` : '';
 }
 
+const ensureSlash = (url) => url.startsWith('/') ? url : '/' + url;

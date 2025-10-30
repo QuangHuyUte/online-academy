@@ -63,6 +63,24 @@ export function findOverviewByInstructorFlex(instructorId, _userId, limit = 10, 
     .limit(limit).offset(offset);
 }
 
+// models/course.model.js
+export function findOverviewByInstructorAll(instructorId) {
+  return db('courses as c')
+    .leftJoin('categories as cat', 'cat.id', 'c.cat_id')
+    .select(
+      'c.id', 'c.title', 'c.cover_url',
+      db.raw('COALESCE(cat.name, c.cat_id::text) as category'),
+      'c.students_count',
+      'c.rating_avg', 'c.rating_count',
+      'c.view_count',
+      'c.is_completed', 'c.is_removed',
+      'c.last_updated_at'
+    )
+    .where('c.instructor_id', instructorId)
+    .andWhere('c.is_removed', false)
+    .orderBy('c.id', 'desc');
+}
+
 
 export function countByInstructorFlex(instructorId, userId) {
   const ids = [instructorId, userId].filter(Boolean);
@@ -177,34 +195,53 @@ export function setRemoved(id, removed = true) {
     .update({ is_removed: removed, last_updated_at: db.fn.now() });
 }
 
-export function findPageAdmin(offset, limit, keyword = '', { showRemoved = true } = {}) {
+// cũ:
+// export function findPageAdmin(offset, limit, keyword = '', { showRemoved = true } = {}) {
+
+export function findPageAdmin(offset, limit, keyword = '', {
+  showRemoved = true,
+  catId = null,
+  instructorId = null,
+} = {}) {
   let q = db('courses as c')
     .leftJoin('categories as cat', 'cat.id', 'c.cat_id')
     .leftJoin('instructors as i', 'i.id', 'c.instructor_id')
     .leftJoin('users as u', 'u.id', 'i.user_id')
     .select(
-      'c.id', 'c.title',
-      'c.price', 'c.promo_price',
-      'c.is_completed', 'c.is_removed',
-      'c.view_count',            // nếu DB bạn đã thêm cột này
-      'c.last_updated_at',
+      'c.id','c.title',
+      'c.price','c.promo_price',
+      'c.is_completed','c.is_removed',
+      'c.view_count','c.last_updated_at',
       'cat.name as category',
       'u.name as instructor'
     )
-    .orderBy('c.last_updated_at', 'desc')
+    .orderBy('c.last_updated_at','desc')
     .offset(offset)
     .limit(limit);
 
   if (keyword) q.whereILike('c.title', `%${keyword}%`);
   if (!showRemoved) q.andWhere('c.is_removed', false);
+  if (catId) q.andWhere('c.cat_id', catId);
+  if (instructorId) q.andWhere('c.instructor_id', instructorId);
+
   return q;
 }
 
-export function countAdmin(keyword = '') {
-  const q = db('courses as c').count('* as amount').first();
+// cũ:
+// export function countAdmin(keyword = '') {
+export function countAdmin(keyword = '', {
+  showRemoved = true,
+  catId = null,
+  instructorId = null,
+} = {}) {
+  let q = db('courses as c').count('* as amount').first();
   if (keyword) q.whereILike('c.title', `%${keyword}%`);
+  if (!showRemoved) q.andWhere('c.is_removed', false);
+  if (catId) q.andWhere('c.cat_id', catId);
+  if (instructorId) q.andWhere('c.instructor_id', instructorId);
   return q;
 }
+
 
 /* =========================================
  * UTIL
@@ -485,30 +522,51 @@ export function findNewest7day() {
 }
 
 // Full-text search (plainto_tsquery trên cột fts)
+//export function findByKeyword(keyword, { limit = 4, offset = 0, sort = "rating" } = {}) {
+//  const query = db('courses').whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
+//  switch (sort) {
+//    case 'rating':
+//      query.orderBy('rating_avg', 'desc');
+//      break;
+//    case 'price':
+//      query.orderByRaw('COALESCE(promo_price, price) ASC');
+//      break;
+//    case 'newest':
+//      query.orderBy('created_at', 'desc');
+//      break;
+//    case 'bestseller':
+//      query.orderBy('students_count', 'desc');
+//      break;
+//
+//  }
+//  return query.limit(limit).offset(offset);
+//}
 export function findByKeyword(keyword, { limit = 4, offset = 0, sort = "rating" } = {}) {
-  const query = db('courses').whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
-  switch (sort) {
-    case 'rating':
-      query.orderBy('rating_avg', 'desc');
-      break;
-    case 'price':
-      query.orderByRaw('COALESCE(promo_price, price) ASC');
-      break;
-    case 'newest':
-      query.orderBy('created_at', 'desc');
-      break;
-    case 'bestseller':
-      query.orderBy('students_count', 'desc');
-      break;
+  const query = db('courses')
+    .whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
+    .andWhere(builder => builder.whereNull('is_removed').orWhere('is_removed', false)); // 👈 exclude hidden
 
+  switch (sort) {
+    case 'rating':   query.orderBy('rating_avg','desc'); break;
+    case 'price':    query.orderByRaw('COALESCE(promo_price, price) ASC'); break;
+    case 'newest':   query.orderBy('created_at','desc'); break;
+    case 'bestseller': query.orderBy('students_count','desc'); break;
   }
   return query.limit(limit).offset(offset);
 }
+
+//export function countByKeyword(keyword) {
+//  return db('courses')
+//    .count('*')
+//    .whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
+//    .first();
+//}
 
 export function countByKeyword(keyword) {
   return db('courses')
     .count('*')
     .whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
+    .andWhere(builder => builder.whereNull('is_removed').orWhere('is_removed', false)) // 👈 exclude hidden
     .first();
 }
 
@@ -611,33 +669,39 @@ export function countByInstructor(instructorId) {
 
 /** (Tuỳ chọn) Tổng hợp số liệu KPIs cho header */
 export async function overviewMetrics(instructorId) {
-  const [{ amount: total_courses }] = await Promise.all([
-    db('courses').where('instructor_id', instructorId).count('* as amount')
-  ]);
+  // Đếm khóa học
+  const rowsCount = await db('courses')
+    .where('instructor_id', instructorId)
+    .count('* as amount');
+  const total_courses = Number(rowsCount?.[0]?.amount || 0);
 
-  const [{ total_students }] = await db('enrollments as e')
+  // Tổng học viên (enrollments)
+  const rowsStudents = await db('enrollments as e')
     .join('courses as c', 'c.id', 'e.course_id')
     .where('c.instructor_id', instructorId)
     .count('* as total_students');
+  const total_students = Number(rowsStudents?.[0]?.total_students || 0);
 
-  const [{ avg_rating, rating_count }] = await db('reviews as r')
+  // Điểm trung bình + số review
+  const rowsRating = await db('reviews as r')
     .join('courses as c', 'c.id', 'r.course_id')
     .where('c.instructor_id', instructorId)
     .avg('r.rating as avg_rating')
     .count('* as rating_count');
+  const avg_rating = rowsRating?.[0]?.avg_rating != null
+    ? Number(rowsRating[0].avg_rating).toFixed(2)
+    : '0.00';
+  const rating_count = Number(rowsRating?.[0]?.rating_count || 0);
 
-  const [{ total_views }] = await db('courses')
+  // Tổng lượt xem
+  const rowsViews = await db('courses')
     .where('instructor_id', instructorId)
     .sum('view_count as total_views');
+  const total_views = Number(rowsViews?.[0]?.total_views || 0);
 
-  return {
-    total_courses: Number(total_courses || 0),
-    total_students: Number(total_students || 0),
-    avg_rating: (avg_rating ? Number(avg_rating).toFixed(2) : '0.00'),
-    total_views: Number(total_views || 0),
-    rating_count: Number(rating_count || 0),
-  };
+  return { total_courses, total_students, avg_rating, total_views, rating_count };
 }
+
 
 /* =========================================
  * DEFAULT EXPORT 
@@ -664,5 +728,5 @@ export default {
 
   findOverviewByInstructor, overviewMetrics, countByInstructor,
 
-  getCourseStats, countByInstructorFlex, findOverviewByInstructorFlex, overviewMetricsFlex,
+  getCourseStats, countByInstructorFlex, findOverviewByInstructorFlex, overviewMetricsFlex, findOverviewByInstructorAll,
 };

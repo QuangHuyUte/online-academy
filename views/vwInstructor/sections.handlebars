@@ -37,8 +37,8 @@
         <div class="fw-semibold mb-1">How to add lessons (3 steps)</div>
         <ol class="mb-0 ps-3">
           <li>Create a <strong>Section</strong> (e.g., “Getting Started”).</li>
-          <li>In that section, click <strong>Upload</strong> to choose your <code>.mp4/.webm/.ogg</code> file, or paste a valid <strong>YouTube URL</strong>.</li>
-          <li>Click <strong>Add Lesson</strong> or <strong>Save Lesson</strong>. Done ✅</li>
+          <li>Use <strong>Upload</strong> to send your <code>.mp4/.webm/.ogg</code> (or paste a <strong>YouTube URL</strong>).</li>
+          <li>Click <strong>Add Lesson</strong> / <strong>Save Lesson</strong>. ✅</li>
         </ol>
       </div>
     </div>
@@ -180,7 +180,7 @@
                                              required
                                              pattern="^(\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
                                              title="Use /uploads/... or YouTube URL (https://youtube.com/watch?v=... / https://youtu.be/...)">
-                                      <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="video_url_{{this.id}}">
+                                      <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="video_url_{{this.id}}" data-status="status_{{this.id}}">
                                         <i class="bi bi-upload me-1"></i> Upload
                                       </button>
                                       <button class="btn btn-outline-secondary btn-copy" type="button" data-target-input="video_url_{{this.id}}">
@@ -253,7 +253,7 @@
                                required
                                pattern="^(\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
                                title="Use /uploads/... or YouTube URL (https://youtube.com/watch?v=... / https://youtu.be/...)">
-                        <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="new_video_{{this.id}}">
+                        <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="new_video_{{this.id}}" data-status="status_new_{{this.id}}">
                           <i class="bi bi-upload me-1"></i> Upload
                         </button>
                         <button class="btn btn-outline-secondary btn-copy" type="button" data-target-input="new_video_{{this.id}}">
@@ -304,3 +304,99 @@
     </div>
   {{/if}}
 </div>
+
+<style>
+  .softshadow { box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+  .hover-lift { transition: transform .18s ease, box-shadow .18s ease; }
+  .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.08); }
+  .row-lift { transition: transform .15s ease, box-shadow .18s ease, background-color .25s ease; }
+  .row-lift:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.07); background-color:#fcfcfd; }
+  .page-enter { animation: enter .28s ease both; }
+  .page-enter-stagger > [class*='col'], .page-enter-stagger tbody tr { opacity: 1; transform: none; }
+  .page-enter-stagger.loaded > [class*='col'], .page-enter-stagger.loaded tbody tr { animation: itemIn .34s ease both; }
+  @keyframes enter { from{opacity:0; transform: translateY(-6px)} to{opacity:1; transform:none} }
+  @keyframes itemIn { from{opacity:0; transform: translateY(8px)} to{opacity:1; transform:none} }
+</style>
+
+{{!-- ======= Uploader (reused hidden input) ======= --}}
+<input type="file" id="__videoUploader" accept="video/mp4,video/webm,video/ogg" class="d-none" />
+
+<script>
+  // Tooltip & stagger
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.bootstrap) {
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    }
+    const wrap = document.querySelector('.page-enter-stagger');
+    if (wrap) wrap.classList.add('loaded');
+  });
+
+  // Copy helper
+  function copyToClipboard(inputEl) {
+    inputEl.select?.();
+    try {
+      navigator.clipboard?.writeText(inputEl.value) || document.execCommand('copy');
+    } catch {}
+  }
+
+  // Upload via /instructor/upload
+  (function initLessonUploaders(){
+    const hiddenFile = document.getElementById('__videoUploader');
+
+    let targetInput = null;
+    let statusEl = null;
+
+    // when user picked a file
+    hiddenFile.addEventListener('change', async (e) => {
+      if (!targetInput || !hiddenFile.files?.length) return;
+
+      const file = hiddenFile.files[0];
+      const fd = new FormData();
+      fd.append('file', file);
+
+      if (statusEl) statusEl.innerHTML = '<span class="text-primary"><i class="bi bi-cloud-upload"></i> Uploading...</span>';
+
+      try {
+        const resp = await fetch('/instructor/upload', { method: 'POST', body: fd });
+        const json = await resp.json();
+
+        if (!resp.ok || !json?.url) {
+          throw new Error(json?.error || 'Upload failed');
+        }
+
+        // fill input with /uploads/....mp4
+        targetInput.value = json.url;
+        if (statusEl) statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Uploaded</span>';
+      } catch (err) {
+        console.error('Upload error:', err);
+        if (statusEl) statusEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ' + (err.message || 'Upload error') + '</span>';
+        alert('Không thể upload video. ' + (err.message || ''));
+      } finally {
+        // reset input so picking the same file again still triggers change
+        hiddenFile.value = '';
+      }
+    });
+
+    // delegate click events for all .btn-upload & .btn-copy
+    document.addEventListener('click', (ev) => {
+      const upBtn = ev.target.closest('.btn-upload');
+      const cpBtn = ev.target.closest('.btn-copy');
+      if (upBtn) {
+        const inputId = upBtn.getAttribute('data-target-input');
+        const statusId = upBtn.getAttribute('data-status');
+        targetInput = document.getElementById(inputId);
+        statusEl = statusId ? document.getElementById(statusId) : null;
+        if (!targetInput) return alert('Target input not found.');
+        hiddenFile.click();
+      }
+      if (cpBtn) {
+        const inputId = cpBtn.getAttribute('data-target-input');
+        const i = document.getElementById(inputId);
+        if (!i || !i.value) return;
+        copyToClipboard(i);
+        cpBtn.classList.add('btn-success');
+        setTimeout(() => cpBtn.classList.remove('btn-success'), 600);
+      }
+    });
+  })();
+</script>

@@ -276,7 +276,6 @@ router.get('/:id', async (req, res) => {
    🎓 PHẦN CỦA BẠN (Feature Detail + Watchlist + Review)
 ================================ */
 
-
 router.post('/watchlist/add', async (req, res) => {
   try {
     const { course_id } = req.body;

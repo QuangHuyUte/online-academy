@@ -1,106 +1,277 @@
-<div class="row">
+<div class="row page-enter">
   <div class="col-3">
     {{> sidebar}}
   </div>
 
   <div class="col-9">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h3 class="mb-0">
-        {{#if category.id}}Edit Category{{else}}New Category{{/if}}
-      </h3>
-      <a href="/admin/categories" class="btn btn-outline-secondary">Back</a>
+    <!-- ======= BREADCRUMB + HEADER ======= -->
+    <nav class="small text-muted mb-2 d-flex align-items-center gap-2">
+      <i class="bi bi-house-door"></i>
+      <a class="text-decoration-none" href="/admin/categories">Admin</a>
+      <span class="mx-1">/</span>
+      <a class="text-decoration-none" href="/admin/categories">Categories</a>
+      <span class="mx-1">/</span>
+      <span class="fw-semibold">{{#if category.id}}Edit{{else}}New{{/if}}</span>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex align-items-center gap-2">
+        <div class="brand-dot"></div>
+        <h3 class="mb-0 fw-bold">
+          {{#if category.id}}Edit Category{{else}}New Category{{/if}}
+        </h3>
+        {{#if category.id}}
+          <span class="badge rounded-pill bg-light text-dark border ms-1">#{{category.id}}</span>
+        {{/if}}
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="/admin/categories" class="btn btn-outline-secondary" data-bs-toggle="tooltip" data-bs-title="Back to list">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+      </div>
     </div>
 
     {{> flash}}
 
-    <form id="frmCategory" method="post" action="{{#if category.id}}/admin/categories/{{category.id}}{{else}}/admin/categories{{/if}}">
-      {{#if category.id}}
-        <input type="hidden" name="id" value="{{category.id}}">
-      {{/if}}
+    <!-- ======= MAIN CARD ======= -->
+    <div class="card shadow-sm card-enter">
+      <div class="card-body">
+        <form id="frmCategory" method="post" action="{{#if category.id}}/admin/categories/{{category.id}}{{else}}/admin/categories{{/if}}">
+          {{#if category.id}}
+            <input type="hidden" name="id" value="{{category.id}}">
+          {{/if}}
 
-      <div class="mb-3">
-        <label class="form-label">Name <span class="text-danger">*</span></label>
-        <input name="name" class="form-control" value="{{category.name}}" placeholder="e.g. Web Development" required autofocus>
-        <div class="form-text">Tên hiển thị cho người dùng (bắt buộc).</div>
+          <div class="row g-4">
+            <!-- LEFT: FORM -->
+            <div class="col-lg-8">
+              <!-- NAME -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">
+                  Name <span class="text-danger">*</span>
+                </label>
+                <input name="name"
+                       class="form-control form-control-lg focus-ring"
+                       value="{{category.name}}"
+                       placeholder="e.g. Web Development"
+                       required
+                       autofocus
+                       aria-describedby="nameHelp">
+                <div id="nameHelp" class="form-text">
+                  Tên hiển thị cho người dùng.
+                </div>
+              </div>
+
+              <!-- SLUG + PREVIEW + COPY -->
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label fw-semibold mb-0">Slug</label>
+                  <div class="small text-muted">
+                    Để trống để tự sinh từ Name
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                  <input name="slug"
+                         class="form-control focus-ring"
+                         value="{{category.slug}}"
+                         placeholder="auto-generated-if-empty"
+                         aria-describedby="slugHelp slugPreviewBtn copySlugBtn">
+                  <button class="btn btn-outline-secondary" type="button" id="slugPreviewBtn" data-bs-toggle="tooltip" data-bs-title="Preview URL">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <button class="btn btn-outline-secondary" type="button" id="copySlugBtn" data-bs-toggle="tooltip" data-bs-title="Copy slug">
+                    <i class="bi bi-clipboard"></i>
+                  </button>
+                </div>
+                <div id="slugHelp" class="form-text">
+                  Chỉ gồm chữ thường, số và dấu gạch ngang.
+                </div>
+
+                <div class="slug-preview fade-in mt-2 small">
+                  <span class="text-muted">Preview:</span>
+                  <code class="ms-1" id="slugPreviewCode">/courses/category/<span id="slugPreviewValue">{{category.slug}}</span></code>
+                </div>
+              </div>
+
+              <!-- PARENT -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Parent Category</label>
+                <select name="parent_id" class="form-select focus-ring" aria-describedby="parentHelp">
+                  <option value="">-- None --</option>
+                  {{#each parents}}
+                    <option
+                      value="{{this.id}}"
+                      {{#if (eq this.id ../category.parent_id)}}selected{{/if}}
+                      {{#if (eq this.id ../category.id)}}disabled{{/if}}
+                    >
+                      {{this.name}}
+                    </option>
+                  {{/each}}
+                </select>
+                <div id="parentHelp" class="form-text">
+                  Chỉ chọn danh mục <strong>cấp 1</strong> làm cha (danh sách đã lọc sẵn).
+                </div>
+              </div>
+
+              <!-- ACTIONS -->
+              <div class="d-flex gap-2 mt-4">
+                <button id="btnSave" class="btn btn-success btn-lg btn-glow">
+                  <span class="save-label"><i class="bi bi-check2-circle me-1"></i>Save</span>
+                  <span class="save-spinner d-none">
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving...
+                  </span>
+                </button>
+                <a href="/admin/categories" class="btn btn-outline-secondary btn-lg">Cancel</a>
+
+                {{#if category.id}}
+                  <button formaction="/admin/categories/{{category.id}}/delete"
+                          formmethod="post"
+                          class="btn btn-danger btn-lg ms-auto"
+                          onclick="return confirm('Delete category {{category.name}}?');">
+                    <i class="bi bi-trash3 me-1"></i> Delete
+                  </button>
+                {{/if}}
+              </div>
+            </div>
+
+            <!-- RIGHT: INFO / TIPS -->
+            <div class="col-lg-4">
+              <div class="p-3 rounded-3 border bg-light-subtle info-enter">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-info-circle"></i>
+                  <strong>Hints</strong>
+                </div>
+                <ul class="small mb-0 ps-3">
+                  <li>Slug tự động sinh khi để trống hoặc rời ô Name.</li>
+                  <li>Không thể chọn chính danh mục làm cha của nó.</li>
+                  <li>Nhóm cấp 1 = <em>Group</em>, cấp 2 = <em>Leaf</em>.</li>
+                </ul>
+              </div>
+
+              {{#if category.id}}
+              <div class="mt-3 p-3 rounded-3 border">
+                <div class="small text-muted mb-2">Meta</div>
+                <div class="d-flex flex-wrap gap-2">
+                  <span class="badge bg-primary-subtle text-primary border">ID: {{category.id}}</span>
+                  {{#if category.parent_id}}
+                    <span class="badge bg-success-subtle text-success border">Type: Leaf</span>
+                  {{else}}
+                    <span class="badge bg-secondary-subtle text-dark border">Type: Group</span>
+                  {{/if}}
+                </div>
+              </div>
+              {{/if}}
+            </div>
+          </div>
+        </form>
       </div>
+    </div>
 
-      <div class="mb-3">
-        <label class="form-label">Slug</label>
-        <input name="slug" class="form-control" value="{{category.slug}}" placeholder="auto-generated-if-empty">
-        <div class="form-text">Để trống nếu muốn tự sinh từ Name. Chỉ gồm chữ thường, số, và dấu gạch ngang.</div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Parent Category</label>
-        <select name="parent_id" class="form-select">
-          <option value="">-- None --</option>
-          {{#each parents}}
-            <option
-              value="{{this.id}}"
-              {{#if (eq this.id ../category.parent_id)}}selected{{/if}}
-              {{!-- Không cho chọn chính nó làm cha --}}
-              {{#if (eq this.id ../category.id)}}disabled{{/if}}
-            >
-              {{this.name}}
-            </option>
-          {{/each}}
-        </select>
-        <div class="form-text">
-          Chỉ chọn danh mục <strong>cấp 1</strong> làm cha. Danh sách bên trên đã lọc sẵn các nhóm cấp 1.
+    <!-- TOAST -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+      <div id="toastCopied" class="toast align-items-center text-white bg-dark border-0" role="status" aria-live="polite" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">Slug copied!</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
       </div>
-
-      <div class="d-flex gap-2">
-        <button id="btnSave" class="btn btn-success">Save</button>
-        <a href="/admin/categories" class="btn btn-outline-secondary">Cancel</a>
-
-        {{#if category.id}}
-          <button
-            formaction="/admin/categories/{{category.id}}/delete"
-            formmethod="post"
-            class="btn btn-danger ms-auto"
-            onclick="return confirm('Delete category {{category.name}}?');"
-          >
-            Delete
-          </button>
-        {{/if}}
-      </div>
-    </form>
+    </div>
   </div>
 </div>
 
+<style>
+  /* motion preferences */
+  @media (prefers-reduced-motion: no-preference) {
+    .page-enter { animation: fadeUp .5s ease-out both; }
+    .card-enter { animation: fadeUp .6s .05s ease-out both; }
+    .info-enter { animation: fadeUp .6s .1s ease-out both; }
+    .slug-preview { animation: fadeIn .3s ease-in both; }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0 }
+    to   { opacity: 1 }
+  }
+
+  .brand-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: linear-gradient(135deg,#6ea8fe,#2ecc71);
+    box-shadow: 0 0 0 3px rgba(110,168,254,.15);
+  }
+
+  .focus-ring:focus {
+    box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
+    border-color: rgba(13,110,253,.6);
+  }
+
+  .btn-glow {
+    position: relative;
+    transition: transform .12s ease;
+  }
+  .btn-glow:hover { transform: translateY(-1px); }
+  .btn-glow::after {
+    content: ""; position: absolute; inset: -2px; border-radius: .6rem;
+    background: radial-gradient(120px 60px at var(--x,50%) 120%, rgba(255,255,255,.25), transparent 60%);
+    opacity: 0; transition: opacity .2s ease;
+    pointer-events: none;
+  }
+  .btn-glow:hover::after { opacity: 1; }
+
+  code#slugPreviewCode { background: #f8f9fa; padding: .15rem .4rem; border-radius: .375rem; }
+</style>
+
 <script>
-  // --- Tiny helpers ---
+  // ==== Tiny helpers ====
   const $ = (s, r = document) => r.querySelector(s);
   const slugify = (str = '') =>
-    str
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')     // bỏ dấu tiếng Việt
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g,'')                         // bỏ ký tự lạ
-      .trim().replace(/\s+/g,'-');                         // space -> dash
+    str.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+       .toLowerCase().replace(/[^a-z0-9\s-]/g,'')
+       .trim().replace(/\s+/g,'-');
 
-  const $form = $('#frmCategory');
-  const $btnSave = $('#btnSave');
-  const $name = $('[name="name"]');
-  const $slug = $('[name="slug"]');
+  const $form   = $('#frmCategory');
+  const $btn    = $('#btnSave');
+  const $name   = $('[name="name"]');
+  const $slug   = $('[name="slug"]');
   const $parent = $('[name="parent_id"]');
-  const categoryId = '{{category.id}}'; // string ('' nếu tạo mới)
+  const $preview = $('#slugPreviewValue');
+  const $slugPreviewBtn = $('#slugPreviewBtn');
+  const $copyBtn = $('#copySlugBtn');
+  const toastEl = $('#toastCopied');
+  const categoryId = '{{category.id}}'; // '' if new
 
-  // Tự sinh slug khi rời ô Name nếu slug đang trống
+  // Bootstrap tooltips
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+  // Keep pointer glow position
+  document.addEventListener('pointermove', e => {
+    document.querySelectorAll('.btn-glow').forEach(btn => {
+      const r = btn.getBoundingClientRect();
+      btn.style.setProperty('--x', `${((e.clientX - r.left) / r.width) * 100}%`);
+    });
+  });
+
+  // Generate slug on blur if empty
   $name?.addEventListener('blur', () => {
     if ($slug && !$slug.value.trim() && $name.value.trim()) {
       $slug.value = slugify($name.value);
+      $preview && ($preview.textContent = $slug.value);
     }
   });
 
-  // Làm sạch slug theo thời gian thực
+  // Sanitize slug live
   $slug?.addEventListener('input', (e) => {
     const pos = e.target.selectionStart;
     e.target.value = slugify(e.target.value);
     try { e.target.selectionStart = e.target.selectionEnd = pos; } catch {}
+    $preview && ($preview.textContent = e.target.value.trim());
   });
 
-  // Không cho chọn chính nó làm parent (phòng khi route chưa lọc)
+  // Parent cannot be itself
   $parent?.addEventListener('change', (e) => {
     const v = e.target.value;
     if (categoryId && v && String(v) === String(categoryId)) {
@@ -109,14 +280,41 @@
     }
   });
 
-  // Validate tối thiểu + chống double submit
+  // Unsaved changes guard
+  let dirty = false;
+  ['input','change','keyup'].forEach(evt => {
+    $form?.addEventListener(evt, () => { dirty = true; }, { once: true });
+  });
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // Submit: validate + spinner + disable + remove guard
   $form?.addEventListener('submit', (e) => {
     if (!$name.value.trim()) {
       e.preventDefault();
       return alert('Name không được trống.');
     }
-    // Không ép slug — BE sẽ tự sinh nếu để trống
-    $btnSave.disabled = true;
-    $btnSave.textContent = 'Saving...';
+    $btn.disabled = true;
+    $btn.querySelector('.save-label')?.classList.add('d-none');
+    $btn.querySelector('.save-spinner')?.classList.remove('d-none');
+    dirty = false;
+  });
+
+  // Preview URL in a new tab (uses current slug or generated)
+  $slugPreviewBtn?.addEventListener('click', () => {
+    const v = ($slug?.value?.trim()) || slugify($name?.value || '');
+    if ($preview) $preview.textContent = v;
+    // chỉ preview chuỗi, không điều hướng (có thể bật nếu muốn)
+  });
+
+  // Copy slug + toast
+  $copyBtn?.addEventListener('click', async () => {
+    const v = ($slug?.value?.trim()) || '';
+    if (!v) return;
+    try {
+      await navigator.clipboard.writeText(v);
+      if (toastEl) new bootstrap.Toast(toastEl).show();
+    } catch { alert('Cannot copy to clipboard.'); }
   });
 </script>

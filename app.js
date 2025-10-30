@@ -250,7 +250,7 @@ app.get('/', async (req, res, next) => {
   try {
     const role = (res.locals.authUser?.role || '').toLowerCase();
     if (role === 'instructor') return res.redirect('/instructor');
-    //if (role === 'admin')      return res.redirect('/admin');
+    if (role === 'admin')      return res.redirect('/admin/categories');
 
     // --- giữ nguyên render trang Home cho student/guest ---
     const courses_bestseller = await (courseModel.finBestSellerthanAvg?.() ?? []);
