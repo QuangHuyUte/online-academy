@@ -6,7 +6,6 @@
     <label for="sort" class="me-2 fw-semibold">Arrange by:</label>
 
     <select name="sort" id="sort" class="form-select w-auto" onchange="this.form.submit()">
-      <option value="">Select sorting criteria</option>
       <option value="rating"     {{#if (eq sort "rating")}}selected{{/if}}>Rating: High to Low</option>
       <option value="price"      {{#if (eq sort "price")}}selected{{/if}}>Price: Low to High</option>
       <option value="newest"     {{#if (eq sort "newest")}}selected{{/if}}>Newest</option>

@@ -13,14 +13,28 @@
         {{this.title}}
       </a>
     </h6>
-
-    <p class="text-muted small mb-1">
-      <i class="bi bi-people"></i> {{this.students_count}} học viên
-    </p>
-
-    <p class="text-muted small mb-1">
-      <i class="bi bi-eye"></i> {{this.view_count}} lượt xem
-    </p>
+    <div class="row row-cols-2 g-2">
+      <div class="col">
+        <p class="text-muted small mb-1">
+          <i class="bi bi-people"></i> {{this.students_count}} 
+        </p>
+      </div>
+      <div class="col">
+        <p class="text-muted small mb-1">
+          <i class="bi bi-eye"></i> {{this.view_count}}
+        </p>
+      </div>
+      <div class="col">
+        <p class="text-warning fw-semibold mb-1">
+          <i class="bi bi-star-fill"></i> {{this.rating_avg}}
+        </p>
+      </div>
+      <div class="col">
+        <p class="text-muted small mb-0">
+          <i class="bi bi-calendar"></i> {{formatDate this.created_at }}
+        </p>
+      </div>
+    </div>
 
     <p class="fw-bold mb-1">
       <i class="bi bi-currency-dollar"></i>
@@ -32,12 +46,7 @@
       {{/if}}
     </p>
 
-    <p class="text-warning fw-semibold mb-1">
-      <i class="bi bi-star-fill"></i> {{this.rating_avg}}
-    </p>
 
-    <p class="text-muted small mt-auto mb-0">
-      <i class="bi bi-calendar"></i> {{formatDate this.create_at "DD/MM/YYYY HH:mm"}}
     </p>
   </div>
 </div>
