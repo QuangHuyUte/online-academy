@@ -133,20 +133,20 @@ router.get('/details', async (req, res) => {
     const course = await courseModel.findFullById(id);
     if (!course) return res.status(404).render('404');
 
-    const outline = await courseModel.findOutlinePreview(id);
     const related = await courseModel.findTopByCategory(course.cat_id, id, 5);
     const reviews = await ratingModel.findByCourseId(id);
 
+    // ✅ Tính toán rating trung bình
     let avgRating = 0;
     if (reviews.length > 0)
       avgRating = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
-
     course.rating_avg = avgRating.toFixed(1);
     course.rating_count = reviews.length;
 
+    // ✅ Kiểm tra user
     const user_id = req.session.authUser?.id || null;
 
-    // ✅ Kiểm tra xem user đã đăng ký học khóa này chưa
+    // ✅ Kiểm tra đã đăng ký chưa
     let isEnrolled = false;
     if (user_id) {
       const enrolled = await db('enrollments')
@@ -155,19 +155,28 @@ router.get('/details', async (req, res) => {
       if (enrolled) isEnrolled = true;
     }
 
-    // ✅ Kiểm tra xem có trong watchlist không (đã có sẵn)
+    // ✅ Lấy outline tuỳ theo trạng thái đăng ký
+    let outline;
+    if (isEnrolled) {
+      outline = await courseModel.findFullOutline(id);
+    } else {
+      outline = await courseModel.findOutlinePreview(id);
+    }
+
+    // ✅ Kiểm tra watchlist
     let inWatchlist = false;
     if (user_id) {
       inWatchlist = await watchlistModel.exists(user_id, id);
     }
 
+    // ✅ Render view
     res.render('vwCourse/detail', {
       course,
       outline,
       related,
       reviews,
       inWatchlist,
-      isEnrolled, // ✅ truyền biến này sang view
+      isEnrolled,
       hasReviews: reviews.length > 0,
       outlineEmpty: outline.length === 0,
     });
@@ -176,6 +185,7 @@ router.get('/details', async (req, res) => {
     res.status(500).send('Không thể tải chi tiết khóa học.');
   }
 });
+
 
 
 router.post("/enroll/:id", async (req, res) => {

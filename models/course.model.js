@@ -325,6 +325,50 @@ export async function findOutlinePreview(courseId) {
   return Array.from(map.values());
 }
 
+// — Đề cương đầy đủ (hiện tất cả bài học, không giới hạn is_preview)
+export async function findFullOutline(courseId) {
+  const rows = await db('sections as s')
+    .leftJoin('lessons as l', 's.id', 'l.section_id')
+    .select(
+      's.id as section_id',
+      's.title as section_title',
+      's.order_no as section_order',
+      'l.id as lesson_id',
+      'l.title as lesson_title',
+      'l.video_url',
+      'l.duration_sec',
+      'l.is_preview',
+      'l.order_no as lesson_order'
+    )
+    .where('s.course_id', courseId)
+    .orderBy('s.order_no', 'asc')
+    .orderBy('l.order_no', 'asc');
+
+  const map = new Map();
+  for (const r of rows) {
+    if (!map.has(r.section_id)) {
+      map.set(r.section_id, {
+        id: r.section_id,
+        title: r.section_title,
+        order_no: r.section_order,
+        lessons: [],
+      });
+    }
+    if (r.lesson_id) {
+      map.get(r.section_id).lessons.push({
+        id: r.lesson_id,
+        title: r.lesson_title,
+        video_url: r.video_url,
+        duration_sec: r.duration_sec,
+        is_preview: r.is_preview,
+        order_no: r.lesson_order,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
+
 // — 5 khoá cùng category bán chạy (trừ chính nó)
 export function findTopByCategory(catId, excludeId, limit = 5) {
   return db('courses')
@@ -737,7 +781,7 @@ export default {
   // util
   countByCat, countByCategory,
   // preview/detail
-  findFullById, findOutlinePreview, findTopByCategory, getByIdJoined,
+  findFullById, findOutlinePreview, findTopByCategory, getByIdJoined,findFullOutline,
   // feeds/search
   getFeaturedCourses, getMostViewedCourses, getNewestCourses, countNewestCourses,
   getCoursesByCategory, findBestSellerAboveAvg, findNewest7day,

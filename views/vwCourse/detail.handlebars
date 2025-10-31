@@ -236,13 +236,13 @@
                             {{#each (range 1 6)}}
                             {{#ifCond @index '<=' ../course.rating_avg}}★{{else}}☆{{/ifCond}} {{/each}} </div>
                                 <span class="fw-bold me-2">{{course.rating_avg}}/5</span>
-                                <span>({{course.rating_count}} đánh giá)</span>
+                                <span>({{course.rating_count}} Comment)</span>
                                 <span class="mx-2">|</span>
-                                <span>{{course.students_count}} học viên</span>
+                                <span>{{course.students_count}} Student</span>
                         </div>
 
                         <p class="mt-2">
-                            <i class="bi bi-clock-history"></i> Cập nhật lần cuối:
+                            <i class="bi bi-clock-history"></i> Last Updated:
                             {{formatDate course.last_updated_at}}
                         </p>
                     </div>
@@ -262,11 +262,11 @@
                         {{/if}}
 
                         {{#if isEnrolled}}
-                        <button class="btn btn-secondary w-100" disabled>Đã đăng ký</button>
+                        <button class="btn btn-secondary w-100" disabled>Has Enrolled</button>
                         {{else}}
                         <form action="/courses/enroll/{{course.id}}" method="post">
                             <button type="submit" class="btn btn-outline-primary w-100">
-                                Đăng ký học
+                                Add to Cart
                             </button>
                         </form>
                         {{/if}}
@@ -278,7 +278,7 @@
                             <button type="submit" id="watchlistBtn"
                                 class="btn {{#if inWatchlist}}btn-danger{{else}}btn-outline-danger{{/if}} w-75">
                                 <i class="bi {{#if inWatchlist}}bi-heart-fill{{else}}bi-heart{{/if}}"></i>
-                                {{#if inWatchlist}}Đã yêu thích{{else}}Thêm vào yêu thích{{/if}}
+                                {{#if inWatchlist}}Already in Watchlist{{else}}Add to Watchlist{{/if}}
                             </button>
                         </form>
 
@@ -338,15 +338,15 @@
         <ul class="nav nav-tabs mt-4" id="courseTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview"
-                    type="button" role="tab">Tổng quan</button>
+                    type="button" role="tab">Overview</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="outline-tab" data-bs-toggle="tab" data-bs-target="#outline" type="button"
-                    role="tab">Đề cương</button>
+                    role="tab">Section</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button"
-                    role="tab">Đánh giá</button>
+                    role="tab">Comment</button>
             </li>
         </ul>
 
@@ -358,55 +358,83 @@
             </div>
 
             <!-- Đề cương -->
+
             <div class="tab-pane fade" id="outline" role="tabpanel">
                 {{#if outlineEmpty}}
-                <p class="text-muted">Chưa có nội dung đề cương.</p>
+                <p class="text-muted">Content not exist</p>
                 {{else}}
+
                 <!-- 🎬 PREVIEW PLAYER -->
                 <div id="previewPlayerContainer" class="mb-4 text-center" style="display: none;">
                     <h5 id="previewTitle" class="fw-bold text-primary mb-3"></h5>
                     <video id="previewPlayer" playsinline controls class="w-100 rounded shadow-sm"
                         style="max-width: 720px;"></video>
                 </div>
+
+                {{!-- ✅ Nếu người dùng đã đăng ký thì hiển thị toàn bộ outline --}}
+                {{#if isEnrolled}}
                 {{#each outline}}
-                <!-- Section -->
                 <div class="mb-4">
                     <h5 class="fw-bold text-primary mt-3">
                         <i class="bi bi-journal-text me-2"></i> {{title}}
                     </h5>
-
                     <ul class="list-group mb-3">
                         {{#each lessons}}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-play-btn text-danger me-2"></i>
+                                <i class="bi bi-play-btn text-success me-2"></i>
                                 <span class="fw-semibold">{{title}}</span>
-
                                 {{#if duration_sec}}
                                 <small class="text-muted ms-2">⏱ {{duration_sec}}s</small>
                                 {{/if}}
                             </div>
-
-                            {{#if is_preview}}
-                            <button class="btn btn-sm btn-outline-primary"
+                            <button class="btn btn-sm btn-outline-success"
                                 onclick="playPreview('{{video_url}}', '{{title}}')">
-                                <i class="bi bi-play-circle"></i> Xem thử
+                                <i class="bi bi-play-circle"></i> Watch Preview
                             </button>
-                            {{/if}}
-
                         </li>
                         {{/each}}
                     </ul>
                 </div>
                 {{/each}}
+
+                {{!-- ❌ Nếu chưa đăng ký, chỉ hiển thị section đầu tiên và các bài preview --}}
+                {{else}}
+                {{#each outline}}
+                {{#if @first}}
+                <div class="mb-4">
+                    <h5 class="fw-bold text-primary mt-3">
+                        <i class="bi bi-journal-text me-2"></i> {{title}}
+                    </h5>
+                    <ul class="list-group mb-3">
+                        {{#each lessons}}
+                        {{#if is_preview}}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-play-btn text-danger me-2"></i>
+                                <span class="fw-semibold">{{title}}</span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary"
+                                onclick="playPreview('{{video_url}}', '{{title}}')">
+                                <i class="bi bi-play-circle"></i> Watch Preview
+                            </button>
+                        </li>
+                        {{/if}}
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+                {{/each}}
+                {{/if}}
                 {{/if}}
             </div>
 
 
 
 
+
             <!-- Đánh giá -->
-            <!-- Đánh giá -->
+
             <div class="tab-pane fade" id="reviews" role="tabpanel">
                 {{#if hasReviews}}
                 {{#each reviews}}
@@ -422,34 +450,34 @@
                     </div>
                     {{/each}}
                     {{else}}
-                    <p>Chưa có đánh giá nào cho khóa học này.</p>
+                    <p>Don't have any comment yet.</p>
                     {{/if}}
 
                     <!-- 📝 Form gửi đánh giá -->
                     <hr>
-                    <h5 class="fw-bold mt-4">Gửi đánh giá của bạn</h5>
+                    <h5 class="fw-bold mt-4">Send your feedback !</h5>
                     <form action="/courses/reviews/add" method="POST" class="mt-3">
                         <input type="hidden" name="course_id" value="{{course.id}}">
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Chọn số sao:</label>
+                            <label class="form-label fw-semibold">Choose rating:</label>
                             <select name="rating" class="form-select w-auto d-inline-block" required>
-                                <option value="5">⭐⭐⭐⭐⭐ (5 - Tuyệt vời)</option>
-                                <option value="4">⭐⭐⭐⭐ (4 - Tốt)</option>
-                                <option value="3">⭐⭐⭐ (3 - Khá)</option>
-                                <option value="2">⭐⭐ (2 - Trung bình)</option>
-                                <option value="1">⭐ (1 - Kém)</option>
+                                <option value="5">⭐⭐⭐⭐⭐ (5 - Brilliant)</option>
+                                <option value="4">⭐⭐⭐⭐ (4 - Excellence)</option>
+                                <option value="3">⭐⭐⭐ (3 - Good)</option>
+                                <option value="2">⭐⭐ (2 - Not Good)</option>
+                                <option value="1">⭐ (1 - Bad)</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Nhận xét của bạn:</label>
-                            <textarea name="comment" class="form-control" rows="3" placeholder="Nhập đánh giá..."
+                            <label class="form-label fw-semibold">Your feedback:</label>
+                            <textarea name="comment" class="form-control" rows="3" placeholder="Send your feedback..."
                                 required></textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-send"></i> Gửi đánh giá
+                            <i class="bi bi-send"></i> Send feed back
                         </button>
                     </form>
                 </div>
@@ -465,7 +493,7 @@
                     <div class="col-md-10">
                         <h5 class="fw-bold">{{course.instructor_name}}</h5>
                         <p class="text-muted mb-1">{{course.instructor_bio}}</p>
-                        <small class="text-secondary">Giảng viên chuyên ngành • {{course.category_name}}</small>
+                        <small class="text-secondary">Subject instructor • {{course.category_name}}</small>
                     </div>
                 </div>
 
@@ -475,7 +503,7 @@
                 <section class="mt-5">
                     <h4 class="fw-bold mb-4 text-primary">
                         <i class="bi bi-bar-chart-line-fill text-warning me-2"></i>
-                        Top 5 khóa học cùng lĩnh vực được mua nhiều nhất
+                        Top 5 most purchased courses in the same field
                     </h4>
 
                     {{#if related.length}}
@@ -499,7 +527,7 @@
 
                                     <p class="text-warning mb-2">
                                         ★ {{rating_avg}}
-                                        <small class="text-muted">({{rating_count}} đánh giá)</small>
+                                        <small class="text-muted">({{rating_count}} Comment)</small>
                                     </p>
 
                                     <div class="mt-auto d-flex justify-content-between align-items-center">
@@ -535,41 +563,51 @@
                     let previewPlayer;
 
                     document.addEventListener("DOMContentLoaded", () => {
-                        // 🎬 Khởi tạo player YouTube mode
+                        // 🎬 Khởi tạo Plyr player
                         previewPlayer = new Plyr("#previewPlayer", {
                             ratio: "16:9",
                             youtube: { noCookie: true, rel: 0 }
                         });
                     });
 
-                    // ▶️ Khi người dùng bấm "Xem thử"
+                    // ▶️ Hàm phát video (YouTube hoặc file local)
                     function playPreview(videoUrl, title) {
-                        const videoId = extractYouTubeId(videoUrl);
-                        if (!videoId) {
-                            alert("❌ URL video không hợp lệ!");
-                            return;
-                        }
+                        const localPath = videoUrl?.startsWith("/uploads/") ? videoUrl : null;
+                        const ytId = extractYouTubeId(videoUrl);
 
-                        // Hiện player + set tiêu đề
+                        // Hiển thị player
                         document.getElementById("previewTitle").textContent = title;
                         const container = document.getElementById("previewPlayerContainer");
                         container.style.display = "block";
 
-                        // Nạp video mới vào player
-                        previewPlayer.source = {
-                            type: "video",
-                            sources: [{ src: videoId, provider: "youtube" }]
-                        };
+                        // Nếu là video trong thư mục public/uploads
+                        if (localPath) {
+                            previewPlayer.source = {
+                                type: "video",
+                                sources: [{ src: localPath, type: "video/mp4" }],
+                            };
+                        }
+                        // Nếu là link YouTube
+                        else if (ytId) {
+                            previewPlayer.source = {
+                                type: "video",
+                                sources: [{ src: ytId, provider: "youtube" }],
+                            };
+                        }
+                        // Nếu không hợp lệ
+                        else {
+                            alert("❌ Video URL không hợp lệ!");
+                            return;
+                        }
 
                         previewPlayer.play();
-
-                        // Cuộn xuống player
                         container.scrollIntoView({ behavior: "smooth", block: "center" });
                     }
 
-                    // 🔍 Trích ID YouTube từ nhiều dạng URL
+                    // 🔍 Trích ID YouTube
                     function extractYouTubeId(url) {
-                        const regex = /(?:youtube\.com\/(?:.*v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+                        const regex =
+                            /(?:youtube\.com\/(?:.*v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
                         const match = url?.match(regex);
                         return match ? match[1] : null;
                     }
