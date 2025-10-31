@@ -4,6 +4,19 @@
   .course-logo img { display:block; border-radius:6px; }
   .course-logo:hover { transform: scale(1.05); box-shadow:0 8px 18px rgba(0,0,0,.25); }
   .course-header { background: linear-gradient(90deg, #003973 0%, #005AA7 100%); width:100vw; margin-left:calc(-50vw + 50%); padding:60px 0; box-shadow:0 8px 25px rgba(0,0,0,.2); color:#fff; position:relative; z-index:1; }
+
+  /* ===== AESTHETICS for inline editor (reused) ===== */
+  .softshadow { box-shadow: 0 6px 18px rgba(0,0,0,.06); border: none; }
+  .hover-lift { transition: transform .2s ease, box-shadow .2s ease; }
+  .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.08); }
+  .rich-toolbar { background: #f6f7f9; border: 1px solid #e6e7ea; }
+  .rich-editor { height: 460px; background: #fff; border: 1px solid #e6e7ea; border-top: none; border-radius: 0 0 .5rem .5rem; }
+  .ql-toolbar.ql-snow { border: none; border-radius: .5rem .5rem 0 0; }
+  .ql-container.ql-snow { border: none; }
+
+  /* Buttons micro-interactions */
+  .btn { transition: transform .15s ease, box-shadow .2s ease; }
+  .btn:hover { transform: translateY(-1px); }
 </style>
 
 <div class="container py-5">
@@ -14,15 +27,23 @@
         <!-- LEFT -->
         <div class="col-md-8 text-white">
           <div class="d-flex align-items-center gap-2 mb-2">
-            <h1 class="fw-bold mb-0">{{course.title}}</h1>
+            <h1 class="fw-bold mb-0">
+              <!-- Title view/edit -->
+              <span id="vTitle">{{course.title}}</span>
+              <input id="eTitle" class="form-control form-control-sm d-none mt-2" value="{{course.title}}" maxlength="120">
+            </h1>
             {{#if isInstructorPreview}}
               <span class="badge bg-warning text-dark ms-2">Instructor preview</span>
             {{/if}}
           </div>
 
-          <p class="mb-3">{{course.short_desc}}</p>
+          <!-- Short description view/edit -->
+          <p class="mb-3">
+            <span id="vShort">{{course.short_desc}}</span>
+            <textarea id="eShort" class="form-control d-none mt-2" rows="2" maxlength="240">{{course.short_desc}}</textarea>
+          </p>
 
-            <div class="d-flex align-items-center flex-wrap">
+          <div class="d-flex align-items-center flex-wrap">
             <div class="text-warning me-2">
               {{#each (range 1 6)}}
                 {{#ifCond @index '<=' ../course.rating_avg}}★{{else}}☆{{/ifCond}}
@@ -34,24 +55,78 @@
             <span>{{course.students_count}} students</span>
           </div>
 
-            <p class="mt-2">
-            <i class="bi bi-clock-history"></i> Last updated:
-            {{formatDate course.last_updated_at}}
+          <p class="mt-2">
+            <i class="bi bi-clock-history"></i> Last updated: {{formatDate course.last_updated_at}}
           </p>
+
+          {{!-- Edit inline controls --}}
+          {{#if (or canEdit isInstructorPreview)}}
+            <div class="mt-2 d-flex gap-2">
+              <button id="btnToggleEdit" class="btn btn-warning btn-sm">
+                <i class="bi bi-pencil-square"></i> Edit inline
+              </button>
+              <button id="btnSaveInline" class="btn btn-primary btn-sm d-none">
+                <i class="bi bi-save2"></i> Save
+              </button>
+              <button id="btnCancelInline" class="btn btn-outline-secondary btn-sm d-none">
+                <i class="bi bi-x-circle"></i> Cancel
+              </button>
+            </div>
+          {{/if}}
         </div>
 
         <!-- RIGHT -->
         <div class="col-md-4 text-center">
-          {{#if course.preview_video}}
-            <iframe width="100%" height="230" src="{{course.preview_video}}" title="{{course.title}}" allowfullscreen></iframe>
-          {{else}}
-            <img src="{{course.cover_url}}" alt="{{course.title}}" class="img-fluid rounded shadow">
+          <!-- View media -->
+          <div id="vMedia">
+            {{#if course.preview_video}}
+              <iframe width="100%" height="230" src="{{course.preview_video}}" title="{{course.title}}" allowfullscreen></iframe>
+            {{else}}
+              <img src="{{course.cover_url}}" alt="{{course.title}}" class="img-fluid rounded shadow">
+            {{/if}}
+          </div>
+
+          <!-- Edit media -->
+          <div id="eMedia" class="d-none text-start">
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">Preview video URL (YouTube/embed)</label>
+              <input id="ePreview" type="url" class="form-control form-control-sm" value="{{course.preview_video}}">
+              <div class="form-text">Để trống nếu không dùng video preview.</div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small fw-semibold">Cover Image URL</label>
+              <input id="eCover" type="url" class="form-control form-control-sm" value="{{course.cover_url}}">
+            </div>
+            <div class="mt-2">
+              <button type="button" id="btnLiveApplyMedia" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-image"></i> Apply preview
+              </button>
+            </div>
+          </div>
+
+          <!-- Price view -->
+          <h4 class="text-warning fw-bold mt-3">
+            <span id="vPromo">${{course.promo_price}}</span>
+          </h4>
+          {{#if course.price}}
+            <p class="text-decoration-line-through text-light small">
+              <span id="vPrice">${{course.price}}</span>
+            </p>
           {{/if}}
 
-          <h4 class="text-warning fw-bold mt-3">${{course.promo_price}}</h4>
-          {{#if course.price}}
-            <p class="text-decoration-line-through text-light small">${{course.price}}</p>
-          {{/if}}
+          <!-- Price edit -->
+          <div id="ePriceWrap" class="d-none text-start mt-3">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Price</label>
+                <input id="ePrice" type="number" step="0.01" min="0" class="form-control form-control-sm" value="{{course.price}}">
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Promo price</label>
+                <input id="ePromo" type="number" step="0.01" min="0" class="form-control form-control-sm" value="{{course.promo_price}}">
+              </div>
+            </div>
+          </div>
 
           {{!-- 🚫 Ẩn toàn bộ hành động khi là instructor preview --}}
           {{#unless isInstructorPreview}}
@@ -66,7 +141,7 @@
             <!-- Watchlist -->
             <form id="watchlistForm" class="mt-3">
               <input type="hidden" id="courseId" value="{{course.id}}">
-                <button type="submit" id="watchlistBtn"
+              <button type="submit" id="watchlistBtn"
                 class="btn {{#if inWatchlist}}btn-danger{{else}}btn-outline-danger{{/if}} w-75">
                 <i class="bi {{#if inWatchlist}}bi-heart-fill{{else}}bi-heart{{/if}}"></i>
                 {{#if inWatchlist}}Favorited{{else}}Add to favorites{{/if}}
@@ -92,7 +167,6 @@
                 } catch (err) { console.error('Watchlist error:', err); alert('Cannot connect to server.'); }
               });
             </script>
-          {{else}}
           {{/unless}}
         </div>
 
@@ -115,7 +189,19 @@
     <div class="tab-content p-4 border border-top-0 rounded-bottom">
       <!-- Tổng quan -->
       <div class="tab-pane fade show active" id="overview" role="tabpanel">
-        {{{course.long_desc_html}}}
+        <!-- View mode -->
+        <div id="vLong">
+          {{{course.long_desc_html}}}
+        </div>
+
+        <!-- Edit mode -->
+        <div id="eLongWrap" class="d-none">
+          <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+          <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+
+          <div class="mb-2 small text-muted"><i class="bi bi-type"></i> Rich editor</div>
+          <div id="quillEditor" style="height:420px;background:#fff;border:1px solid #e6e7ea;">{{{course.long_desc_html}}}</div>
+        </div>
       </div>
 
       <!-- Đề cương -->
@@ -211,8 +297,162 @@
         </div>
 
         <hr class="my-5">
-
       </div>
     </div>
   </div>
 </div>
+
+{{!-- Hidden form to POST back to existing edit endpoint --}}
+{{#if (or canEdit isInstructorPreview)}}
+<form id="inlineSaveForm" class="d-none" method="post" action="/instructor/courses/{{course.id}}">
+  <input type="hidden" name="title" id="fTitle">
+  <input type="hidden" name="short_desc" id="fShort">
+  <input type="hidden" name="long_desc_html" id="fLong">
+  <input type="hidden" name="cover_url" id="fCover">
+  <input type="hidden" name="preview_video" id="fPreview">
+  <input type="hidden" name="price" id="fPrice">
+  <input type="hidden" name="promo_price" id="fPromo">
+  {{#if course.cat_id}}<input type="hidden" name="cat_id" value="{{course.cat_id}}">{{/if}}
+</form>
+{{/if}}
+
+<script>
+(function(){
+  const canEdit = {{#if (or canEdit isInstructorPreview)}}true{{else}}false{{/if}};
+  if (!canEdit) return;
+
+  const btnEdit   = document.getElementById('btnToggleEdit');
+  const btnSave   = document.getElementById('btnSaveInline');
+  const btnCancel = document.getElementById('btnCancelInline');
+
+  const vTitle = document.getElementById('vTitle');
+  const eTitle = document.getElementById('eTitle');
+
+  const vShort = document.getElementById('vShort');
+  const eShort = document.getElementById('eShort');
+
+  const vMedia = document.getElementById('vMedia');
+  const eMedia = document.getElementById('eMedia');
+
+  const vPrice = document.getElementById('vPrice');
+  const vPromo = document.getElementById('vPromo');
+  const ePriceWrap = document.getElementById('ePriceWrap');
+  const ePrice = document.getElementById('ePrice');
+  const ePromo = document.getElementById('ePromo');
+
+  const eCover = document.getElementById('eCover');
+  const ePreview = document.getElementById('ePreview');
+  const btnLiveApplyMedia = document.getElementById('btnLiveApplyMedia');
+
+  const vLong = document.getElementById('vLong');
+  const eLongWrap = document.getElementById('eLongWrap');
+
+  const form = document.getElementById('inlineSaveForm');
+  const fTitle = document.getElementById('fTitle');
+  const fShort = document.getElementById('fShort');
+  const fLong  = document.getElementById('fLong');
+  const fCover = document.getElementById('fCover');
+  const fPreview = document.getElementById('fPreview');
+  const fPrice = document.getElementById('fPrice');
+  const fPromo = document.getElementById('fPromo');
+
+  let quill = null;
+
+  function enterEdit(){
+    btnEdit?.classList.add('d-none');
+    btnSave?.classList.remove('d-none');
+    btnCancel?.classList.remove('d-none');
+
+    vTitle?.classList.add('d-none');  eTitle?.classList.remove('d-none');
+    vShort?.classList.add('d-none');  eShort?.classList.remove('d-none');
+    vMedia?.classList.add('d-none');  eMedia?.classList.remove('d-none');
+    ePriceWrap?.classList.remove('d-none');
+
+    vLong?.classList.add('d-none');
+    eLongWrap?.classList.remove('d-none');
+
+    // init quill
+    if (!quill) {
+      quill = new Quill('#quillEditor', {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            [{ header: [1, 2, 3, false] }],
+            ['bold','italic','underline','strike'],
+            [{ color: [] }, { background: [] }],
+            [{ align: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link','image','video'],
+            ['clean']
+          ]
+        }
+      });
+      // custom image handler → URL
+      const tb = quill.getModule('toolbar');
+      tb.addHandler('image', function(){
+        const url = prompt('Paste the image URL');
+        if (!url) return;
+        const r = quill.getSelection(true) || { index: quill.getLength() };
+        quill.insertEmbed(r.index, 'image', String(url).trim(), 'user');
+        quill.setSelection(r.index + 1, 0, 'user');
+      });
+    }
+  }
+
+  function leaveEdit(){
+    btnEdit?.classList.remove('d-none');
+    btnSave?.classList.add('d-none');
+    btnCancel?.classList.add('d-none');
+
+    eTitle?.classList.add('d-none');  vTitle?.classList.remove('d-none');
+    eShort?.classList.add('d-none');  vShort?.classList.remove('d-none');
+    eMedia?.classList.add('d-none');  vMedia?.classList.remove('d-none');
+    ePriceWrap?.classList.add('d-none');
+
+    eLongWrap?.classList.add('d-none');
+    vLong?.classList.remove('d-none');
+  }
+
+  btnEdit?.addEventListener('click', enterEdit);
+  btnCancel?.addEventListener('click', leaveEdit);
+
+  // Live apply preview/cover
+  btnLiveApplyMedia?.addEventListener('click', ()=>{
+    const pv = (ePreview?.value || '').trim();
+    const cv = (eCover?.value || '').trim();
+    if (pv) {
+      vMedia.innerHTML = `<iframe width="100%" height="230" src="${pv}" allowfullscreen></iframe>`;
+    } else if (cv) {
+      vMedia.innerHTML = `<img src="${cv}" class="img-fluid rounded shadow">`;
+    }
+  });
+
+  function validate(){
+    const P = parseFloat(ePrice?.value || '');
+    const D = parseFloat(ePromo?.value || '');
+    if (!isNaN(P) && !isNaN(D) && D > P) {
+      alert('Promo price must not be greater than Price.');
+      return false;
+    }
+    if (!eTitle?.value?.trim()) {
+      alert('Title is required.');
+      return false;
+    }
+    return true;
+  }
+
+  btnSave?.addEventListener('click', ()=>{
+    if (!validate()) return;
+
+    fTitle.value   = eTitle.value.trim();
+    fShort.value   = eShort.value.trim();
+    fCover.value   = (eCover.value || '').trim();
+    fPreview.value = (ePreview.value || '').trim();
+    fPrice.value   = ePrice.value || '';
+    fPromo.value   = ePromo.value || '';
+    fLong.value    = quill ? quill.root.innerHTML : (vLong?.innerHTML || '');
+
+    form.submit();
+  });
+})();
+</script>

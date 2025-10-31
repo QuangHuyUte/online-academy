@@ -106,19 +106,17 @@
               </td>
               <td class="text-muted">{{#if this.view_count}}{{this.view_count}}{{else}}—{{/if}}</td>
               <td class="text-end">
-        <form action="/admin/courses/{{this.id}}/remove" method="post" class="d-inline"
-          onsubmit="return confirm('Are you sure you want to {{#if this.is_removed}}unhide{{else}}hide{{/if}} this course?');">
-                  <!-- giữ lại filter để quay về đúng -->
-                  <input type="hidden" name="q" value="{{../q}}">
-                  <input type="hidden" name="page" value="{{../page}}">
-                  <input type="hidden" name="cat_id" value="{{../catQS}}">
-                  <input type="hidden" name="instructor_id" value="{{../insQS}}">
-                  <input type="hidden" name="showRemoved" value="{{../srQS}}">
+        <form action="/admin/courses/{{this.id}}/remove" method="post" class="d-inline">
+            <input type="hidden" name="q" value="{{../q}}">
+            <input type="hidden" name="page" value="{{../page}}">
+            <input type="hidden" name="cat_id" value="{{../catQS}}">
+            <input type="hidden" name="instructor_id" value="{{../insQS}}">
+            <input type="hidden" name="showRemoved" value="{{../srQS}}">
+            <button class="btn btn-sm {{#if this.is_removed}}btn-success{{else}}btn-warning{{/if}}">
+              {{#if this.is_removed}}Unhide{{else}}Hide{{/if}}
+            </button>
+          </form>
 
-
-                  <button class="btn btn-sm {{#if this.is_removed}}btn-success{{else}}btn-warning{{/if}}">
-                    {{#if this.is_removed}}Unhide{{else}}Hide{{/if}}
-                  </button>
                 </form>
               </td>
             </tr>

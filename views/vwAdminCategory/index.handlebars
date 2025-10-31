@@ -35,7 +35,7 @@
     </div>
 
     {{> flash}}
-
+    
     {{#if categories.length}}
       <div class="table-responsive card border-0 shadow-sm table-enter">
         <table class="table table-hover align-middle mb-0" id="tblCategories">
@@ -96,6 +96,12 @@
                 <a class="btn btn-sm btn-outline-primary" href="/admin/categories/{{this.id}}/edit" data-bs-toggle="tooltip" data-bs-title="Edit this category">
                   <i class="bi bi-pencil-square"></i> Edit
                 </a>
+                {{#if error}}
+                  <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <div>{{error}}</div>
+                  </div>
+                {{/if}}
 
                 <form action="/admin/categories/{{this.id}}/delete"
                       method="post" class="d-inline"

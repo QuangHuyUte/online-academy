@@ -1,0 +1,119 @@
+<div class="row page-enter">
+  <div class="col-3">
+    {{> sidebar}}
+  </div>
+
+  <div class="col-9">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h3 class="fw-bold mb-0">
+          <i class="bi bi-person-plus text-success me-2"></i> Add Instructor
+        </h3>
+        <div class="text-muted small">Promote an existing user or create a brand-new instructor account.</div>
+      </div>
+      <a href="/admin/instructors" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+    </div>
+
+    {{> flash}}
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="addInstTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="existing-tab" data-bs-toggle="tab" data-bs-target="#existing-pane" type="button" role="tab">
+              <i class="bi bi-envelope-at me-1"></i> Existing user (by email)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="new-tab" data-bs-toggle="tab" data-bs-target="#new-pane" type="button" role="tab">
+              <i class="bi bi-person-badge me-1"></i> New instructor
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+          <!-- EXISTING USER -->
+          <div class="tab-pane fade show active" id="existing-pane" role="tabpanel" aria-labelledby="existing-tab">
+            <form method="post" action="/admin/instructors">
+              <input type="hidden" name="mode" value="existing">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">User Email <span class="text-danger">*</span></label>
+                  <input name="email" type="email" class="form-control" placeholder="user@example.com" required>
+                  <div class="form-text">We will promote this user to instructor (if not yet) and activate the account.</div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Avatar URL</label>
+                  <input name="avatar_url" type="url" class="form-control" placeholder="https://...">
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Bio</label>
+                  <textarea name="bio" rows="3" class="form-control" placeholder="Short biography (optional)"></textarea>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end mt-3">
+                <button class="btn btn-success">
+                  <i class="bi bi-check2-circle"></i> Promote
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- NEW INSTRUCTOR -->
+          <div class="tab-pane fade" id="new-pane" role="tabpanel" aria-labelledby="new-tab">
+            <form method="post" action="/admin/instructors">
+              <input type="hidden" name="mode" value="new">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                  <input name="name" class="form-control" required>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Email <span class="text-danger">*</span></label>
+                  <input name="email" type="email" class="form-control" required>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Password</label>
+                  <input name="password" type="text" class="form-control" placeholder="Leave blank to auto-generate">
+                  <div class="form-text">If left blank, a random password will be created.</div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Avatar URL</label>
+                  <input name="avatar_url" type="url" class="form-control" placeholder="https://...">
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Bio</label>
+                  <textarea name="bio" rows="3" class="form-control" placeholder="Short biography (optional)"></textarea>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end mt-3">
+                <button class="btn btn-primary">
+                  <i class="bi bi-person-plus"></i> Create Instructor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (prefers-reduced-motion:no-preference){
+    .page-enter{animation:fadeUp .4s ease-out both}
+  }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
