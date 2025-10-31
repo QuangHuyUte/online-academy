@@ -567,8 +567,6 @@ export function findNewest7day() {
   return db('courses')
     .where('created_at', '>=', db.raw("CURRENT_DATE - INTERVAL '7 days'"))
     .orderBy('created_at', 'desc')
-    .limit(8)
-    .offset(0);
 }
 
 // Full-text search (plainto_tsquery trên cột fts)
