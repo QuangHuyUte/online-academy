@@ -8,45 +8,101 @@ import watchlistModel from '../models/watchlist.model.js';
 import myCourseModel from "../models/myCourse.model.js";
 import instructorModel from '../models/instructor.model.js';
 import { verifyEmailExists, sendOTPEmail } from '../services/email.service.js';
+import path from 'path'; // 🆕 Thêm path
+import fs from 'fs';   // 🆕 Thêm fs
+import multer from 'multer'; // 🆕 Thêm multer
+
+// ----------------------------- Helper utils (Cần sao chép từ instructor.route.js) -----------------------------
+function slugify(str = '') {
+  return String(str)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .trim().replace(/\s+/g, '-')
+    .toLowerCase();
+}
+
+// --------------------------------- Multer Configuration ---------------------------------
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join('public', 'uploads');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = slugify(file.originalname.replace(ext, ''));
+    cb(null, `${filename}-${Date.now()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    // Chỉ cho phép định dạng ảnh
+    if (
+      file.mimetype === 'image/jpeg' ||
+      file.mimetype === 'image/png' ||
+      file.mimetype === 'image/gif' ||
+      file.mimetype === 'image/webp'
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error('Chỉ chấp nhận các file ảnh (JPEG, PNG, GIF, WebP).'), false);
+    }
+  },
+  limits: {
+    fileSize: 1024 * 1024 * 5, // Giới hạn 5MB cho ảnh đại diện
+  },
+});
 
 const router = express.Router();
 
 router.post('/send-otp', async function (req, res) {
     const email = req.body.email;
     
-    // Kiểm tra email đã được đăng ký chưa
+    // 1. Kiểm tra email đã được đăng ký chưa
     const existingUser = await userModel.findByEmail(email);
     if (existingUser) {
         return res.json({ 
             success: false, 
-            message: 'Email đã được sử dụng.' 
+            message: 'The email is already in use. Please choose another email.' 
         });
     }
 
-    // Kiểm tra email có thật không
+    // 2. ✅ THỰC HIỆN KIỂM TRA EMAIL CÓ THẬT KHÔNG NGAY LÚC NÀY
     const isValidEmail = await verifyEmailExists(email);
     if (!isValidEmail) {
+        // TRẢ VỀ LỖI RÕ RÀNG NẾU EMAIL KHÔNG TỒN TẠI/DOMAIN LỖI
         return res.json({ 
             success: false, 
-            message: 'Email không tồn tại hoặc không thể nhận mail.' 
+            message: 'Email does not exist or cannot receive mail. Please check again.' 
         });
     }
-
-    // Tạo mã OTP mới
+    console.log(isValidEmail);
+    // 3. Tạo mã OTP mới
     const otp = generateOTP();
     
     try {
-        // Lưu OTP vào database
-        await otpModel.add(email, otp);
+        // Xóa OTP cũ (nếu có)
+        await otpModel.deleteOtp(email); 
 
-        // Gửi OTP qua email
+        // 4. Gửi OTP qua email. 
+        // LÚC NÀY, sendOTPEmail KHÔNG NÊN FAIL VÌ VẤN ĐỀ MX/DOMAIN nữa,
+        // chỉ fail nếu server mail bị lỗi kết nối/auth.
         const emailSent = await sendOTPEmail(email, otp);
+        
         if (!emailSent) {
+            // Nếu gửi mail thất bại do lỗi kết nối/auth
             return res.json({ 
                 success: false, 
-                message: 'Không thể gửi email. Vui lòng thử lại sau.' 
+                message: 'Could not send email due to server error. Please try again.' 
             });
         }
+        
+        // 5. ✅ NẾU GỬI THÀNH CÔNG, LƯU OTP VÀO DATABASE
+        await otpModel.add(email, otp);
 
         // Lưu email đang verify vào session
         req.session.emailToVerify = email;
@@ -56,17 +112,13 @@ router.post('/send-otp', async function (req, res) {
             console.log(`[DEV] OTP for ${email}: ${otp}`);
         }
 
-       
-        req.session.emailToVerify = email; 
-
         return res.json({ success: true, mock_code: otp }); 
 
     } catch (error) {
-        console.error('Lỗi khi lưu OTP vào DB:', error);
-        return res.json({ success: false, message: 'Lỗi server khi tạo OTP.' });
+        console.error('Lỗi khi xử lý/lưu OTP:', error);
+        return res.json({ success: false, message: 'Server error during OTP processing.' });
     }
 });
-
 router.post('/verify-otp', async function (req, res) {
     const { email, otp } = req.body;
     
@@ -87,13 +139,42 @@ router.get('/signup', function (req, res) {
     res.render('vwAccounts/signup');
 });
 
-router.get('/is-available', async function(req, res) {
+router.get('/is-available', async function (req, res) {
     const email = req.query.email;
+    if (!email) {
+        return res.json({
+            ok: false,
+            message: 'Vui lòng cung cấp email.'
+        });
+    }
+
     const user = await userModel.findByEmail(email);
-    if(user) {
-        return res.json(false);
-    }   
-    return res.json(true);
+    if (!user) {
+        // Tránh tiết lộ tài khoản không tồn tại, trả về OK nhưng không kiểm tra được.
+        // Hoặc trả về ok: true để cho phép tiếp tục kiểm tra mật khẩu.
+        return res.json({
+            ok: true,
+            is_available: true,
+            message: 'Email hợp lệ.'
+        });
+    }
+
+    // Kiểm tra trạng thái is_available. Nếu cột không tồn tại, mặc định là true.
+    const is_available = user.is_available === undefined || user.is_available === null ? true : user.is_available;
+
+    if (is_available === false) {
+        return res.json({
+            ok: false,
+            is_available: false,
+            message: 'Tài khoản này đã bị khóa. Vui lòng liên hệ quản trị viên.'
+        });
+    }
+
+    return res.json({
+        ok: true,
+        is_available: true,
+        message: 'Tài khoản khả dụng.'
+    });
 });
 
 router.get('/is-password-correct', async function(req, res) {
@@ -189,17 +270,27 @@ router.get('/signin', async function (req, res) {
     res.render('vwAccounts/signin');
 });
 
-// routes/account.route.js  (POST /account/signin)
-// routes/account.route.js
+
 router.post('/signin', async function (req, res) {
   const { email, password } = req.body;
   const user = await userModel.findByEmail(email);
-  if (!user) return res.render('vwAccounts/signin', { error: true });
+
+  // 🆕 Thêm logic kiểm tra is_available vào đây để xử lý đăng nhập trực tiếp (nếu client không dùng AJAX)
+  if (user) {
+      if (user.is_available === false) { 
+          // Nếu tài khoản bị khóa
+          return res.render('vwAccounts/signin', { 
+              error: true, 
+              message: 'Tài khoản này đã bị khóa. Vui lòng liên hệ quản trị viên.' 
+          });
+      }
+  }
+
+  if (!user) return res.render('vwAccounts/signin', { error: true, message: 'Sai Email hoặc mật khẩu.' });
 
   const ok = bcrypt.compareSync(password, user.password_hash);
-  if (!ok) return res.render('vwAccounts/signin', { error: true });
-
-  // Chuẩn hoá role để middleware so sánh chắc chắn
+  if (!ok) return res.render('vwAccounts/signin', { error: true, message: 'Sai Email hoặc mật khẩu.' });
+  
   const normalized = {
     ...user,
     role: String(user.role || '').toLowerCase().trim(),
@@ -209,7 +300,6 @@ router.post('/signin', async function (req, res) {
   req.session.authUser = normalized;
   req.session.userId = normalized.id;
 
-  // Fallback theo role: Instructor -> /instructor (dashboard mới)
   async function getFallbackByRole(u) {
     if (u.role === 'admin') return '/admin/courses';
     if (u.role === 'instructor') return '/instructor';
@@ -217,8 +307,6 @@ router.post('/signin', async function (req, res) {
   }
 
   const fallback = await getFallbackByRole(normalized);
-
-  // Ưu tiên URL người dùng định đi tới trước khi bị chặn
   const returnUrl = req.session.returnUrl || req.session.url;
   delete req.session.returnUrl;
   delete req.session.url;
@@ -255,37 +343,194 @@ router.get('/profile', checkAuthenticated, function (req, res) {
         user: req.session.authUser,
     });
 });
+/* ------------------------------ Upload endpoint (Cho Avatar) ------------------------------ */
+router.post('/upload', checkAuthenticated, upload.single('file'), (req, res) => {
+  if (req.file) {
+    // Chuẩn hoá đường dẫn về dạng /uploads/...
+    let relPath = req.file.path.replace(/^public[\\/]/, '') || '';
+    relPath = relPath.split(path.sep).join('/');
+    if (!relPath.startsWith('/')) relPath = '/' + relPath;
+    return res.json({ url: relPath });
+  }
 
-router.post('/profile', checkAuthenticated, async function (req, res) {
+  // Xử lý lỗi từ Multer (ví dụ: kích thước file)
+  if (req.uploadError) {
+      return res.status(400).json({ success: false, message: req.uploadError });
+  }
+  
+  // Xử lý lỗi chung khi không có file
+  return res.status(400).json({ success: false, message: 'Không có file nào được tải lên.' });
+});
+
+router.post('/profile/send-otp', checkAuthenticated, async function (req, res) {
+    const newEmail = req.body.email;
+    const currentEmail = req.session.authUser.email;
+
+    // 1. Nếu email không đổi, không làm gì cả
+    if (newEmail.toLowerCase() === currentEmail.toLowerCase()) {
+        return res.json({ 
+            success: true, 
+            message: 'Email không thay đổi.', 
+            skip_otp: true // Báo cho client biết có thể bỏ qua OTP
+        });
+    }
+
+    // 2. Kiểm tra email mới đã được sử dụng chưa (ngoại trừ user hiện tại)
+    const existingUser = await userModel.findByEmail(newEmail);
+    if (existingUser && existingUser.id !== req.session.authUser.id) {
+        return res.json({ 
+            success: false, 
+            message: 'Email mới đã được sử dụng bởi người dùng khác.' 
+        });
+    }
+
+    // 3. Kiểm tra email mới có thật không (format + domain/MX check)
+    // Chức năng này dựa trên việc bạn đã triển khai verifyEmailExists trong email.service.js
+    const isValidEmail = await verifyEmailExists(newEmail);
+    if (!isValidEmail) {
+        return res.json({ 
+            success: false, 
+            message: 'Email mới không tồn tại hoặc không thể nhận mail.' 
+        });
+    }
+    
+    // 4. Tạo mã OTP mới
+    const otp = generateOTP();
+    
+    try {
+        // Xóa OTP cũ cho email mới (nếu có) và thêm OTP mới
+        await otpModel.deleteOtp(newEmail); 
+        await otpModel.add(newEmail, otp);
+
+        // Gửi OTP qua email
+        const emailSent = await sendOTPEmail(newEmail, otp, 'Xác thực Email Cập nhật Profile'); // Cập nhật tiêu đề email
+        if (!emailSent) {
+            await otpModel.deleteOtp(newEmail); // Xóa OTP nếu gửi mail thất bại
+            return res.json({ 
+                success: false, 
+                message: 'Không thể gửi email. Vui lòng thử lại sau.' 
+            });
+        }
+
+        // Lưu email mới đang chờ verify vào session
+        req.session.emailToVerifyUpdate = newEmail; 
+
+        if (process.env.NODE_ENV === 'development') {
+            // Chỉ hiển thị trong môi trường Dev để debug
+            console.log(`[DEV] OTP for New Email ${newEmail}: ${otp}`);
+        }
+
+        return res.json({ success: true, mock_code: otp }); 
+
+    } catch (error) {
+        console.error('Lỗi khi gửi OTP cho Profile Update:', error);
+        return res.json({ success: false, message: 'Lỗi server khi tạo OTP.' });
+    }
+});
+
+router.post('/profile/verify-otp', checkAuthenticated, async function (req, res) {
+    const { email, otp } = req.body;
+    
+    // Đảm bảo email đang verify là email mới trong session
+    if (req.session.emailToVerifyUpdate !== email) {
+         return res.json({ success: false, message: 'Lỗi: Email xác thực không khớp.' });
+    }
+
+    const otpRecord = await otpModel.findByEmailAndOtp(email, otp);
+    
+    if (!otpRecord) {
+        return res.json({ success: false, message: 'Mã OTP không đúng hoặc đã hết hạn.' });
+    }
+
+    // Đánh dấu email mới đã được verified
+    req.session.verifiedNewEmail = email;
+    delete req.session.emailToVerifyUpdate; // Xóa cờ email đang chờ
+
+    await otpModel.deleteOtp(email); 
+
+    return res.json({ success: true, message: 'Xác thực OTP thành công.' });
+});
+
+// ----------------------------------------------------------------------------
+// 🔄 CẬP NHẬT ROUTE POST /profile
+// ----------------------------------------------------------------------------
+router.post('/profile', checkAuthenticated, upload.none(), async function (req, res) { 
+    
+    // 🆕 KIỂM TRA AN TOÀN CHO SESSION USER
+    if (!req.session.authUser) {
+        req.session.flash = { type: 'warning', message: 'Vui lòng đăng nhập lại để cập nhật hồ sơ.' };
+        return res.redirect('/account/signin'); 
+    }
+    
     const id = req.session.authUser.id;
-    const user = {
-        name: req.body.name,
-        email: req.body.email,
-    };
-    await userModel.patch(id, user);
-    req.session.authUser.name = user.name;
-    req.session.authUser.email = user.email;
+    
+    // ✅ GIỜ ĐÂY req.body.email ĐÃ ĐƯỢC ĐẢM BẢO TỒN TẠI (hoặc là chuỗi rỗng nếu trường không gửi)
+    const newEmail = req.body.email || ''; 
+    
+    // Đảm bảo oldEmail tồn tại
+    const oldEmail = req.session.authUser.email; 
+    
+    if (!oldEmail) {
+        // Điều này chỉ xảy ra nếu cấu trúc session bị lỗi nặng
+        return res.render('vwAccounts/profile', {
+            user: req.session.authUser,
+            error: 'Lỗi session: Không thể xác định email cũ.'
+        });
+    }
 
-    // LOGIC CẬP NHẬT INSTRUCTOR PROFILE
+    const isEmailChanged = newEmail.toLowerCase() !== oldEmail.toLowerCase();
+    
+    let userUpdate = {
+        // Đảm bảo req.body.name tồn tại
+        name: req.body.name || req.session.authUser.name,
+    };
+    
+    // 1. Xử lý Email: Chỉ cập nhật email nếu nó không đổi HOẶC đã được verified
+    if (isEmailChanged) {
+        const verifiedEmail = req.session.verifiedNewEmail;
+        if (!verifiedEmail || verifiedEmail.toLowerCase() !== newEmail.toLowerCase()) {
+             // Redirect trở lại trang profile với lỗi nếu chưa verified
+            return res.render('vwAccounts/profile', {
+                user: req.session.authUser,
+                error: 'Vui lòng xác thực email mới bằng OTP trước khi cập nhật.'
+            });
+        }
+        userUpdate.email = newEmail;
+        delete req.session.verifiedNewEmail; // Xóa cờ sau khi cập nhật thành công
+    } else {
+        // Email không đổi
+        userUpdate.email = newEmail;
+    }
+    
+    // 2. Cập nhật user (Name, Email)
+    await userModel.patch(id, userUpdate);
+    req.session.authUser.name = userUpdate.name;
+    req.session.authUser.email = userUpdate.email;
+
+    // 3. LOGIC CẬP NHẬT INSTRUCTOR PROFILE (Bio, Avatar)
     if (req.session.authUser.role === 'instructor') {
         const instUpdate = {
-            avatar_url: req.body.avatar_url || null,
+            // ✅ req.body.avatar_url được gửi từ trường hiddenAvatarUrl sau khi AJAX thành công
+            avatar_url: req.body.avatar_url || null, 
             bio: req.body.bio || null,
         };
-        // Tìm bản ghi instructor để lấy instructor.id
         const inst = await instructorModel.findByUserId(id); 
         if (inst) {
             await instructorModel.patch(inst.id, instUpdate);
-            
-            // 💥 BỔ SUNG: CẬP NHẬT SESSION AUTHUSER VỚI URL VÀ BIO MỚI 💥
             req.session.authUser.avatar_url = instUpdate.avatar_url; 
             req.session.authUser.bio = instUpdate.bio;
         }
     }
+    
+    // Lấy lại user data để đảm bảo các trường khác (như avatar_url/bio) vẫn được truyền lại
+    const updatedUser = await userModel.findById(id);
+    if (updatedUser && req.session.authUser.role === 'instructor') {
+        const instData = await instructorModel.findByUserId(id);
+        Object.assign(updatedUser, instData); // merge inst info
+    }
 
-    // Sau khi session đã được cập nhật, render lại trang profile
     res.render('vwAccounts/profile', {
-        user: req.session.authUser,
+        user: updatedUser,
         message: 'Profile updated successfully!'
     });
 });
@@ -375,15 +620,35 @@ router.get('/auth/google',
 router.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/account/signin' }),
   async function(req, res) {
-    try {
-      if (req.user) {
-        req.session.isAuthenticated = true;
-        req.session.authUser = req.user;
+    if (req.user) {
+      
+      if (req.user.is_available === false) {
+          
+          const errorMessage = 'Tài khoản Google liên kết đã bị khóa. Vui lòng liên hệ quản trị viên.';
+          
+          // 1. Set flash message to be shown on the next request
+          req.session.flash = { type: 'error', message: errorMessage };
+          
+          // 2. Clear authentication keys to log out the user safely 
+          // (without destroying req.session.flash)
+          delete req.session.isAuthenticated;
+          delete req.session.authUser;
+          delete req.session.userId;
+          delete req.session.passport; // Xóa dữ liệu Passport
+          
+          // 3. Save session and redirect
+          return req.session.save((err) => {
+              if (err) console.error('Error saving session after block:', err);
+              // KHÔNG GỌI res.clearCookie('connect.sid') HOẶC req.session.destroy
+              // để giữ session ID và dữ liệu flash.
+              res.redirect('/account/signin');
+          });
       }
-    } catch (e) {
-      console.error('Error saving auth session after Google callback', e);
-    }
 
+      // Logic đăng nhập thành công (chỉ chạy nếu is_available === true)
+      req.session.isAuthenticated = true;
+      req.session.authUser = req.user;
+    }
     // ✅ Lấy user để suy ra fallback theo role
     const u = req.user || req.session.authUser;
     let fallback = '/';

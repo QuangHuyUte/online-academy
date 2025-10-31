@@ -19,24 +19,43 @@
             return;
         }
 
-        fetch(`/account/is-password-correct?email=${email}&password=${password}`)
-            .then(function (res) {
-                console.log(res);
-                return res.json();
-            })
-            .then(function (data)  {
-                if (data === false) {
-                    alert('Wrong Email or password.');
+        // 🆕 BƯỚC 1: KIỂM TRA TÀI KHOẢN CÓ BỊ KHÓA KHÔNG
+        fetch(`/account/is-available?email=${email}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.is_available === false) {
+                    // Nếu tài khoản bị khóa
+                    alert(data.message || 'Tài khoản này đã bị khóa.');
                     return;
                 }
-                alert('Login successfully.');
-                e.target.submit();
+                
+                // Nếu tài khoản khả dụng hoặc API lỗi/không rõ
+                // 🆕 BƯỚC 2: TIẾP TỤC KIỂM TRA MẬT KHẨU (logic cũ)
+                fetch(`/account/is-password-correct?email=${email}&password=${password}`)
+                    .then(function (res) {
+                        console.log(res);
+                        return res.json();
+                    })
+                    .then(function (data)  {
+                        if (data === false) {
+                            alert('Wrong Email or password.');
+                            return;
+                        }
+                        alert('Login successfully.');
+                        // 🆕 Gửi form lên server để tạo session (logic cũ)
+                        e.target.submit(); 
+                    })
+                    .catch(function (err) {
+                        console.error(err);
+                        alert('Error occurred. Please try again later.');
+                    });
             })
             .catch(function (err) {
                 console.error(err);
-                alert('Error occurred. Please try again later.');
+                alert('Lỗi khi kiểm tra trạng thái tài khoản. Vui lòng thử lại.');
             });
     }
+    
     document.addEventListener('DOMContentLoaded', function () {
         const frm = document.getElementById('frmSignIn') || document.querySelector('form');
         if (!frm) {
@@ -49,9 +68,22 @@
 {{/fill_Content}}
 <div class="signin-scope">
 <div class="login_form">
-    <!-- Login form container -->
     <form id="frmSignIn" action="/account/signin" method="post">
       <h3>Log in with</h3>
+      
+      {{#if error}}
+        <p id="errorMessage" class="text-danger" style="margin-top: -10px; margin-bottom: 10px; font-weight: 500;">
+            {{message}}
+        </p>
+      {{/if}}
+
+     {{#if flash.message}}
+        <p class="{{#ifCond flash.type '===' 'error'}}text-danger{{else}}text-success{{/ifCond}}" 
+           style="margin-top: -10px; margin-bottom: 10px; font-weight: 500;">
+            {{flash.message}}
+        </p>
+      {{/if}}
+
       <div class="login_option">
         <!-- Google button -->
         <div class="option">
