@@ -209,8 +209,13 @@ router.post("/enroll/:id", async (req, res) => {
         course_id: courseId,
         purchased_at: new Date(),
       });
+      // ✅ Cập nhật lại số lượng học viên
+      await db("courses")
+        .where("id", courseId)
+        .increment("students_count", 1);
     }
-
+    
+    
     // Use flash message to notify success
     req.session.flash = { message: "Course enrollment successful!" };
     res.redirect(`/courses/details?id=${courseId}`);
