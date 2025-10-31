@@ -340,6 +340,7 @@ export function findTopByCategory(catId, excludeId, limit = 5) {
 /* ========== Home / Listing feeds, search, thống kê ========== */
 
 // Featured tuần (dựa vào enrollments trong tuần)
+// Trả về thêm: teacher_name, rating, rating_count, view_count, created_at
 export function getFeaturedCourses(limit = 4) {
   return db('courses as c')
     .join('enrollments as e', 'c.id', 'e.course_id')
@@ -349,23 +350,28 @@ export function getFeaturedCourses(limit = 4) {
     .select(
       'c.id',
       'c.title',
-      'c.short_desc as shortDesc',
-      'c.cover_url as image',
+  'c.short_desc as shortDesc',
+  'c.cover_url',
       db.raw("coalesce(cat.name, 'Uncategorized') as category_name"),
       db.raw("coalesce(u.name, 'Giảng viên chưa rõ') as teacher_name"),
       db.raw('coalesce(c.price, 0) as price'),
-      db.raw('coalesce(c.promo_price, 0) as promo_price')
+      db.raw('coalesce(c.promo_price, 0) as promo_price'),
+  db.raw('coalesce(c.rating_avg, 0) as rating_avg'),
+      db.raw('coalesce(c.rating_count, 0) as rating_count'),
+      'c.view_count',
+      'c.created_at'
     )
     .count({ enroll_count: 'e.course_id' })
     .whereRaw("date_trunc('week', e.purchased_at) = date_trunc('week', now())")
     .groupBy(
       'c.id', 'c.title', 'c.short_desc', 'c.cover_url',
-      'cat.name', 'u.name', 'c.price', 'c.promo_price'
+      'cat.name', 'u.name', 'c.price', 'c.promo_price',
+      'c.rating_avg', 'c.rating_count', 'c.view_count', 'c.created_at'
     )
     .orderBy('enroll_count', 'desc')
     .limit(limit)
     .then(rows =>
-      rows.map(r => ({ ...r, enroll_count: Number(r.enroll_count) })),
+      rows.map(r => ({ ...r, students_count: Number(r.enroll_count) })),
     );
 }
 
@@ -611,7 +617,22 @@ export function countCoursesByCategory(categoryId) {
 // 2) Nếu code cũ từng gọi getTopCategories từ courseModel,
 //    ta bọc lại và gọi sang categoryModel (tránh duplicate logic).
 export function getTopCategories(limit = 5) {
-  return categoryModel.getTopCategories(limit);
+  return db('categories as c')
+    .join('courses as co', 'c.id', 'co.cat_id')
+    .join('enrollments as e', 'co.id', 'e.course_id')
+    .select('c.id', 'c.name')
+    .count({ enroll_count: 'e.course_id' })
+    .whereRaw("date_trunc('week', e.purchased_at) = date_trunc('week', now())")
+    .groupBy('c.id', 'c.name')
+    .orderBy('enroll_count', 'desc')
+    .limit(limit)
+    .then(rows =>
+      rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        enroll_count: Number(r.enroll_count),
+      })),
+    );
 }
 
 // 3) Khôi phục tạm findTopFieldCourses nếu còn nơi dùng (giữ nguyên logic cũ)

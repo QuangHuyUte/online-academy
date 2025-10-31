@@ -112,29 +112,6 @@ export function findAllCourse() {
   return db('courses');
 }
 
-/**
- * Top categories theo số enroll trong tuần hiện tại
- * Trả về: [{ id, name, enroll_count }]
- * (giữ nguyên hành vi cũ: count theo số dòng enrollments)
- */
-export function getTopCategories(limit = 5) {
-  return db('categories as c')
-    .join('courses as co', 'c.id', 'co.cat_id')
-    .join('enrollments as e', 'co.id', 'e.course_id')
-    .select('c.id', 'c.name')
-    .count({ enroll_count: 'e.course_id' })
-    .whereRaw("date_trunc('week', e.purchased_at) = date_trunc('week', now())")
-    .groupBy('c.id', 'c.name')
-    .orderBy('enroll_count', 'desc')
-    .limit(limit)
-    .then(rows =>
-      rows.map(r => ({
-        id: r.id,
-        name: r.name,
-        enroll_count: Number(r.enroll_count),
-      })),
-    );
-}
 
 /**
  * Build menu 2 cấp: [{ id, name, children: [...] }]
@@ -179,6 +156,5 @@ export default {
   findCoursesByCategoryId,
   findCategoryNotParent,
   findAllCourse,
-  getTopCategories,
   getMenuCategories,
 };

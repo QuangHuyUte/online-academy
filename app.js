@@ -254,7 +254,7 @@ app.get('/', async (req, res, next) => {
 
   // --- giữ nguyên render trang Home cho student/guest ---
   // Hiển thị 3 khoá 'Featured Course' (top enrollments trong tuần)
-  const courses_bestseller = await (courseModel.getFeaturedCourses?.(3) ?? []);
+  const courses_bestseller = await (courseModel.getFeaturedCourses?.(4) ?? []);
     const courses_newest     = await (courseModel.findCourses?.({ limit: 10, offset: 0, sortBy: 'newest' }) ?? []);
     const Top10ViewedCourses = await (courseModel.findTop10ViewedCourses?.() ?? []);
     const topfield           = await (courseModel.findTopFieldCourses?.() ?? []);
