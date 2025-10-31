@@ -2,13 +2,235 @@
   <link rel="stylesheet" href="/css/styleProfile.css" />
 {{/fill_Content}}
 
+{{#fill_Content 'js'}}
+<script>
+    const frmProfile = document.querySelector('#frmProfile');
+    const txtEmail = document.querySelector('#txtEmail');
+    const txtOldEmail = '{{user.email}}'; 
+    const btnSubmit = document.querySelector('#btnSubmit');
+    const emailHelp = document.querySelector('#emailHelp');
+    const otpContainer = document.querySelector('#otpContainer');
+    const txtOTP = document.querySelector('#txtOTP');
+    
+    // Khởi tạo Alert Box và logic hiển thị/ẩn tin nhắn
+    const cardBody = document.querySelector('.card-body');
+    const alertBox = document.createElement('div');
+    alertBox.id = 'alertBox';
+    alertBox.classList.add('mb-3');
+    if (!document.querySelector('#alertBox')) {
+        cardBody.prepend(alertBox);
+    }
+
+    function showMessage(msg, isError = false) {
+        if (!alertBox) return;
+
+        if (!msg) {
+            alertBox.innerHTML = '';
+            emailHelp.innerHTML = `We'll never share your email with anyone else.`;
+            return;
+        }
+
+        const type = isError ? 'danger' : 'success';
+        alertBox.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${msg}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        emailHelp.innerHTML = isError ?
+            `<span class="text-danger">${msg}</span>` : `<span class="text-success">${msg}</span>`;
+    }
+
+    // Logic xử lý OTP và Update Profile (Giữ nguyên)
+    async function handleUpdateProfile(e) {
+        e.preventDefault();
+        showMessage('', false);
+
+        const newEmail = txtEmail.value.toLowerCase().trim();
+        const emailChanged = newEmail !== txtOldEmail.toLowerCase().trim();
+
+        if (!emailChanged) {
+            frmProfile.removeEventListener('submit', handleUpdateProfile);
+            frmProfile.submit();
+            return;
+        }
+        
+        // Gửi yêu cầu OTP
+        let res = await fetch('/account/profile/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: newEmail })
+        });
+        let otpData = await res.json();
+        
+        if (otpData.success) {
+            if (otpData.skip_otp) {
+                frmProfile.removeEventListener('submit', handleUpdateProfile);
+                frmProfile.submit();
+                return;
+            }
+            
+            let msg = 'Mã OTP đã được gửi đến email mới của bạn. Vui lòng kiểm tra và nhập mã.';
+            if (otpData.mock_code) {
+                msg = `Mã OTP đã được gửi đến email mới . Vui lòng kiểm tra và nhập mã.`;
+            }
+            showMessage(msg, false);
+            
+            btnSubmit.innerHTML = '<i class="bi bi-check2-square"></i> Verify Email';
+            otpContainer.style.display = 'block';
+
+            frmProfile.removeEventListener('submit', handleUpdateProfile);
+            frmProfile.addEventListener('submit', handleVerifyAndSubmit);
+        } else {
+            showMessage(otpData.message || 'Lỗi gửi OTP. Vui lòng thử lại.', true);
+        }
+    }
+
+    async function handleVerifyAndSubmit(e) {
+        e.preventDefault();
+        const email = txtEmail.value.toLowerCase().trim();
+        const otp = txtOTP.value;
+
+        if (otp.length === 0) {
+            showMessage('Vui lòng nhập mã OTP.', true);
+            return;
+        }
+        
+        let res = await fetch('/account/profile/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, otp: otp })
+        });
+        let data = await res.json();
+        
+        if (data.success) {
+            showMessage('Xác thực OTP thành công! Đang tiến hành cập nhật Profile...', false);
+            
+            frmProfile.removeEventListener('submit', handleVerifyAndSubmit);
+            frmProfile.removeEventListener('submit', handleUpdateProfile);
+            
+            const hiddenVerifiedEmail = document.createElement('input');
+            hiddenVerifiedEmail.type = 'hidden';
+            hiddenVerifiedEmail.name = 'verified_email';
+            hiddenVerifiedEmail.value = email;
+            frmProfile.appendChild(hiddenVerifiedEmail);
+            
+            frmProfile.submit(); 
+        } else {
+            showMessage(data.message, true);
+        }
+    }
+    
+    frmProfile.addEventListener('submit', handleUpdateProfile);
+
+    // Logic preview avatar
+    const txtAvatarUrlInput = document.querySelector('#txtAvatarUrlInput');
+    const avatarPreview = document.querySelector('#avatar-preview');
+    const hiddenAvatarUrl = document.querySelector('#hiddenAvatarUrl');
+    // 🆕 Khai báo input file mới
+    const fileAvatarUpload = document.querySelector('#fileAvatarUpload'); 
+
+
+    // ----------------------------------------------------------------------
+    // 🆕 LOGIC TẢI ẢNH (Upload) BẰNG AJAX VÀ PREVIEW
+    // ----------------------------------------------------------------------
+    if (fileAvatarUpload && txtAvatarUrlInput) {
+        fileAvatarUpload.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 1. Preview ảnh ngay lập tức
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                avatarPreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            // 2. Chuẩn bị FormData và gửi lên server
+            const formData = new FormData();
+            formData.append('file', file); 
+            // VÌ router.post('/upload', upload.single('file')) -> tên trường là 'file'
+
+            try {
+                // Tắt các input liên quan khi đang upload
+                txtAvatarUrlInput.disabled = true;
+                fileAvatarUpload.disabled = true;
+                btnSubmit.disabled = true;
+                showMessage('Đang tải ảnh lên...', false);
+
+                // 3. Gửi AJAX lên route tải ảnh
+                const res = await fetch('/account/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await res.json();
+                
+                if (data.url) {
+                    // 4. Nếu thành công, gán URL trả về vào trường ẩn
+                    hiddenAvatarUrl.value = data.url;
+                    // Xóa URL cũ nếu có
+                    txtAvatarUrlInput.value = ''; 
+                    showMessage('Tải ảnh đại diện thành công! Vui lòng nhấn Update Profile để lưu.', false);
+                } else {
+                    // Nếu server trả về lỗi
+                    showMessage(data.message || 'Lỗi tải ảnh lên server.', true);
+                    hiddenAvatarUrl.value = '{{user.avatar_url}}'; // Khôi phục URL cũ
+                }
+
+            } catch (err) {
+                console.error('Upload failed:', err);
+                showMessage('Lỗi kết nối hoặc tải ảnh không thành công.', true);
+                hiddenAvatarUrl.value = '{{user.avatar_url}}';
+            } finally {
+                // Bật lại các input
+                txtAvatarUrlInput.disabled = false;
+                fileAvatarUpload.disabled = false;
+                btnSubmit.disabled = false;
+                // Xóa file đã chọn để lần sau người dùng có thể chọn lại cùng file
+                fileAvatarUpload.value = ''; 
+            }
+        });
+    }
+
+    // ----------------------------------------------------------------------
+    // LOGIC PREVIEW TỪ URL (Chỉnh sửa để xóa file upload khi dán URL)
+    // ----------------------------------------------------------------------
+    if (txtAvatarUrlInput && avatarPreview && hiddenAvatarUrl) {
+        txtAvatarUrlInput.addEventListener('input', function() {
+            const url = this.value.trim();
+            avatarPreview.src = url || '/img/placeholder-avatar.jpg';
+            hiddenAvatarUrl.value = url;
+            // 🆕 Khi nhập URL, xóa giá trị file upload
+            if (fileAvatarUpload) fileAvatarUpload.value = ''; 
+        });
+
+        avatarPreview.onerror = function() {
+            this.src = '/img/placeholder-avatar.jpg';
+        };
+    }
+</script>
+{{/fill_Content}}
+
 <div class="profile-scope">
-  <form action="" method="post">
+  <form action="/account/profile" method="post" id="frmProfile" enctype="multipart/form-data">
     <div class="card">
       <h5 class="card-header d-flex justify-content-center">Your profile</h5>
       <div class="card-body">
-        <div class="row">
-          <div class="col">
+        
+        {{#if error}}
+            <div class="alert alert-danger mb-3" role="alert">
+                {{error}}
+            </div>
+        {{/if}}
+        {{#if message}}
+            <div class="alert alert-success mb-3" role="alert">
+                {{message}}
+            </div>
+        {{/if}}
+
+        <div> 
+            
             <div class="mb-3">
               <input
                 type="text"
@@ -19,20 +241,33 @@
                 hidden
               />
             </div>
+            
             {{#ifCond user.role "===" "instructor"}}
-              
               <div class="mb-3 d-flex flex-column align-items-center">
-                <label class="form-label mb-2">Avatar Preview </label>
+                <label class="form-label mb-2">Avatar Preview</label> 
 
                 <img
                   src="{{user.avatar_url}}"
                   alt="Avatar"
-                  class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: cover;"
+                  class="img-thumbnail"
+                  style="max-width: 150px; max-height: 150px; object-fit: cover;"
                   onerror="this.onerror=null; this.src='/img/placeholder-avatar.jpg';"
                   id="avatar-preview"
                 />
               </div>
+
+              <div class="mb-3">
+                <label for="fileAvatarUpload" class="form-label">Tải ảnh từ máy (Upload)</label>
+                <input
+                    type="file"
+                    class="form-control"
+                    id="fileAvatarUpload"
+                    name="avatar_file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                />
+              </div>
             {{/ifCond}}
+
             <div class="mb-3">
               <label for="txtName" class="form-label">Name</label>
               <input
@@ -43,6 +278,7 @@
                 value="{{user.name}}"
               />
             </div>
+            
             <div class="mb-3">
               <label for="txtEmail" class="form-label">Email address</label>
               <input
@@ -57,6 +293,7 @@
                 with anyone else.
               </div>
             </div>
+            
             <div class="mb-3">
               <label for="txtRole" class="form-label">Role</label>
               <input
@@ -69,7 +306,8 @@
               />
             </div>
 
-              <div class="w-100 mb-3">
+            {{#ifCond user.role "===" "instructor"}}
+              <div class="mb-3">
                 <label for="txtAvatarUrlInput" class="form-label">Avatar URL</label>
                 <input
                   type="text"
@@ -86,8 +324,7 @@
                 id="hiddenAvatarUrl"
                 value="{{user.avatar_url}}"
               />
-
-            {{#ifCond user.role "===" "instructor"}}
+              
               <div class="mb-3">
                 <label for="txtBio" class="form-label">Bio</label>
                 <textarea
@@ -99,8 +336,10 @@
               </div>
             {{/ifCond}}
 
-
-          </div>
+            <div class="mb-3" id="otpContainer" style="display: none;">
+                <label for="txtOTP" class="form-label">Mã OTP (Xác thực Email)</label>
+                <input type="text" class="form-control" id="txtOTP" name="otp" maxlength="6">
+            </div>
           </div>
       </div>
       <div class="card-footer text-muted">
@@ -108,6 +347,7 @@
           type="submit"
           formaction="/account/profile"
           class="btn btn-primary"
+          id="btnSubmit"
         >Update Profile</button>
 
       </div>

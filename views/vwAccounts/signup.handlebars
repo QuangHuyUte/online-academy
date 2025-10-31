@@ -69,10 +69,10 @@
         let otpData = await otpRes.json();
         
         if (otpData.success) {
-            let msg = 'The OTP code has been sent to your email. Please check and enter the code.';
+            let msg = '';
             // Chỉ hiện mock_code trong dev, KHÔNG BAO GIỜ TRONG PROD!
             if (otpData.mock_code) {
-                msg = `The OTP code has been sent to your email (${otpData.mock_code}). Please check and enter the code.`;
+                msg = `The OTP code has been sent to your email . Please check and enter the code.`;
             }
             showMessage(msg, false);
 

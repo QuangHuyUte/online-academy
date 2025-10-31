@@ -63,9 +63,8 @@ function isValidEmailFormat(email) {
  */
 export async function verifyEmailExists(email) {
     try {
-        // 1. Kiểm tra cú pháp email nhanh
+        // 1. Kiểm tra cú pháp email nhanh (giữ nguyên)
         if (!isValidEmailFormat(email)) {
-            // console.log('Invalid email format:', email);
             return false;
         }
 
@@ -73,40 +72,47 @@ export async function verifyEmailExists(email) {
         const domain = (domainRaw || '').toLowerCase();
         if (!localPart || !domain) return false;
 
-        // 2. Chặn nhanh domain disposable
+        // 2. Chặn nhanh domain disposable (giữ nguyên)
         if (DISPOSABLE_DOMAINS.has(domain)) return false;
 
-        // 3. Kiểm tra cache MX
+        // 3. Kiểm tra cache MX (giữ nguyên)
         const cacheKey = `mx:${domain}`;
         const cached = cacheGet(cacheKey);
         if (cached !== null) return cached;
 
         const { promises: dns } = await import('dns');
-        // DNS lookup with timeout to avoid long blocking
+        
+        // DNS lookup với timeout
         const mxLookup = dns.resolveMx(domain);
         const timeoutMs = 1500; // 1.5s fast timeout for UX
+        
         const mxRecords = await Promise.race([
             mxLookup,
             new Promise((_, rej) => setTimeout(() => rej(new Error('dns-timeout')), timeoutMs))
         ]).catch((err) => {
-            // If DNS times out, treat as unknown -> for trusted providers allow, else reject
-            // Trusted top providers likely have MX; if domain is trusted, assume OK to keep UX fast
-            if (TRUSTED_TOP_PROVIDERS.has(domain)) {
+            // ❌ CHỈNH SỬA TẠI ĐÂY ❌
+            // Nếu DNS times out (ví dụ, mạng chậm), ta chỉ chấp nhận nó OK nếu là Trusted provider
+            if (err.message === 'dns-timeout' && TRUSTED_TOP_PROVIDERS.has(domain)) {
                 cacheSet(cacheKey, true, 1000 * 60 * 60); // cache 1h
-                return true;
+                return true; // Tạm thời chấp nhận (dành cho các miền lớn)
             }
-            // log and return false
+            
+            // Nếu lỗi khác (ví dụ: ENOTFOUND) hoặc timeout trên miền không đáng tin, chặn.
             console.error('DNS MX lookup failed/timeout for domain:', domain, err && err.message);
             cacheSet(cacheKey, false, 1000 * 60); // cache negative 1min
             return false;
         });
 
-        if (mxRecords === true) return true; // from trusted fallback
+        // Nếu mxRecords là true (từ Trusted fallback), trả về true (giữ nguyên)
+        if (mxRecords === true) return true;
 
+        // 4. Nếu DNS lookup hoàn tất thành công
         const ok = Array.isArray(mxRecords) && mxRecords.length > 0;
         cacheSet(cacheKey, ok, ok ? 1000 * 60 * 60 : 1000 * 60);
         return ok;
+
     } catch (error) {
+        // Nếu lỗi xảy ra ngoài khối Promise.race (ví dụ: email.split('@') lỗi, không phải DNS timeout)
         console.error('Error verifying email:', error);
         return false;
     }
@@ -120,20 +126,7 @@ export async function verifyEmailExists(email) {
  */
 export async function sendOTPEmail(to, otp) {
     try {
-        // Kiểm tra email có tồn tại (format + domain + MX)
-        const isValid = await verifyEmailExists(to);
-        if (!isValid) {
-            console.error('Invalid email address (format/domain/MX failed):', to);
-            return false;
-        }
-        /*
-        // Thử probe mailbox bằng RCPT TO trên MX server (cẩn trọng: không luôn tin cậy 100%)
-        const mailboxOk = await verifyMailbox(to, { timeout: 5000 });
-        if (!mailboxOk) {
-            console.error('Mailbox verification failed (RCPT refused or timed out):', to);
-            return false;
-        }
-        */
+        
         // Template email
         const mailOptions = {
             from: process.env.EMAIL_USER,
