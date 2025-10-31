@@ -250,26 +250,46 @@ app.get('/', async (req, res, next) => {
   try {
     const role = (res.locals.authUser?.role || '').toLowerCase();
     if (role === 'instructor') return res.redirect('/instructor');
-    if (role === 'admin')      return res.redirect('/admin/categories');
+    if (role === 'admin') return res.redirect('/admin/categories');
 
-  // --- giữ nguyên render trang Home cho student/guest ---
-  // Hiển thị 3 khoá 'Featured Course' (top enrollments trong tuần)
-  const courses_bestseller = await (courseModel.getFeaturedCourses?.(4) ?? []);
-    const courses_newest     = await (courseModel.findCourses?.({ limit: 10, offset: 0, sortBy: 'newest' }) ?? []);
-    const Top10ViewedCourses = await (courseModel.findTop10ViewedCourses?.() ?? []);
-    const topfield           = await (courseModel.findTopFieldCourses?.() ?? []);
+    // --- lấy dữ liệu ---
+    const [courses_bestseller, courses_newest, Top10ViewedCourses, topfield] = await Promise.all([
+      courseModel.getFeaturedCourses?.(4) ?? [],
+      courseModel.findCourses?.({ limit: 10, offset: 0, sortBy: 'newest' }) ?? [],
+      courseModel.findTop10ViewedCourses?.() ?? [],
+      courseModel.findTopFieldCourses?.() ?? [],
+    ]);
+
+    // --- đánh dấu khóa học nổi bật & mới nhất ---
+    const now = new Date();
+    const featuredIds = new Set(courses_bestseller.map(c => c.id));
+
+    // 👇 chỉ gắn tag cho 3 nhóm đầu tiên
+    const allCourses = [...courses_bestseller, ...courses_newest, ...Top10ViewedCourses];
+
+    const taggedCourses = allCourses.map(c => {
+      const createdAt = new Date(c.created_at);
+      const isNew = (now - createdAt) <= 7 * 24 * 60 * 60 * 1000; // mới trong 7 ngày
+      const isFeatured = featuredIds.has(c.id);
+      return { ...c, isNew, isFeatured };
+    });
+
+    // Bổ sung lại dữ liệu cho các nhóm có tag
+    const tagMap = new Map(taggedCourses.map(c => [c.id, c]));
+    const withTags = list => list.map(c => tagMap.get(c.id) || c);
 
     res.render('vwHome/index', {
       title: 'Home',
-      courses_bestseller,
-      courses_newest,
-      Top10ViewedCourses,
-      topfield,
+      courses_bestseller: withTags(courses_bestseller),
+      courses_newest: withTags(courses_newest),
+      Top10ViewedCourses: withTags(Top10ViewedCourses),
+      topfield, // 👈 nhóm này giữ nguyên, không có tag
     });
   } catch (err) {
     next(err);
   }
 });
+
 
 
 // ----------------------------------------------------------------------------
