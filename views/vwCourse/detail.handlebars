@@ -236,9 +236,9 @@
                             {{#each (range 1 6)}}
                             {{#ifCond @index '<=' ../course.rating_avg}}★{{else}}☆{{/ifCond}} {{/each}} </div>
                                 <span class="fw-bold me-2">{{course.rating_avg}}/5</span>
-                                <span>({{course.rating_count}} Comment)</span>
+                                <span>({{course.rating_count}} reviews)</span>
                                 <span class="mx-2">|</span>
-                                <span>{{course.students_count}} Student</span>
+                                <span>{{course.students_count}} students</span>
                         </div>
 
                         <p class="mt-2">
@@ -256,9 +256,9 @@
                         <img src="{{course.cover_url}}" alt="{{course.title}}" class="img-fluid rounded shadow">
                         {{/if}}
 
-                        <h4 class="text-warning fw-bold mt-3">{{course.promo_price}}₫</h4>
+                        <h4 class="text-warning fw-bold mt-3">${{course.promo_price}}</h4>
                         {{#if course.price}}
-                        <p class="text-decoration-line-through text-light small">{{course.price}}₫</p>
+                        <p class="text-decoration-line-through text-light small">${{course.price}}</p>
                         {{/if}}
 
                         {{#if isEnrolled}}
@@ -302,7 +302,7 @@
 
                                     // 🧩 Xử lý phản hồi
                                     if (res.status === 401) {
-                                        alert(result.message || 'Vui lòng đăng nhập trước khi thêm yêu thích.');
+                                        alert(result.message || 'Please sign in before adding to favorites.');
                                         return (window.location.href = '/account/signin');
                                     }
 
@@ -312,18 +312,18 @@
                                         btn.classList.toggle('btn-outline-danger');
 
                                         if (isAdded) {
-                                            btn.innerHTML = '<i class="bi bi-heart"></i> Thêm vào yêu thích';
+                                            btn.innerHTML = '<i class="bi bi-heart"></i> Add to favorites';
                                         } else {
-                                            btn.innerHTML = '<i class="bi bi-heart-fill"></i> Đã yêu thích';
+                                            btn.innerHTML = '<i class="bi bi-heart-fill"></i> Favorited';
                                         }
 
                                     } else {
-                                        alert(result.message || 'Lỗi khi xử lý yêu thích.');
+                                        alert(result.message || 'Error processing favorite.');
                                     }
 
                                 } catch (err) {
-                                    console.error('❌ Watchlist button error:', err);
-                                    alert('Không thể kết nối đến máy chủ.');
+                                console.error('❌ Watchlist button error:', err);
+                                alert('Cannot connect to server.');
                                 }
                             });
                         </script>
@@ -446,7 +446,7 @@
                             {{#ifCond this '<=' ../rating}}★{{else}}☆{{/ifCond}} {{/each}} </div>
                         </div>
                         <p class="mb-1">{{comment}}</p>
-                        <small class="text-muted">Gửi ngày {{formatDate created_at}}</small>
+                        <small class="text-muted">Send Date {{formatDate created_at}}</small>
                     </div>
                     {{/each}}
                     {{else}}
@@ -532,17 +532,17 @@
 
                                     <div class="mt-auto d-flex justify-content-between align-items-center">
                                         {{#if promo_price}}
-                                        <span class="fw-bold text-danger">{{promo_price}} ₫</span>
-                                        <small class="text-decoration-line-through text-secondary">{{price}} ₫</small>
+                                        <span class="fw-bold text-danger">${{promo_price}}</span>
+                                        <small class="text-decoration-line-through text-secondary">${{price}}</small>
                                         {{else}}
-                                        <span class="fw-bold text-dark">{{price}} ₫</span>
+                                        <span class="fw-bold text-dark">${{price}}</span>
                                         {{/if}}
                                     </div>
                                 </div>
 
                                 <div class="card-footer bg-white border-top-0">
                                     <a href="/courses/details?id={{id}}" class="btn btn-outline-primary w-100 btn-sm">
-                                        <i class="bi bi-eye"></i> Xem chi tiết
+                                        <i class="bi bi-eye"></i> See Details
                                     </a>
                                 </div>
                             </div>
@@ -550,7 +550,7 @@
                         {{/each}}
                     </div>
                     {{else}}
-                    <p class="text-muted">Không có khóa học nào khác trong cùng lĩnh vực.</p>
+                    <p class="text-muted">No other courses found in this category.</p>
                     {{/if}}
                 </section>
 
@@ -596,7 +596,7 @@
                         }
                         // Nếu không hợp lệ
                         else {
-                            alert("❌ Video URL không hợp lệ!");
+                            alert("❌ Invalid video URL!");
                             return;
                         }
 

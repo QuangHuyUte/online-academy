@@ -58,7 +58,7 @@
                        autofocus
                        aria-describedby="nameHelp">
                 <div id="nameHelp" class="form-text">
-                  Tên hiển thị cho người dùng.
+                  Display name shown to users.
                 </div>
               </div>
 
@@ -67,7 +67,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                   <label class="form-label fw-semibold mb-0">Slug</label>
                   <div class="small text-muted">
-                    Để trống để tự sinh từ Name
+                    Leave empty to auto-generate from Name
                   </div>
                 </div>
 
@@ -86,7 +86,7 @@
                   </button>
                 </div>
                 <div id="slugHelp" class="form-text">
-                  Chỉ gồm chữ thường, số và dấu gạch ngang.
+                  Only lowercase letters, numbers and hyphens.
                 </div>
 
                 <div class="slug-preview fade-in mt-2 small">
@@ -111,7 +111,7 @@
                   {{/each}}
                 </select>
                 <div id="parentHelp" class="form-text">
-                  Chỉ chọn danh mục <strong>cấp 1</strong> làm cha (danh sách đã lọc sẵn).
+                  Only choose a level-1 category as parent (pre-filtered).
                 </div>
               </div>
 
@@ -144,9 +144,9 @@
                   <strong>Hints</strong>
                 </div>
                 <ul class="small mb-0 ps-3">
-                  <li>Slug tự động sinh khi để trống hoặc rời ô Name.</li>
-                  <li>Không thể chọn chính danh mục làm cha của nó.</li>
-                  <li>Nhóm cấp 1 = <em>Group</em>, cấp 2 = <em>Leaf</em>.</li>
+                  <li>Slug is auto-generated when left empty or when leaving the Name field.</li>
+                  <li>Cannot select the category itself as its parent.</li>
+                  <li>Level 1 = <em>Group</em>, Level 2 = <em>Leaf</em>.</li>
                 </ul>
               </div>
 
@@ -275,7 +275,7 @@
   $parent?.addEventListener('change', (e) => {
     const v = e.target.value;
     if (categoryId && v && String(v) === String(categoryId)) {
-      alert('Category không thể là cha của chính nó.');
+      alert('Category cannot be parent of itself.');
       e.target.value = '';
     }
   });
@@ -293,7 +293,7 @@
   $form?.addEventListener('submit', (e) => {
     if (!$name.value.trim()) {
       e.preventDefault();
-      return alert('Name không được trống.');
+      return alert('Name cannot be empty.');
     }
     $btn.disabled = true;
     $btn.querySelector('.save-label')?.classList.add('d-none');

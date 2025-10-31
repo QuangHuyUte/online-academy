@@ -188,8 +188,8 @@
                                       </button>
                                     </div>
                                     <div class="form-text">
-                                      Khi Save thành công, hệ thống tự chuyển sang <code>/uploads/...</code>.
-                                      Cũng có thể dán YouTube URL (watch?v=... / youtu.be/...).
+                                      When Save is successful, the system automatically switches to <code>/uploads/...</code>.
+                                      You can also paste YouTube URL (watch?v=... / youtu.be/...).
                                     </div>
 
                                     <div class="d-flex align-items-center gap-2 mt-2 small text-muted" id="status_{{this.id}}"></div>
@@ -262,8 +262,8 @@
                       </button>
                     </div>
                     <div class="form-text">
-                      Upload sẽ trả <code>/repouploads/...</code> (tạm). Khi Add thành công, hệ thống tự chuyển sang <code>/uploads/...</code>.
-                      Cũng có thể dán YouTube URL (watch?v=... / youtu.be/...).
+                      Upload sẽ trả <code>/repouploads/...</code> (tạm). When Add is successful, the system automatically switches to <code>/uploads/...</code>.
+                      You can also paste YouTube URL(watch?v=... / youtu.be/...).
                     </div>
 
                     <div class="d-flex align-items-center gap-2 mt-2 small text-muted" id="status_new_{{this.id}}"></div>
@@ -373,7 +373,7 @@
       } catch (err) {
         console.error('Upload error:', err);
         if (statusEl) statusEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ' + (err.message || 'Upload error') + '</span>';
-        alert('Không thể upload video. ' + (err.message || ''));
+  alert('Unable to upload video. ' + (err.message || ''));
       } finally {
         // reset input so picking the same file again still triggers change
         hiddenFile.value = '';

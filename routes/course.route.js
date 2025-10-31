@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Lỗi khi tải trang chính');
+    res.status(500).send('Error loading main page');
   }
 });
 
@@ -117,11 +117,11 @@ router.get('/newest', async (req, res) => {
       currentPage: page,
       totalPages,
       menu,
-      title: 'Khóa học mới nhất'
+  title: 'Newest Courses'
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Lỗi khi tải danh sách khóa học mới nhất');
+    res.status(500).send('Error loading newest courses list');
   }
 });
 
@@ -181,8 +181,8 @@ router.get('/details', async (req, res) => {
       outlineEmpty: outline.length === 0,
     });
   } catch (err) {
-    console.error('❌ Lỗi khi tải chi tiết khóa học:', err);
-    res.status(500).send('Không thể tải chi tiết khóa học.');
+    console.error('❌ Error loading course detail:', err);
+    res.status(500).send('Cannot load course detail.');
   }
 });
 
@@ -211,12 +211,12 @@ router.post("/enroll/:id", async (req, res) => {
       });
     }
 
-    // Dùng flash message báo thành công
-    req.session.flash = { message: "Đăng ký khóa học thành công!" };
+    // Use flash message to notify success
+    req.session.flash = { message: "Course enrollment successful!" };
     res.redirect(`/courses/details?id=${courseId}`);
   } catch (err) {
     console.error("Enroll error:", err);
-    req.session.flash = { message: "Lỗi khi đăng ký khóa học!" };
+    req.session.flash = { message: "Error enrolling in course!" };
     res.redirect(`/courses/details?id=${courseId}`);
   }
 });
@@ -257,8 +257,8 @@ router.get('/:id/details', async (req, res) => {
       outlineEmpty: outline.length === 0,
     });
   } catch (err) {
-    console.error('❌ Lỗi khi tải chi tiết khóa học:', err);
-    res.status(500).send('Không thể tải chi tiết khóa học.');
+    console.error('❌ Error loading course detail:', err);
+    res.status(500).send('Cannot load course detail.');
   }
 });
 
@@ -279,8 +279,8 @@ router.get('/:id', async (req, res) => {
       menu
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Lỗi khi tải chi tiết khóa học');
+  console.error(err);
+  res.status(500).send('Error loading course detail.');
   }
 });
 
@@ -294,25 +294,25 @@ router.post('/watchlist/add', async (req, res) => {
     const user_id = req.session.authUser?.id;
 
     if (!user_id) {
-      return res.status(401).json({ success: false, message: 'Bạn cần đăng nhập để thêm yêu thích.' });
+      return res.status(401).json({ success: false, message: 'You need to sign in to add to favorites.' });
     }
     if (!course_id) {
-      return res.status(400).json({ success: false, message: 'Thiếu ID khóa học.' });
+      return res.status(400).json({ success: false, message: 'Missing course ID.' });
     }
 
     // ✅ Kiểm tra xem đã tồn tại chưa
     const exists = await watchlistModel.exists(user_id, course_id);
     if (exists) {
-      return res.json({ success: false, already: true, message: 'Khoá học này đã có trong danh sách yêu thích.' });
+      return res.json({ success: false, already: true, message: 'This course is already in your favorites.' });
     }
 
     // ✅ Thêm mới
     await watchlistModel.addWatchlist(user_id, course_id);
-    res.json({ success: true, message: 'Đã thêm vào danh sách yêu thích' });
+  res.json({ success: true, message: 'Added to favorites' });
 
   } catch (err) {
     console.error('❌ Watchlist add error:', err);
-    res.status(500).json({ success: false, message: 'Lỗi khi thêm vào danh sách yêu thích.' });
+    res.status(500).json({ success: false, message: 'Error adding to favorites.' });
   }
 });
 
@@ -324,23 +324,23 @@ router.post('/watchlist/remove', async (req, res) => {
     const user_id = req.session.authUser?.id;
 
     if (!user_id) {
-      return res.status(401).json({ success: false, message: 'Bạn cần đăng nhập để xoá yêu thích.' });
+      return res.status(401).json({ success: false, message: 'You need to sign in to remove from favorites.' });
     }
     if (!course_id) {
-      return res.status(400).json({ success: false, message: 'Thiếu ID khóa học.' });
+      return res.status(400).json({ success: false, message: 'Missing course ID.' });
     }
 
     const exists = await watchlistModel.exists(user_id, course_id);
     if (!exists) {
-      return res.json({ success: false, notFound: true, message: 'Khoá học này chưa có trong danh sách yêu thích.' });
+      return res.json({ success: false, notFound: true, message: 'This course is not in your favorites.' });
     }
 
     await watchlistModel.remove(user_id, course_id);
-    res.json({ success: true, message: 'Đã xóa khỏi danh sách yêu thích' });
+  res.json({ success: true, message: 'Removed from favorites' });
 
   } catch (err) {
     console.error('❌ Watchlist remove error:', err);
-    res.status(500).json({ success: false, message: 'Lỗi khi xoá khỏi danh sách yêu thích.' });
+    res.status(500).json({ success: false, message: 'Error removing from favorites.' });
   }
 });
 
@@ -355,25 +355,25 @@ router.post('/reviews/add', async (req, res) => {
     if (!enrolled)
       return res
         .status(403)
-        .send('<h3 style="color:red;text-align:center;margin-top:50px;">Bạn cần đăng ký khóa học trước khi đánh giá.</h3>');
+        .send('<h3 style="color:red;text-align:center;margin-top:50px;">You need to enroll in the course before reviewing.</h3>');
 
     const reviewed = await ratingModel.hasReviewed(user_id, course_id);
     if (reviewed)
       return res
         .status(400)
-        .send('<h3 style="color:orange;text-align:center;margin-top:50px;">Bạn đã gửi đánh giá cho khóa học này rồi!</h3>');
+        .send('<h3 style="color:orange;text-align:center;margin-top:50px;">You have already submitted a review for this course!</h3>');
 
     await ratingModel.addRating(course_id, user_id, rating, comment);
     res.redirect(`/courses/details?id=${course_id}`);
   } catch {
-    res.status(500).send('Không thể gửi đánh giá.');
+    res.status(500).send('Could not submit review.');
   }
 });
 
 router.get("/learning/:id", async (req, res) => {
   const courseId = parseInt(req.params.id, 10);
   if (!req.session.authUser) {
-    req.session.flash = { message: "Vui lòng đăng nhập để học." };
+    req.session.flash = { message: "Please sign in to access the course." };
     return res.redirect(`/account/signin`);
   }
 
@@ -392,8 +392,8 @@ router.get("/learning/:id", async (req, res) => {
       sections,
     });
   } catch (err) {
-    console.error("❌ Lỗi khi tải trang học:", err);
-    res.status(500).send("Không thể tải trang học.");
+    console.error("❌ Error loading learning page:", err);
+    res.status(500).send("Cannot load learning page.");
   }
 });
 

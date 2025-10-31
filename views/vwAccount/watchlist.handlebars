@@ -2,8 +2,8 @@
 
     <!-- 🩷 Tiêu đề -->
     <div class="d-flex align-items-center mb-4">
-        <i class="bi bi-heart-fill text-danger fs-3 me-2"></i>
-        <h2 class="fw-bold text-primary mb-0">Danh sách khóa học yêu thích</h2>
+    <i class="bi bi-heart-fill text-danger fs-3 me-2"></i>
+    <h2 class="fw-bold text-primary mb-0">Favorite Courses</h2>
     </div>
 
     {{#if hasCourses}}
@@ -24,15 +24,15 @@
 
                     <p class="text-warning mb-2">
                         ★ {{rating_avg}}
-                        <small class="text-muted">({{rating_count}} đánh giá)</small>
+                        <small class="text-muted">({{rating_count}} reviews)</small>
                     </p>
 
                     <div class="mt-auto d-flex justify-content-between align-items-center">
                         {{#if promo_price}}
-                        <span class="fw-bold text-danger">{{promo_price}} ₫</span>
-                        <small class="text-decoration-line-through text-secondary">{{price}} ₫</small>
+                        <span class="fw-bold text-danger">${{promo_price}}</span>
+                        <small class="text-decoration-line-through text-secondary">${{price}}</small>
                         {{else}}
-                        <span class="fw-bold text-dark">{{price}} ₫</span>
+                        <span class="fw-bold text-dark">${{price}}</span>
                         {{/if}}
                     </div>
                 </div>
@@ -40,10 +40,10 @@
                 <!-- Footer -->
                 <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
                     <a href="/courses/details?id={{id}}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-eye"></i> Xem chi tiết
+                        <i class="bi bi-eye"></i> View details
                     </a>
                     <button class="btn btn-outline-danger btn-sm btn-remove-watchlist">
-                        <i class="bi bi-trash"></i> Xóa
+                        <i class="bi bi-trash"></i> Remove
                     </button>
                 </div>
             </div>
@@ -55,9 +55,9 @@
     <!-- ❌ Khi chưa có khóa học -->
     <div id="emptyMessage" class="text-center py-5">
         <i class="bi bi-heart text-danger fs-1 mb-3"></i>
-        <h5 class="fw-bold text-secondary">Bạn chưa thêm khóa học nào vào danh sách yêu thích.</h5>
+        <h5 class="fw-bold text-secondary">You have not added any courses to your favorites.</h5>
         <a href="/courses" class="btn btn-primary mt-3">
-            <i class="bi bi-search"></i> Khám phá khóa học
+            <i class="bi bi-search"></i> Explore courses
         </a>
     </div>
     {{/if}}
@@ -78,7 +78,7 @@
                 e.preventDefault();
                 const card = btn.closest('.col');
                 const courseId = card.dataset.courseId;
-                const confirmed = confirm('Bạn có chắc muốn xoá khóa học này khỏi danh sách yêu thích không?');
+                const confirmed = confirm('Are you sure you want to remove this course from your favorites?');
                 if (!confirmed) return;
 
                 try {
@@ -91,11 +91,11 @@
                     const result = await res.json();
 
                     if (res.status === 401) {
-                        alert(result.message || 'Bạn cần đăng nhập để xoá.');
+                        alert(result.message || 'You need to sign in to remove.');
                         return (window.location.href = '/account/signin');
                     }
 
-                    if (result.success) {
+                        if (result.success) {
                         card.remove();
 
                         // Nếu xoá hết
@@ -111,11 +111,11 @@
               </div>`);
                         }
                     } else {
-                        alert(result.message || 'Lỗi khi xoá khỏi danh sách yêu thích.');
+                        alert(result.message || 'Error removing from favorites.');
                     }
                 } catch (err) {
-                    console.error('❌ Lỗi khi xoá khỏi watchlist:', err);
-                    alert('Không thể kết nối đến máy chủ.');
+                    console.error('❌ Error removing from watchlist:', err);
+                    alert('Cannot connect to server.');
                 }
             });
         });

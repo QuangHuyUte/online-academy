@@ -23,9 +23,9 @@
         fetch(`/account/is-available?email=${email}`)
             .then(res => res.json())
             .then(data => {
-                if (data.is_available === false) {
-                    // Nếu tài khoản bị khóa
-                    alert(data.message || 'Tài khoản này đã bị khóa.');
+        if (data.is_available === false) {
+          // If account is locked
+          alert(data.message || 'This account has been locked.');
                     return;
                 }
                 
@@ -50,10 +50,10 @@
                         alert('Error occurred. Please try again later.');
                     });
             })
-            .catch(function (err) {
-                console.error(err);
-                alert('Lỗi khi kiểm tra trạng thái tài khoản. Vui lòng thử lại.');
-            });
+      .catch(function (err) {
+        console.error(err);
+        alert('Error checking account status. Please try again.');
+      });
     }
     
     document.addEventListener('DOMContentLoaded', function () {

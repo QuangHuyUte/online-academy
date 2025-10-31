@@ -229,7 +229,7 @@ app.use(async (req, res, next) => { // 💥 Thay đổi thành async để dùng
         req.session.authUser = authUser; // Cập nhật session
       }
     } catch (err) {
-      console.error('Lỗi khi tải instructor profile:', err);
+  console.error('Error loading instructor profile:', err);
     }
   }
 

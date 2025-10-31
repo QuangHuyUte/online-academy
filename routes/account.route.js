@@ -49,7 +49,7 @@ const upload = multer({
     ) {
       cb(null, true);
     } else {
-      cb(new Error('Chỉ chấp nhận các file ảnh (JPEG, PNG, GIF, WebP).'), false);
+      cb(new Error('Only image files are allowed (JPEG, PNG, GIF, WebP).'), false);
     }
   },
   limits: {
@@ -115,7 +115,7 @@ router.post('/send-otp', async function (req, res) {
         return res.json({ success: true, mock_code: otp }); 
 
     } catch (error) {
-        console.error('Lỗi khi xử lý/lưu OTP:', error);
+  console.error('Error processing/saving OTP:', error);
         return res.json({ success: false, message: 'Server error during OTP processing.' });
     }
 });
@@ -125,14 +125,14 @@ router.post('/verify-otp', async function (req, res) {
     const otpRecord = await otpModel.findByEmailAndOtp(email, otp);
     
     if (!otpRecord) {
-        return res.json({ success: false, message: 'Mã OTP không đúng hoặc đã hết hạn.' });
+    return res.json({ success: false, message: 'OTP is incorrect or has expired.' });
     }
 
     req.session.verifiedEmail = email;
     
     await otpModel.deleteOtp(email); 
 
-    return res.json({ success: true, message: 'Xác thực OTP thành công.' });
+  return res.json({ success: true, message: 'OTP verified successfully.' });
 });
 
 router.get('/signup', function (req, res) {
@@ -142,9 +142,9 @@ router.get('/signup', function (req, res) {
 router.get('/is-available', async function (req, res) {
     const email = req.query.email;
     if (!email) {
-        return res.json({
-            ok: false,
-            message: 'Vui lòng cung cấp email.'
+      return res.json({
+          ok: false,
+          message: 'Please provide an email.'
         });
     }
 
@@ -152,29 +152,29 @@ router.get('/is-available', async function (req, res) {
     if (!user) {
         // Tránh tiết lộ tài khoản không tồn tại, trả về OK nhưng không kiểm tra được.
         // Hoặc trả về ok: true để cho phép tiếp tục kiểm tra mật khẩu.
-        return res.json({
-            ok: true,
-            is_available: true,
-            message: 'Email hợp lệ.'
-        });
+    return res.json({
+      ok: true,
+      is_available: true,
+      message: 'Email is valid.'
+    });
     }
 
     // Kiểm tra trạng thái is_available. Nếu cột không tồn tại, mặc định là true.
     const is_available = user.is_available === undefined || user.is_available === null ? true : user.is_available;
 
     if (is_available === false) {
-        return res.json({
-            ok: false,
-            is_available: false,
-            message: 'Tài khoản này đã bị khóa. Vui lòng liên hệ quản trị viên.'
-        });
+    return res.json({
+      ok: false,
+      is_available: false,
+      message: 'This account has been suspended. Please contact the administrator.'
+    });
     }
 
-    return res.json({
-        ok: true,
-        is_available: true,
-        message: 'Tài khoản khả dụng.'
-    });
+  return res.json({
+    ok: true,
+    is_available: true,
+    message: 'Account is available.'
+  });
 });
 
 router.get('/is-password-correct', async function(req, res) {
@@ -200,7 +200,7 @@ router.post('/signup', async function (req, res) {
     if (!isEmailVerified) {
       return res.render('vwAccounts/signup', {
         error: true,
-        message: 'Vui lòng xác thực OTP trước khi đăng ký.'
+        message: 'Please verify OTP before signing up.'
       });
     }
 
@@ -210,7 +210,7 @@ router.post('/signup', async function (req, res) {
       delete req.session.verifiedEmail;
       return res.render('vwAccounts/signup', {
         error: true,
-        message: 'Email đã tồn tại.'
+        message: 'Email already exists.'
       });
     }
 
@@ -240,7 +240,7 @@ router.post('/signup', async function (req, res) {
           console.log(`✅ Added instructor record for user_id=${id}`);
         }
       } catch (err) {
-        console.error('❌ Lỗi khi thêm instructor record:', err);
+  console.error('❌ Error adding instructor record:', err);
       }
     }
 
@@ -254,13 +254,13 @@ router.post('/signup', async function (req, res) {
     if (err.code === '23505') {
       return res.render('vwAccounts/signup', {
         error: true,
-        message: 'Email đã được sử dụng. Vui lòng chọn email khác.'
+        message: 'Email is already in use. Please choose another email.'
       });
     }
 
     return res.render('vwAccounts/signup', {
       error: true,
-      message: 'Đã xảy ra lỗi trong quá trình đăng ký.'
+      message: 'An error occurred during registration.'
     });
   }
 });
@@ -277,19 +277,19 @@ router.post('/signin', async function (req, res) {
 
   // 🆕 Thêm logic kiểm tra is_available vào đây để xử lý đăng nhập trực tiếp (nếu client không dùng AJAX)
   if (user) {
-      if (user.is_available === false) { 
-          // Nếu tài khoản bị khóa
-          return res.render('vwAccounts/signin', { 
-              error: true, 
-              message: 'Tài khoản này đã bị khóa. Vui lòng liên hệ quản trị viên.' 
-          });
-      }
+    if (user.is_available === false) { 
+      // Nếu tài khoản bị khóa
+      return res.render('vwAccounts/signin', { 
+        error: true, 
+        message: 'This account has been suspended. Please contact the administrator.' 
+      });
+    }
   }
 
-  if (!user) return res.render('vwAccounts/signin', { error: true, message: 'Sai Email hoặc mật khẩu.' });
+  if (!user) return res.render('vwAccounts/signin', { error: true, message: 'Incorrect email or password.' });
 
   const ok = bcrypt.compareSync(password, user.password_hash);
-  if (!ok) return res.render('vwAccounts/signin', { error: true, message: 'Sai Email hoặc mật khẩu.' });
+  if (!ok) return res.render('vwAccounts/signin', { error: true, message: 'Incorrect email or password.' });
   
   const normalized = {
     ...user,
@@ -359,7 +359,7 @@ router.post('/upload', checkAuthenticated, upload.single('file'), (req, res) => 
   }
   
   // Xử lý lỗi chung khi không có file
-  return res.status(400).json({ success: false, message: 'Không có file nào được tải lên.' });
+  return res.status(400).json({ success: false, message: 'No file was uploaded.' });
 });
 
 router.post('/profile/send-otp', checkAuthenticated, async function (req, res) {
@@ -367,32 +367,32 @@ router.post('/profile/send-otp', checkAuthenticated, async function (req, res) {
     const currentEmail = req.session.authUser.email;
 
     // 1. Nếu email không đổi, không làm gì cả
-    if (newEmail.toLowerCase() === currentEmail.toLowerCase()) {
-        return res.json({ 
-            success: true, 
-            message: 'Email không thay đổi.', 
-            skip_otp: true // Báo cho client biết có thể bỏ qua OTP
-        });
-    }
+  if (newEmail.toLowerCase() === currentEmail.toLowerCase()) {
+    return res.json({ 
+      success: true, 
+      message: 'Email did not change.', 
+      skip_otp: true // Báo cho client biết có thể bỏ qua OTP
+    });
+  }
 
     // 2. Kiểm tra email mới đã được sử dụng chưa (ngoại trừ user hiện tại)
     const existingUser = await userModel.findByEmail(newEmail);
-    if (existingUser && existingUser.id !== req.session.authUser.id) {
-        return res.json({ 
-            success: false, 
-            message: 'Email mới đã được sử dụng bởi người dùng khác.' 
-        });
-    }
+  if (existingUser && existingUser.id !== req.session.authUser.id) {
+    return res.json({ 
+      success: false, 
+      message: 'The new email is already used by another user.' 
+    });
+  }
 
     // 3. Kiểm tra email mới có thật không (format + domain/MX check)
     // Chức năng này dựa trên việc bạn đã triển khai verifyEmailExists trong email.service.js
     const isValidEmail = await verifyEmailExists(newEmail);
-    if (!isValidEmail) {
-        return res.json({ 
-            success: false, 
-            message: 'Email mới không tồn tại hoặc không thể nhận mail.' 
-        });
-    }
+  if (!isValidEmail) {
+    return res.json({ 
+      success: false, 
+      message: 'The new email does not exist or cannot receive mail.' 
+    });
+  }
     
     // 4. Tạo mã OTP mới
     const otp = generateOTP();
@@ -403,12 +403,12 @@ router.post('/profile/send-otp', checkAuthenticated, async function (req, res) {
         await otpModel.add(newEmail, otp);
 
         // Gửi OTP qua email
-        const emailSent = await sendOTPEmail(newEmail, otp, 'Xác thực Email Cập nhật Profile'); // Cập nhật tiêu đề email
+    const emailSent = await sendOTPEmail(newEmail, otp, 'Verify Email for Profile Update'); // Cập nhật tiêu đề email
         if (!emailSent) {
             await otpModel.deleteOtp(newEmail); // Xóa OTP nếu gửi mail thất bại
             return res.json({ 
                 success: false, 
-                message: 'Không thể gửi email. Vui lòng thử lại sau.' 
+        message: 'Could not send email. Please try again later.' 
             });
         }
 
@@ -422,10 +422,10 @@ router.post('/profile/send-otp', checkAuthenticated, async function (req, res) {
 
         return res.json({ success: true, mock_code: otp }); 
 
-    } catch (error) {
-        console.error('Lỗi khi gửi OTP cho Profile Update:', error);
-        return res.json({ success: false, message: 'Lỗi server khi tạo OTP.' });
-    }
+  } catch (error) {
+  console.error('Error sending OTP for Profile Update:', error);
+    return res.json({ success: false, message: 'Server error while creating OTP.' });
+  }
 });
 
 router.post('/profile/verify-otp', checkAuthenticated, async function (req, res) {
@@ -433,14 +433,14 @@ router.post('/profile/verify-otp', checkAuthenticated, async function (req, res)
     
     // Đảm bảo email đang verify là email mới trong session
     if (req.session.emailToVerifyUpdate !== email) {
-         return res.json({ success: false, message: 'Lỗi: Email xác thực không khớp.' });
+      return res.json({ success: false, message: 'Error: Verification email does not match.' });
     }
 
     const otpRecord = await otpModel.findByEmailAndOtp(email, otp);
     
-    if (!otpRecord) {
-        return res.json({ success: false, message: 'Mã OTP không đúng hoặc đã hết hạn.' });
-    }
+  if (!otpRecord) {
+    return res.json({ success: false, message: 'OTP is incorrect or has expired.' });
+  }
 
     // Đánh dấu email mới đã được verified
     req.session.verifiedNewEmail = email;
@@ -448,7 +448,7 @@ router.post('/profile/verify-otp', checkAuthenticated, async function (req, res)
 
     await otpModel.deleteOtp(email); 
 
-    return res.json({ success: true, message: 'Xác thực OTP thành công.' });
+  return res.json({ success: true, message: 'OTP verified successfully.' });
 });
 
 // ----------------------------------------------------------------------------
@@ -457,10 +457,10 @@ router.post('/profile/verify-otp', checkAuthenticated, async function (req, res)
 router.post('/profile', checkAuthenticated, upload.none(), async function (req, res) { 
     
     // 🆕 KIỂM TRA AN TOÀN CHO SESSION USER
-    if (!req.session.authUser) {
-        req.session.flash = { type: 'warning', message: 'Vui lòng đăng nhập lại để cập nhật hồ sơ.' };
-        return res.redirect('/account/signin'); 
-    }
+  if (!req.session.authUser) {
+    req.session.flash = { type: 'warning', message: 'Please sign in again to update your profile.' };
+    return res.redirect('/account/signin'); 
+  }
     
     const id = req.session.authUser.id;
     
@@ -470,13 +470,13 @@ router.post('/profile', checkAuthenticated, upload.none(), async function (req, 
     // Đảm bảo oldEmail tồn tại
     const oldEmail = req.session.authUser.email; 
     
-    if (!oldEmail) {
-        // Điều này chỉ xảy ra nếu cấu trúc session bị lỗi nặng
-        return res.render('vwAccounts/profile', {
-            user: req.session.authUser,
-            error: 'Lỗi session: Không thể xác định email cũ.'
-        });
-    }
+  if (!oldEmail) {
+    // Điều này chỉ xảy ra nếu cấu trúc session bị lỗi nặng
+    return res.render('vwAccounts/profile', {
+      user: req.session.authUser,
+      error: 'Session error: Could not determine old email.'
+    });
+  }
 
     const isEmailChanged = newEmail.toLowerCase() !== oldEmail.toLowerCase();
     
@@ -490,10 +490,10 @@ router.post('/profile', checkAuthenticated, upload.none(), async function (req, 
         const verifiedEmail = req.session.verifiedNewEmail;
         if (!verifiedEmail || verifiedEmail.toLowerCase() !== newEmail.toLowerCase()) {
              // Redirect trở lại trang profile với lỗi nếu chưa verified
-            return res.render('vwAccounts/profile', {
-                user: req.session.authUser,
-                error: 'Vui lòng xác thực email mới bằng OTP trước khi cập nhật.'
-            });
+      return res.render('vwAccounts/profile', {
+        user: req.session.authUser,
+        error: 'Please verify the new email with OTP before updating.'
+      });
         }
         userUpdate.email = newEmail;
         delete req.session.verifiedNewEmail; // Xóa cờ sau khi cập nhật thành công
@@ -572,7 +572,7 @@ router.get('/watchlist', async (req, res) => {
     return res.render('vwAccount/watchlist', {
       watchlist: [],
       hasCourses: false,
-      message: 'Bạn cần đăng nhập để xem danh sách yêu thích ❤️'
+      message: 'You need to sign in to view your watchlist ❤️'
     });
   }
 
@@ -585,7 +585,7 @@ router.get('/watchlist', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error loading watchlist:', err);
-    res.status(500).send('Không thể tải danh sách yêu thích.');
+    res.status(500).send('Could not load the watchlist.');
   }
 });
 
@@ -600,7 +600,7 @@ router.get("/my-courses", async (req, res) => {
   const userId = auth?.user_id ?? auth?.id ?? auth?.account_id;
 
   if (!userId) {
-    console.error("❌ Không tìm thấy userId trong session:", auth);
+  console.error("❌ userId not found in session:", auth);
     return res.status(400).send("User ID not found in session");
   }
 
@@ -624,7 +624,7 @@ router.get('/auth/google/callback',
       
       if (req.user.is_available === false) {
           
-          const errorMessage = 'Tài khoản Google liên kết đã bị khóa. Vui lòng liên hệ quản trị viên.';
+          const errorMessage = 'The linked Google account has been suspended. Please contact the administrator.';
           
           // 1. Set flash message to be shown on the next request
           req.session.flash = { type: 'error', message: errorMessage };

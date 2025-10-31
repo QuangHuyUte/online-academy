@@ -36,7 +36,7 @@ router.get('/category/:id', async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Lỗi khi tải danh sách khóa học');
+    res.status(500).send('Error loading course list');
   }
 });
 

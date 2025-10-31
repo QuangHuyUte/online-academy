@@ -37,7 +37,7 @@ router.post("/progress/:lessonId", async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error("❌ Lỗi lưu tiến độ:", err);
+  console.error("❌ Error saving progress:", err);
     res.status(500).json({ success: false });
   }
 });

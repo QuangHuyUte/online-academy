@@ -33,7 +33,7 @@ router.get('/categories/new', async (req, res, next) => {
 router.post('/categories', async (req, res, next) => {
   try {
     const name = req.body.name?.trim();
-    if (!name) { res.flash('error', 'Name không được trống.'); return res.redirect('back'); }
+  if (!name) { res.flash('error', 'Name must not be empty.'); return res.redirect('back'); }
 
     // chuẩn hoá/auto slug
     let slug = (req.body.slug?.trim() || '')
@@ -47,9 +47,9 @@ router.post('/categories', async (req, res, next) => {
     // parent phải là cấp 1 (parent.parent_id IS NULL)
     if (parent_id != null) {
       const parent = await categoryModel.findById(parent_id);
-      if (!parent) { res.flash('error', 'Parent không tồn tại.'); return res.redirect('back'); }
+      if (!parent) { res.flash('error', 'Parent not found.'); return res.redirect('back'); }
       if (parent.parent_id != null) {
-        res.flash('error', 'Chỉ được chọn danh mục cấp 1 làm cha.');
+        res.flash('error', 'Only a level-1 category can be selected as parent.');
         return res.redirect('back');
       }
     }
@@ -59,7 +59,7 @@ router.post('/categories', async (req, res, next) => {
     res.redirect('/admin/categories');
   } catch (err) {
     if (err?.code === '23505') {
-      res.flash('error', 'Slug đã tồn tại. Vui lòng chọn slug khác.');
+      res.flash('error', 'Slug already exists. Please select another slug.');
       return res.redirect('back');
     }
     next(err);
@@ -89,7 +89,7 @@ router.post('/categories/:id', async (req, res, next) => {
     if (!Number.isFinite(id)) return res.sendStatus(400);
 
     const name = req.body.name?.trim();
-    if (!name) { res.flash('error', 'Name không được trống.'); return res.redirect('back'); }
+  if (!name) { res.flash('error', 'Name must not be empty.'); return res.redirect('back'); }
 
     let slug = (req.body.slug?.trim() || '')
       .toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -100,15 +100,15 @@ router.post('/categories/:id', async (req, res, next) => {
     else parent_id = Number(parent_id);
 
     if (parent_id != null && parent_id === id) {
-      res.flash('error', 'Category không thể là cha của chính nó.');
+      res.flash('error', 'Category cannot be its own parent.');
       return res.redirect('back');
     }
 
     if (parent_id != null) {
       const parent = await categoryModel.findById(parent_id);
-      if (!parent) { res.flash('error', 'Parent không tồn tại.'); return res.redirect('back'); }
+      if (!parent) { res.flash('error', 'Parent not found.'); return res.redirect('back'); }
       if (parent.parent_id != null) {
-        res.flash('error', 'Chỉ được chọn danh mục cấp 1 làm cha.');
+        res.flash('error', 'Only a level-1 category can be selected as parent.');
         return res.redirect('back');
       }
     }
@@ -118,7 +118,7 @@ router.post('/categories/:id', async (req, res, next) => {
     res.redirect('/admin/categories');
   } catch (err) {
     if (err?.code === '23505') {
-      res.flash('error', 'Slug đã tồn tại. Vui lòng chọn slug khác.');
+      res.flash('error', 'Slug already exists. Please choose a different slug.');
       return res.redirect('back');
     }
     next(err);
@@ -414,13 +414,13 @@ router.post('/students/:id/availability', async (req, res, next) => {
 
     res.flash(
       'success',
-      newValue ? 'Đã MỞ tài khoản học viên.' : 'Đã KHÓA tài khoản học viên.'
+      newValue ? 'Student account activated.' : 'Student account locked.'
     );
 
     res.redirect(`/admin/students?q=${encodeURIComponent(q || '')}&page=${page || 1}`);
   } catch (err) {
     console.error('Error updating student availability:', err);
-    res.flash('danger', 'Lỗi khi cập nhật trạng thái tài khoản.');
+  res.flash('danger', 'Error updating account status.');
     res.redirect(`/admin/students?q=${encodeURIComponent(q || '')}&page=${page || 1}`);
   }
 });
@@ -441,13 +441,13 @@ router.post('/instructors/:id/availability', async (req, res) => {
 
     res.flash(
       'success',
-      newValue ? 'Đã MỞ lại tài khoản giảng viên.' : 'Đã KHÓA tài khoản giảng viên.'
+      newValue ? 'Instructor account activated.' : 'Instructor account locked.'
     );
 
     res.redirect(`/admin/instructors?q=${encodeURIComponent(q||'')}&page=${page||1}`);
   } catch (err) {
     console.error(err);
-    res.flash('danger', 'Lỗi khi cập nhật trạng thái tài khoản.');
+  res.flash('danger', 'Error updating account status.');
     res.redirect(`/admin/instructors?q=${encodeURIComponent(q||'')}&page=${page||1}`);
   }
 });

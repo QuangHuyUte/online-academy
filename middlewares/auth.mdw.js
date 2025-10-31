@@ -7,7 +7,7 @@ export function authRequired(req, res, next) {
   const user = req.session?.user || req.session?.authUser;
 
   if (!loggedIn || !user) {
-    res.flash?.('warning', 'Vui lòng đăng nhập.');
+    res.flash?.('warning', 'Please sign in.');
     // Ghi nhớ trang cũ để quay lại sau login
     req.session.returnUrl = req.originalUrl;          // 🔁 dùng returnUrl thống nhất
     return res.redirect('/account/signin');           // ✅ đúng route signin
@@ -20,7 +20,7 @@ export function requireAdmin(req, res, next) {
   const user = req.session?.user || req.session?.authUser;
   // Hỗ trợ cả role === 'admin' hoặc permission === 1
   if (user?.role !== 'admin' && user?.permission !== 1) {
-    res.flash?.('danger', 'Bạn không có quyền truy cập trang quản trị.');
+    res.flash?.('danger', 'You do not have permission to access the admin area.');
     return res.redirect('/');
   }
   next();
@@ -30,7 +30,7 @@ export function requireAdmin(req, res, next) {
 export function requireInstructor(req, res, next) {
   const user = req.session?.user || req.session?.authUser;
   if (user?.role !== 'instructor') {
-    res.flash?.('danger', 'Chỉ giảng viên mới được truy cập trang này.');
+    res.flash?.('danger', 'Only instructors can access this page.');
     return res.redirect('/');
   }
   next();
@@ -40,7 +40,7 @@ export function requireInstructor(req, res, next) {
 export function requireStudent(req, res, next) {
   const user = req.session?.user || req.session?.authUser;
   if (user?.role !== 'student') {
-    res.flash?.('danger', 'Chỉ học viên mới được truy cập trang này.');
+    res.flash?.('danger', 'Only students can access this page.');
     return res.redirect('/');
   }
   next();

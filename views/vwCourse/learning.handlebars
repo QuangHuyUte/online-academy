@@ -135,7 +135,7 @@
   const videoContainer = document.getElementById("video-container");
 
   if (!filename) {
-    alert("❌ Không tìm thấy video!");
+    alert("❌ Video not found!");
     return;
   }
 
@@ -153,8 +153,9 @@
   player.src({ type: "video/mp4", src: safeSrc });
   player.one("loadedmetadata", () => {
     player.play().catch((err) => {
-      console.warn("⚠️ Không thể tự động phát video:", err);
+      console.warn("⚠️ Cannot autoplay video:", err);
     });
+  console.log(`📩 Saved progress for lesson ${lessonId}: ${watchedSec}s, done=${isDone}`);
   });
 
   // Highlight bài đang học
@@ -186,7 +187,7 @@
         );
       }
     } catch (err) {
-      console.error("❌ Lỗi khi gửi tiến độ:", err);
+    console.error("❌ Error sending progress:", err);
     }
   }
 </script>

@@ -67,8 +67,8 @@
                     <i class="bi bi-eye"></i> View
                   </a>
 
-                  <form action="/admin/students/{{this.id}}/availability" method="post" class="d-inline"
-                        onsubmit="return confirm('Bạn muốn {{#if this.is_available}}KHÓA{{else}}MỞ{{/if}} tài khoản học viên này?');">
+      <form action="/admin/students/{{this.id}}/availability" method="post" class="d-inline"
+        onsubmit="return confirm('Do you want to {{#if this.is_available}}DEACTIVATE{{else}}ACTIVATE{{/if}} this student account?');">
                     <input type="hidden" name="q" value="{{../q}}">
                     <input type="hidden" name="page" value="{{../page}}">
                     <input type="hidden" name="available" value="{{#if this.is_available}}0{{else}}1{{/if}}">

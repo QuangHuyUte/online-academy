@@ -70,20 +70,20 @@
                 return;
             }
             
-            let msg = 'Mã OTP đã được gửi đến email mới của bạn. Vui lòng kiểm tra và nhập mã.';
-            if (otpData.mock_code) {
-                msg = `Mã OTP đã được gửi đến email mới . Vui lòng kiểm tra và nhập mã.`;
-            }
-            showMessage(msg, false);
+      let msg = 'An OTP has been sent to your new email. Please check and enter the code.';
+      if (otpData.mock_code) {
+        msg = `An OTP has been sent to your new email. Please check and enter the code.`;
+      }
+                showMessage(msg, false);
             
             btnSubmit.innerHTML = '<i class="bi bi-check2-square"></i> Verify Email';
             otpContainer.style.display = 'block';
 
             frmProfile.removeEventListener('submit', handleUpdateProfile);
             frmProfile.addEventListener('submit', handleVerifyAndSubmit);
-        } else {
-            showMessage(otpData.message || 'Lỗi gửi OTP. Vui lòng thử lại.', true);
-        }
+    } else {
+      showMessage(otpData.message || 'Error sending OTP. Please try again.', true);
+    }
     }
 
     async function handleVerifyAndSubmit(e) {
@@ -91,10 +91,10 @@
         const email = txtEmail.value.toLowerCase().trim();
         const otp = txtOTP.value;
 
-        if (otp.length === 0) {
-            showMessage('Vui lòng nhập mã OTP.', true);
-            return;
-        }
+    if (otp.length === 0) {
+      showMessage('Please enter the OTP code.', true);
+      return;
+    }
         
         let res = await fetch('/account/profile/verify-otp', {
             method: 'POST',
@@ -103,8 +103,8 @@
         });
         let data = await res.json();
         
-        if (data.success) {
-            showMessage('Xác thực OTP thành công! Đang tiến hành cập nhật Profile...', false);
+    if (data.success) {
+      showMessage('OTP verified successfully! Updating profile...', false);
             
             frmProfile.removeEventListener('submit', handleVerifyAndSubmit);
             frmProfile.removeEventListener('submit', handleUpdateProfile);
@@ -156,7 +156,7 @@
                 txtAvatarUrlInput.disabled = true;
                 fileAvatarUpload.disabled = true;
                 btnSubmit.disabled = true;
-                showMessage('Đang tải ảnh lên...', false);
+                showMessage('Uploading image...', false);
 
                 // 3. Gửi AJAX lên route tải ảnh
                 const res = await fetch('/account/upload', {
@@ -171,16 +171,16 @@
                     hiddenAvatarUrl.value = data.url;
                     // Xóa URL cũ nếu có
                     txtAvatarUrlInput.value = ''; 
-                    showMessage('Tải ảnh đại diện thành công! Vui lòng nhấn Update Profile để lưu.', false);
+                    showMessage('Avatar uploaded successfully! Please click Update Profile to save.', false);
                 } else {
                     // Nếu server trả về lỗi
-                    showMessage(data.message || 'Lỗi tải ảnh lên server.', true);
+                    showMessage(data.message || 'Error uploading image to server.', true);
                     hiddenAvatarUrl.value = '{{user.avatar_url}}'; // Khôi phục URL cũ
                 }
 
             } catch (err) {
                 console.error('Upload failed:', err);
-                showMessage('Lỗi kết nối hoặc tải ảnh không thành công.', true);
+                showMessage('Connection error or upload failed.', true);
                 hiddenAvatarUrl.value = '{{user.avatar_url}}';
             } finally {
                 // Bật lại các input
@@ -257,7 +257,7 @@
               </div>
 
               <div class="mb-3">
-                <label for="fileAvatarUpload" class="form-label">Tải ảnh từ máy (Upload)</label>
+            <label for="fileAvatarUpload" class="form-label">Upload from computer</label>
                 <input
                     type="file"
                     class="form-control"
@@ -314,7 +314,7 @@
                   class="form-control"
                   id="txtAvatarUrlInput"
                   value="{{user.avatar_url}}"
-                  placeholder="Dán link ảnh tại đây..."
+                  placeholder="Paste image URL here..."
                 />
               </div>
 
@@ -337,7 +337,7 @@
             {{/ifCond}}
 
             <div class="mb-3" id="otpContainer" style="display: none;">
-                <label for="txtOTP" class="form-label">Mã OTP (Xác thực Email)</label>
+                <label for="txtOTP" class="form-label">OTP Code (Email verification)</label>
                 <input type="text" class="form-control" id="txtOTP" name="otp" maxlength="6">
             </div>
           </div>
