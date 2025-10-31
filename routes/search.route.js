@@ -7,22 +7,32 @@ router.get('/', async (req, res, next) => {
   try {
     const keyword = String(req.query.keyword || '').trim();
     const sort = String(req.query.sort || 'rating'); // rating | price | newest | bestseller
-    const limit = 4
+    const limit = 4;
     const page = Math.max(1, Number(req.query.page) || 1);
     const offset = (page - 1) * limit;
 
-    let courses = [];
-    let totalCount = 0;
-
-    // Tìm kiếm theo từ khóa
-    const [rows, cnt] = await Promise.all([
+    // --- Lấy khóa học search + tổng số ---
+    const [rows, cnt, featuredCourses] = await Promise.all([
       courseModel.findByKeyword(keyword, { limit, offset, sort }),
       courseModel.countByKeyword(keyword),
+      courseModel.getFeaturedCourses(4), // top 10 nổi bật trong tuần
     ]);
-    courses = rows;
-    totalCount = Number(cnt?.count || cnt?.amount || 0);
 
-    // Tính phân trang
+    let courses = rows;
+    const totalCount = Number(cnt?.count || cnt?.amount || 0);
+
+    // --- Gắn cờ isNew / isFeatured ---
+    const now = new Date();
+    const featuredIds = new Set(featuredCourses.map(c => c.id));
+
+    courses = courses.map(c => {
+      const createdAt = new Date(c.created_at);
+      const isNew = (now - createdAt) <= 7 * 24 * 60 * 60 * 1000; 
+      const isFeatured = featuredIds.has(c.id);
+      return { ...c, isNew, isFeatured };
+    });
+
+    // --- Tính phân trang ---
     const totalPages = Math.max(1, Math.ceil(totalCount / limit));
     const baseUrl = `/search?keyword=${encodeURIComponent(keyword)}&sort=${encodeURIComponent(sort)}&limit=${limit}`;
 
@@ -39,6 +49,7 @@ router.get('/', async (req, res, next) => {
       }),
     };
 
+    // --- Render ---
     res.render('search/results', {
       title: keyword ? `Search results for "${keyword}"` : 'Search Courses',
       courses,
@@ -53,5 +64,6 @@ router.get('/', async (req, res, next) => {
     next(err);
   }
 });
+
 
 export default router;

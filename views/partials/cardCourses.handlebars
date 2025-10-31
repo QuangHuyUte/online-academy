@@ -1,13 +1,13 @@
 <div class="card course-card shadow-sm border-0 h-100">
   <div class="course-img">
-    <!-- ✅ Bấm vào ảnh sẽ đến trang chi tiết -->
+    <!--  Bấm vào ảnh sẽ đến trang chi tiết -->
     <a href="/courses/details?id={{this.id}}">
       <img src="{{this.cover_url}}" class="card-img-top" alt="{{this.title}}">
     </a>
   </div>
 
   <div class="card-body d-flex flex-column">
-    <!-- ✅ Bấm vào tiêu đề cũng đến trang chi tiết -->
+    <!--  Bấm vào tiêu đề cũng đến trang chi tiết -->
     <h6 class="card-title fw-semibold text-truncate">
       <a href="/courses/details?id={{this.id}}" class="text-dark text-decoration-none">
         {{this.title}}
@@ -16,7 +16,7 @@
     <div class="row row-cols-2 g-2">
       <div class="col">
         <p class="text-muted small mb-1">
-          <i class="bi bi-people"></i> {{this.students_count}} 
+          <i class="bi bi-people"></i> {{this.students_count}}
         </p>
       </div>
       <div class="col">
@@ -46,6 +46,13 @@
       {{/if}}
     </p>
 
+    {{#if this.isNew}}
+    <span class="tag-newest">Newest</span>
+    {{/if}}
+
+    {{#if this.isFeatured}}
+    <span class="tag-bestseller">Bestseller</span>
+    {{/if}}
 
     </p>
   </div>

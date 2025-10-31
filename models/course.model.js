@@ -567,8 +567,6 @@ export function findNewest7day() {
   return db('courses')
     .where('created_at', '>=', db.raw("CURRENT_DATE - INTERVAL '7 days'"))
     .orderBy('created_at', 'desc')
-    .limit(8)
-    .offset(0);
 }
 
 // Full-text search (plainto_tsquery trên cột fts)
@@ -591,17 +589,27 @@ export function findNewest7day() {
 //  }
 //  return query.limit(limit).offset(offset);
 //}
-export function findByKeyword(keyword, { limit = 4, offset = 0, sort = "rating" } = {}) {
+export function findByKeyword(keyword, { limit = 4, offset = 0, sort = 'rating' } = {}) {
+  const trimmed = keyword.trim();
+
   const query = db('courses')
-    .whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
-    .andWhere(builder => builder.whereNull('is_removed').orWhere('is_removed', false)); // 👈 exclude hidden
+    .leftJoin('categories', 'courses.cat_id', 'categories.id')
+    .where(builder => {
+      builder
+        .orWhereILike('courses.title', `%${trimmed}%`)
+        .orWhereILike('categories.name', `%${trimmed}%`)
+        .orWhereRaw("courses.fts @@ plainto_tsquery('english', ?)", [trimmed]);
+    })
+    .andWhere(qb => qb.whereNull('courses.is_removed').orWhere('courses.is_removed', false))
+    .select('courses.*');
 
   switch (sort) {
-    case 'rating':   query.orderBy('rating_avg','desc'); break;
-    case 'price':    query.orderByRaw('COALESCE(promo_price, price) ASC'); break;
-    case 'newest':   query.orderBy('created_at','desc'); break;
-    case 'bestseller': query.orderBy('students_count','desc'); break;
+    case 'rating': query.orderBy('courses.rating_avg', 'desc'); break;
+    case 'price': query.orderByRaw('COALESCE(courses.promo_price, courses.price) ASC'); break;
+    case 'newest': query.orderBy('courses.created_at', 'desc'); break;
+    case 'bestseller': query.orderBy('courses.students_count', 'desc'); break;
   }
+
   return query.limit(limit).offset(offset);
 }
 
@@ -613,10 +621,17 @@ export function findByKeyword(keyword, { limit = 4, offset = 0, sort = "rating" 
 //}
 
 export function countByKeyword(keyword) {
+  const trimmed = keyword.trim();
   return db('courses')
-    .count('*')
-    .whereRaw("fts @@ plainto_tsquery('english', ?)", [keyword])
-    .andWhere(builder => builder.whereNull('is_removed').orWhere('is_removed', false)) // 👈 exclude hidden
+    .leftJoin('categories', 'courses.cat_id', 'categories.id')
+    .where(builder => {
+      builder
+        .orWhereILike('courses.title', `%${trimmed}%`)
+        .orWhereILike('categories.name', `%${trimmed}%`)
+        .orWhereRaw("courses.fts @@ plainto_tsquery('english', ?)", [trimmed]);
+    })
+    .andWhere(qb => qb.whereNull('courses.is_removed').orWhere('courses.is_removed', false))
+    .countDistinct('courses.id as count')
     .first();
 }
 

@@ -82,6 +82,30 @@
     background-color: #ccc;
     cursor: not-allowed;
 }
+/* bên dưới của card nổi bật*/
+.tag-newest, .tag-bestseller {
+  position: absolute;
+  bottom: 10px;       /* đặt ở dưới */
+  left: 10px;         /* góc trái */
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: 4px;
+  display: inline-block;
+  white-space: nowrap;
+  line-height: 1.2;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.tag-newest {
+  background-color: #28a745; /* xanh lá */
+}
+
+.tag-bestseller {
+  background-color: #ffc107; /* vàng */
+  color: #212529; /* chữ tối trên nền vàng */
+}
 
 
 
