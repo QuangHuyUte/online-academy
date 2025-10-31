@@ -22,11 +22,11 @@ export function findBySection(sectionId) {
 /**
  * (Tùy chọn) Bản rút gọn – tương thích với code cũ ở nhánh main
  * chỉ lấy một vài trường khi render outline đơn giản.
- */
+ */ 
 export function findBySectionLite(section_id) {
   return db('lessons')
     .where({ section_id })
-    .select('id', 'title', 'video_url')
+    .select('id', 'title', 'video_url', 'duration')
     .orderBy([
       { column: 'order_no', order: 'asc' },
       { column: 'id',       order: 'asc' },
