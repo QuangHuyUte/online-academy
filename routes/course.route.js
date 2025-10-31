@@ -10,11 +10,13 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const [featuredCourses, mostViewedCourses, newestCourses, topCategories, menu] = await Promise.all([
-      courseModel.getFeaturedCourses(),
+    const [featuredCourses, mostViewedCourses, newestCourses, topfield, menu] = await Promise.all([
+      // đảm bảo Featured Course hiển thị 3 mục
+      courseModel.getFeaturedCourses(3),
       courseModel.getMostViewedCourses(),
       courseModel.getNewestCourses(),
-      courseModel.getTopCategorcategory/ies(),
+      // Lấy 5 lĩnh vực nổi bật trong tuần
+      courseModel.getTopCategories(5),
       categoryModel.getMenuCategories()
     ]);
 
@@ -22,7 +24,7 @@ router.get('/', async (req, res) => {
       featuredCourses,
       mostViewedCourses,
       newestCourses,
-      topCategories,
+      topfield,
       menu
     });
   } catch (err) {
