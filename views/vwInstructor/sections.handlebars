@@ -178,8 +178,8 @@
                                              class="form-control"
                                              value="{{this.video_url}}"
                                              required
-                                             pattern="^(\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
-                                             title="Use /uploads/... or YouTube URL (https://youtube.com/watch?v=... / https://youtu.be/...)">
+                                             pattern="^(\/uploads\/.+|\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
+                                             title="Dùng /uploads/... (tạm) hoặc /uploads/... (final) hoặc YouTube URL (watch?v=... / youtu.be/...)">
                                       <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="video_url_{{this.id}}" data-status="status_{{this.id}}">
                                         <i class="bi bi-upload me-1"></i> Upload
                                       </button>
@@ -188,7 +188,8 @@
                                       </button>
                                     </div>
                                     <div class="form-text">
-                                      Upload để hệ thống tự điền <code>/uploads/...</code> — hoặc dán YouTube URL (watch?v=... / youtu.be/...).
+                                      Khi Save thành công, hệ thống tự chuyển sang <code>/uploads/...</code>.
+                                      Cũng có thể dán YouTube URL (watch?v=... / youtu.be/...).
                                     </div>
 
                                     <div class="d-flex align-items-center gap-2 mt-2 small text-muted" id="status_{{this.id}}"></div>
@@ -230,68 +231,71 @@
               </div>
 
               <!-- Add Lesson -->
-              <div class="card">
-                <div class="card-header fw-semibold">
-                  <i class="bi bi-plus-square me-2"></i> Add Lesson
-                </div>
-                <div class="card-body">
-                  <form class="row g-3 align-items-end js-protect-submit" method="post" action="/instructor/lessons">
-                    <input type="hidden" name="section_id" value="{{this.id}}">
+            <div class="card">
+              <div class="card-header fw-semibold">
+                <i class="bi bi-plus-square me-2"></i> Add Lesson
+              </div>
+              <div class="card-body">
+                <form class="row g-3 align-items-end js-protect-submit" method="post" action="/instructor/lessons">
+                  <input type="hidden" name="section_id" value="{{this.id}}">
 
-                    <div class="col-md-4">
-                      <label class="form-label fw-semibold">Title</label>
-                      <input name="title" class="form-control" required placeholder="e.g., Welcome & Setup">
-                    </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Title</label>
+                    <input name="title" class="form-control" required placeholder="e.g., Welcome & Setup">
+                  </div>
 
-                    <div class="col-md-5">
-                      <label class="form-label fw-semibold">Video URL</label>
+                  <div class="col-md-5">
+                    <label class="form-label fw-semibold">Video URL</label>
 
-                      <div class="input-group mt-2">
-                        <input id="new_video_{{this.id}}" name="video_url"
-                               class="form-control"
-                               placeholder="/uploads/... or YouTube URL"
-                               required
-                               pattern="^(\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
-                               title="Use /uploads/... or YouTube URL (https://youtube.com/watch?v=... / https://youtu.be/...)">
-                        <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="new_video_{{this.id}}" data-status="status_new_{{this.id}}">
-                          <i class="bi bi-upload me-1"></i> Upload
-                        </button>
-                        <button class="btn btn-outline-secondary btn-copy" type="button" data-target-input="new_video_{{this.id}}">
-                          <i class="bi bi-clipboard-check me-1"></i> Copy
-                        </button>
-                      </div>
-                      <div class="form-text">
-                        Upload để hệ thống tự điền <code>/uploads/...</code> — hoặc dán YouTube URL (watch?v=... / youtu.be/...).
-                      </div>
-
-                      <div class="d-flex align-items-center gap-2 mt-2 small text-muted" id="status_new_{{this.id}}"></div>
-                    </div>
-
-                    <div class="col-md-2">
-                      <label class="form-label fw-semibold">Duration (s)</label>
-                      <input name="duration_sec" type="number" min="0" class="form-control">
-                    </div>
-
-                    <div class="col-md-1">
-                      <label class="form-label fw-semibold">Ord</label>
-                      <input name="order_no" type="number" min="1" class="form-control" value="1">
-                    </div>
-
-                    <div class="col-md-12">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_preview" id="add_preview_{{this.id}}">
-                        <label class="form-check-label" for="add_preview_{{this.id}}">Mark as free preview</label>
-                      </div>
-                    </div>
-
-                    <div class="col-12 text-end">
-                      <button class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i> Add lesson
+                    <div class="input-group mt-2">
+                      <input id="new_video_{{this.id}}" name="video_url"
+                            class="form-control"
+                            placeholder="/uploads/... (tạm) hoặc /uploads/... hoặc YouTube URL"
+                            required
+                            pattern="^(\/uploads\/.+|\/uploads\/.+|https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/).+)$"
+                            title="Dùng /uploads/... (tạm) hoặc /uploads/... (final) hoặc YouTube URL (watch?v=... / youtu.be/...)">
+                      <button class="btn btn-outline-secondary btn-upload" type="button" data-target-input="new_video_{{this.id}}" data-status="status_new_{{this.id}}">
+                        <i class="bi bi-upload me-1"></i> Upload
+                      </button>
+                      <button class="btn btn-outline-secondary btn-copy" type="button" data-target-input="new_video_{{this.id}}">
+                        <i class="bi bi-clipboard-check me-1"></i> Copy
                       </button>
                     </div>
-                  </form>
-                </div>
+                    <div class="form-text">
+                      Upload sẽ trả <code>/repouploads/...</code> (tạm). Khi Add thành công, hệ thống tự chuyển sang <code>/uploads/...</code>.
+                      Cũng có thể dán YouTube URL (watch?v=... / youtu.be/...).
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mt-2 small text-muted" id="status_new_{{this.id}}"></div>
+                  </div>
+
+                  <div class="col-md-2">
+                    <label class="form-label fw-semibold">Duration (s)</label>
+                    <input name="duration_sec" type="number" min="0" class="form-control">
+                  </div>
+
+                  <!-- 🆕 Hiển thị Ord kế tiếp (readonly, không submit) -->
+                  <div class="col-md-1">
+                    <label class="form-label fw-semibold">Next Ord</label>
+                    <input class="form-control" value="{{this.next_order}}" readonly disabled>
+                  </div>
+
+                  <div class="col-md-12">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="is_preview" id="add_preview_{{this.id}}">
+                      <label class="form-check-label" for="add_preview_{{this.id}}">Mark as free preview</label>
+                    </div>
+                  </div>
+
+                  <div class="col-12 text-end">
+                    <button class="btn btn-primary">
+                      <i class="bi bi-plus-circle me-1"></i> Add lesson
+                    </button>
+                  </div>
+                </form>
               </div>
+            </div>
+
 
             </div> <!-- /accordion-body -->
           </div>
@@ -312,8 +316,7 @@
   .row-lift { transition: transform .15s ease, box-shadow .18s ease, background-color .25s ease; }
   .row-lift:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.07); background-color:#fcfcfd; }
   .page-enter { animation: enter .28s ease both; }
-  .page-enter-stagger > [class*='col'], .page-enter-stagger tbody tr { opacity: 1; transform: none; }
-  .page-enter-stagger.loaded > [class*='col'], .page-enter-stagger.loaded tbody tr { animation: itemIn .34s ease both; }
+  .page-enter-stagger > [class*='col'], .page-enter-stagger.loaded tbody tr { animation: itemIn .34s ease both; }
   @keyframes enter { from{opacity:0; transform: translateY(-6px)} to{opacity:1; transform:none} }
   @keyframes itemIn { from{opacity:0; transform: translateY(8px)} to{opacity:1; transform:none} }
 </style>
@@ -347,7 +350,7 @@
     let statusEl = null;
 
     // when user picked a file
-    hiddenFile.addEventListener('change', async (e) => {
+    hiddenFile.addEventListener('change', async () => {
       if (!targetInput || !hiddenFile.files?.length) return;
 
       const file = hiddenFile.files[0];
@@ -364,7 +367,7 @@
           throw new Error(json?.error || 'Upload failed');
         }
 
-        // fill input with /uploads/....mp4
+        // fill input with TEMP /repouploads/....mp4 (finalize khi Save/Add)
         targetInput.value = json.url;
         if (statusEl) statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Uploaded</span>';
       } catch (err) {

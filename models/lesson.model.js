@@ -60,3 +60,31 @@ export function patch(id, lesson) {
 export function remove(id) {
   return db('lessons').where({ id }).del();
 }
+
+export async function findBySectionAndOrder(section_id, order_no) {
+  return db('lessons').where({ section_id, order_no }).first();
+}
+
+/** Lấy order_no kế tiếp của 1 section (max + 1) */
+export async function nextOrderNo(section_id) {
+  const row = await db('lessons')
+    .where({ section_id })
+    .max('order_no as max')
+    .first();
+  const max = Number(row?.max || 0);
+  return (isNaN(max) ? 0 : max) + 1;
+}
+
+/** Thêm lesson, tự tính order_no */
+export async function addAutoOrder(payload) {
+  const order_no = await nextOrderNo(payload.section_id);
+  const row = { ...payload, order_no };
+  const [id] = await db('lessons').insert(row).returning('id');
+  return id?.id ?? id; // tuỳ phiên bản pg/knex
+}
+
+/** Cập nhật lesson nhưng bỏ qua order_no (không cho chỉnh) */
+export async function patchNoOrder(id, patch) {
+  const { order_no, ...rest } = patch; // loại bỏ order_no nếu có
+  return db('lessons').where({ id }).update(rest);
+}
