@@ -2,16 +2,38 @@
   <div class="row g-0">
     <!-- ======= VIDEO PLAYER BÊN TRÁI ======= -->
     <div class="col-12 col-lg-8">
-      <div class="player-wrapper position-relative">
-        <!-- 🎬 Plyr video player -->
-        <video id="player" playsinline controls class="w-100" style="display: none; border-radius: 12px;"></video>
+      <div
+        class="player-wrapper position-relative rounded overflow-hidden bg-light shadow-sm"
+        style="width: 100%; aspect-ratio: 16/9; min-height: 400px;"
+      >
+        <!-- 🎬 Video.js Player -->
+        <div id="video-container" class="w-100 h-100" style="display: none;">
+          <video
+            id="learning-video"
+            class="video-js vjs-big-play-centered w-100 h-100"
+            controls
+            preload="auto"
+            poster="/static/images/video-placeholder.jpg"
+            data-setup="{}"
+            style="object-fit: cover;"
+          >
+            <source id="video-source" src="" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
 
         <!-- 🖼️ Placeholder khi chưa chọn bài -->
-        <div id="placeholder"
-          class="player-placeholder d-flex flex-column align-items-center justify-content-center bg-light rounded"
-          style="height: 500px;">
-          <img src="https://cdn-icons-png.flaticon.com/512/2920/2920244.png" alt="No video selected" width="120" />
-          <p class="text-muted mt-3 fs-6">
+        <div
+          id="placeholder"
+          class="d-flex flex-column align-items-center justify-content-center position-absolute top-0 start-0 w-100 h-100"
+          style="background-color: #f8f9fa; opacity: 1; transition: opacity 0.4s ease; z-index: 2;"
+        >
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/2920/2920244.png"
+            alt="No video selected"
+            width="120"
+          />
+          <p class="text-muted mt-3 fs-6 text-center">
             Select a lesson to start watching the video
           </p>
         </div>
@@ -23,7 +45,8 @@
       <div class="learning-sidebar card shadow-sm border-0 sticky-top" style="top: 20px;">
         <div class="card-body">
           <h5 class="fw-bold mb-3 text-primary">
-            <i class="bi bi-collection-play"></i> Lecture List
+            <i class="bi bi-collection-play"></i>
+            Lecture List
           </h5>
 
           {{#each sections}}
@@ -32,8 +55,11 @@
             <ul class="list-group list-group-flush">
               {{#each lessons}}
               <li class="list-group-item p-2">
-                <button id="lesson-{{id}}" class="btn btn-link text-decoration-none w-100 text-start lesson-item"
-                  onclick="loadVideo('{{video_url}}','{{id}}')">
+                <button
+                  id="lesson-{{id}}"
+                  class="btn btn-link text-decoration-none w-100 text-start lesson-item"
+                  onclick="loadVideo('{{video_url}}','{{id}}')"
+                >
                   ▶ {{title}}
                 </button>
               </li>
@@ -47,33 +73,36 @@
   </div>
 </main>
 
-<!-- ✅ Plyr CDN -->
-<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+<!-- ✅ Video.js CDN -->
+<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
 
 <script>
   let player;
   let lastSent = 0;
 
   document.addEventListener("DOMContentLoaded", () => {
-    // ✅ Khởi tạo Plyr (YouTube mode)
-    player = new Plyr("#player", {
-      ratio: "16:9",
-      youtube: { noCookie: true, rel: 0 },
+    player = videojs("learning-video", {
+      controls: true,
+      autoplay: false,
+      preload: "auto",
     });
 
-    const plyrContainer = document.querySelector(".plyr");
-    if (plyrContainer) plyrContainer.style.display = "none";
+    const videoContainer = document.getElementById("video-container");
+    const placeholder = document.getElementById("placeholder");
 
-    // 📍 Theo dõi tiến độ mỗi 10 giây
+    videoContainer.style.display = "none";
+    placeholder.style.opacity = "1";
+    placeholder.style.pointerEvents = "auto";
+
+    // ⏱ Theo dõi tiến độ học
     player.on("timeupdate", () => {
       const lessonId = window.currentLessonId;
-      if (!lessonId || !player.duration) return;
+      if (!lessonId || !player.duration()) return;
 
-      const current = Math.floor(player.currentTime);
-      const duration = Math.floor(player.duration);
+      const current = Math.floor(player.currentTime());
+      const duration = Math.floor(player.duration());
 
-      // Mỗi 10 giây gửi 1 lần
       if (current - lastSent >= 10) {
         lastSent = current;
         const isDone = current / duration >= 0.5;
@@ -81,55 +110,72 @@
       }
     });
 
-    // 📍 Khi xem xong video → gửi hoàn thành
+    // Khi xem xong bài
     player.on("ended", () => {
       const lessonId = window.currentLessonId;
       if (!lessonId) return;
-
-      const duration = Math.floor(player.duration);
+      const duration = Math.floor(player.duration());
       sendProgress(lessonId, duration, true);
       console.log(`✅ Hoàn thành bài học: ${lessonId}`);
+
+      // Hiện lại placeholder sau khi hết video
+      const placeholder = document.getElementById("placeholder");
+      placeholder.style.opacity = "1";
+      placeholder.style.pointerEvents = "auto";
+      placeholder.style.zIndex = "2";
     });
   });
 
-  // ✅ Hàm load video
-  function loadVideo(url, lessonId) {
-    const videoId = extractYouTubeId(url);
-    window.currentLessonId = lessonId;
-    lastSent = 0;
+  // ✅ Khi click vào bài học
+  function loadVideo(filename, lessonId) {
+  window.currentLessonId = lessonId;
+  lastSent = 0;
 
-    if (!videoId) {
-      alert("❌ URL video không hợp lệ!");
-      return;
-    }
+  const placeholder = document.getElementById("placeholder");
+  const videoContainer = document.getElementById("video-container");
 
-    // 🔄 Ẩn placeholder, hiện video
-    const placeholder = document.getElementById("placeholder");
-    const plyrContainer = document.querySelector(".plyr");
-    if (placeholder) placeholder.style.display = "none";
-    if (plyrContainer) plyrContainer.style.display = "block";
-
-    // ⏯️ Nạp video mới vào player
-    player.source = {
-      type: "video",
-      sources: [{ src: videoId, provider: "youtube" }],
-    };
-
-    // 🌟 Highlight bài học đang học
-    document.querySelectorAll(".lesson-item").forEach((btn) =>
-      btn.classList.remove("active-lesson")
-    );
-    const activeBtn = document.getElementById(`lesson-${lessonId}`);
-    if (activeBtn) activeBtn.classList.add("active-lesson");
+  if (!filename) {
+    alert("❌ Không tìm thấy video!");
+    return;
   }
 
-  // ✅ Gửi tiến độ xem về server
+  // Ẩn placeholder, hiện video
+  placeholder.style.opacity = "0";
+  placeholder.style.pointerEvents = "none";
+  placeholder.style.zIndex = "0";
+  videoContainer.style.display = "flex";
+
+  // Dừng video cũ nếu có
+  if (player && !player.paused()) player.pause();
+
+  // ✅ Nạp video mới đúng cách
+  const safeSrc = decodeURIComponent(filename);
+  player.src({ type: "video/mp4", src: safeSrc });
+  player.one("loadedmetadata", () => {
+    player.play().catch((err) => {
+      console.warn("⚠️ Không thể tự động phát video:", err);
+    });
+  });
+
+  // Highlight bài đang học
+  document.querySelectorAll(".lesson-item").forEach((btn) =>
+    btn.classList.remove("active-lesson")
+  );
+  const activeBtn = document.getElementById(`lesson-${lessonId}`);
+  if (activeBtn) activeBtn.classList.add("active-lesson");
+}
+
+
+  // ✅ Gửi tiến độ học lên server
   async function sendProgress(lessonId, watchedSec, isDone) {
     try {
       const res = await fetch(`/student/progress/${lessonId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ watched_sec: watchedSec, is_done: isDone }),
+        body: JSON.stringify({
+          watched_sec: watchedSec,
+          is_done: isDone,
+        }),
       });
 
       if (!res.ok) {
@@ -143,11 +189,18 @@
       console.error("❌ Lỗi khi gửi tiến độ:", err);
     }
   }
-
-  function extractYouTubeId(url) {
-    const regex =
-      /(?:youtube\.com\/(?:.*v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = url?.match(regex);
-    return match ? match[1] : null;
-  }
 </script>
+
+<style>
+  .lesson-item.active-lesson {
+    background-color: #e7f1ff !important;
+    border-radius: 6px;
+    color: #0d6efd !important;
+    font-weight: 600;
+  }
+
+  .player-wrapper video {
+    border-radius: 10px;
+    object-fit: cover;
+  }
+</style>
