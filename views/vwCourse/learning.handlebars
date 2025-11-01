@@ -6,20 +6,17 @@
         class="player-wrapper position-relative rounded overflow-hidden bg-light shadow-sm"
         style="width: 100%; aspect-ratio: 16/9; min-height: 400px;"
       >
-        <!-- 🎬 Video.js Player -->
+        <!-- 🎬 Plyr.js Player -->
         <div id="video-container" class="w-100 h-100" style="display: none;">
           <video
             id="learning-video"
-            class="video-js vjs-big-play-centered w-100 h-100"
+            playsinline
             controls
             preload="auto"
             poster="/static/images/video-placeholder.jpg"
-            data-setup="{}"
+            class="w-100 h-100 rounded shadow-sm"
             style="object-fit: cover;"
-          >
-            <source id="video-source" src="" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+          ></video>
         </div>
 
         <!-- 🖼️ Placeholder khi chưa chọn bài -->
@@ -73,35 +70,46 @@
   </div>
 </main>
 
-<!-- ✅ Video.js CDN -->
-<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+<!-- ✅ Plyr.js CDN -->
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 
 <script>
   let player;
   let lastSent = 0;
 
   document.addEventListener("DOMContentLoaded", () => {
-    player = videojs("learning-video", {
-      controls: true,
-      autoplay: false,
-      preload: "auto",
+    // 🎬 Khởi tạo Plyr
+    player = new Plyr("#learning-video", {
+      ratio: "16:9",
+      controls: [
+        "play-large",
+        "play",
+        "progress",
+        "current-time",
+        "duration",
+        "mute",
+        "volume",
+        "settings",
+        "fullscreen",
+      ],
     });
 
     const videoContainer = document.getElementById("video-container");
     const placeholder = document.getElementById("placeholder");
 
+    // Ban đầu ẩn player
     videoContainer.style.display = "none";
     placeholder.style.opacity = "1";
     placeholder.style.pointerEvents = "auto";
 
-    // ⏱ Theo dõi tiến độ học
+    // Theo dõi tiến độ mỗi khi update
     player.on("timeupdate", () => {
       const lessonId = window.currentLessonId;
-      if (!lessonId || !player.duration()) return;
+      if (!lessonId || !player.duration) return;
 
-      const current = Math.floor(player.currentTime());
-      const duration = Math.floor(player.duration());
+      const current = Math.floor(player.currentTime);
+      const duration = Math.floor(player.duration);
 
       if (current - lastSent >= 10) {
         lastSent = current;
@@ -110,62 +118,63 @@
       }
     });
 
-    // Khi xem xong bài
+    // Khi xem xong video
     player.on("ended", () => {
       const lessonId = window.currentLessonId;
       if (!lessonId) return;
-      const duration = Math.floor(player.duration());
+      const duration = Math.floor(player.duration);
       sendProgress(lessonId, duration, true);
       console.log(`✅ Hoàn thành bài học: ${lessonId}`);
 
-      // Hiện lại placeholder sau khi hết video
-      const placeholder = document.getElementById("placeholder");
+      // Hiện lại placeholder
       placeholder.style.opacity = "1";
       placeholder.style.pointerEvents = "auto";
       placeholder.style.zIndex = "2";
     });
   });
 
-  // ✅ Khi click vào bài học
+  // ✅ Hàm load video khi click
   function loadVideo(filename, lessonId) {
-  window.currentLessonId = lessonId;
-  lastSent = 0;
+    window.currentLessonId = lessonId;
+    lastSent = 0;
 
-  const placeholder = document.getElementById("placeholder");
-  const videoContainer = document.getElementById("video-container");
+    const placeholder = document.getElementById("placeholder");
+    const videoContainer = document.getElementById("video-container");
 
-  if (!filename) {
-    alert("❌ Video not found!");
-    return;
-  }
+    if (!filename) {
+      alert("❌ Không tìm thấy video!");
+      return;
+    }
 
-  // Ẩn placeholder, hiện video
-  placeholder.style.opacity = "0";
-  placeholder.style.pointerEvents = "none";
-  placeholder.style.zIndex = "0";
-  videoContainer.style.display = "flex";
+    // Hiện player, ẩn placeholder
+    placeholder.style.opacity = "0";
+    placeholder.style.pointerEvents = "none";
+    placeholder.style.zIndex = "0";
+    videoContainer.style.display = "block";
 
-  // Dừng video cũ nếu có
-  if (player && !player.paused()) player.pause();
+    // Dừng video cũ
+    if (player && !player.paused) player.pause();
 
-  // ✅ Nạp video mới đúng cách
-  const safeSrc = decodeURIComponent(filename);
-  player.src({ type: "video/mp4", src: safeSrc });
-  player.one("loadedmetadata", () => {
-    player.play().catch((err) => {
-      console.warn("⚠️ Cannot autoplay video:", err);
+    // Nạp video mới
+    const safeSrc = decodeURIComponent(filename);
+    player.source = {
+      type: "video",
+      sources: [{ src: safeSrc, type: "video/mp4" }],
+    };
+
+    player.once("ready", () => {
+      player.play().catch((err) => {
+        console.warn("⚠️ Không thể tự động phát video:", err);
+      });
     });
-  console.log(`📩 Saved progress for lesson ${lessonId}: ${watchedSec}s, done=${isDone}`);
-  });
 
-  // Highlight bài đang học
-  document.querySelectorAll(".lesson-item").forEach((btn) =>
-    btn.classList.remove("active-lesson")
-  );
-  const activeBtn = document.getElementById(`lesson-${lessonId}`);
-  if (activeBtn) activeBtn.classList.add("active-lesson");
-}
-
+    // Highlight bài học
+    document.querySelectorAll(".lesson-item").forEach((btn) =>
+      btn.classList.remove("active-lesson")
+    );
+    const activeBtn = document.getElementById(`lesson-${lessonId}`);
+    if (activeBtn) activeBtn.classList.add("active-lesson");
+  }
 
   // ✅ Gửi tiến độ học lên server
   async function sendProgress(lessonId, watchedSec, isDone) {
@@ -182,12 +191,10 @@
       if (!res.ok) {
         console.error(`⚠️ Lưu tiến độ thất bại: ${lessonId}`, res.status);
       } else {
-        console.log(
-          `📩 Đã lưu tiến độ bài ${lessonId}: ${watchedSec}s, done=${isDone}`
-        );
+        console.log(`📩 Đã lưu tiến độ bài ${lessonId}: ${watchedSec}s, done=${isDone}`);
       }
     } catch (err) {
-    console.error("❌ Error sending progress:", err);
+      console.error("❌ Lỗi khi gửi tiến độ:", err);
     }
   }
 </script>
